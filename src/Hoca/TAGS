@@ -1,0 +1,22 @@
+
+./PCF.hs,366
+module Hoca.PCF Hoca.PCF6,7
+type Sym Sym10,11
+data Exp Exp12,13
+  Abs Abs13,14
+  | Var Var14,15
+  | App App15,16
+  | Fix Fix16,17
+  | BotBot17,18
+shift shift22,23
+shift shift23,24
+subst subst34,35
+subst subst35,36
+beta beta45,46
+beta beta46,47
+fix fix49,50
+fix fix50,51
+step step54,55
+step step55,56
+cbv cbv57,58
+cbv cbv58,59
