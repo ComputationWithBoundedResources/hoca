@@ -7,6 +7,7 @@ import           Text.Parsec
 import           Text.ParserCombinators.Parsec (CharParser)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Control.Applicative ((<$>), (<*>))
+import Control.Monad (void)
 
 
 type Var = String
@@ -47,17 +48,16 @@ instance PP.Pretty Exp where
 toPCF :: Exp -> Either String PCF.Exp
 toPCF = t []
   where
-    t env (Abs v e) = PCF.Abs <$> t env' e
+    t env (Abs v e) = PCF.Abs (Just v) <$> t env' e
       where env' = (v, 0::Int) : [(v',i+1) | (v',i) <- env]
     t env (Var v) = PCF.Var <$> maybe (Left ("variable " ++ show v ++ " not bound.")) Right (lookup v env)
     t env (Con g es) = PCF.Con (PCF.symbol g (length es)) <$> mapM (t env) es
     t env (App e1 e2) = PCF.App <$> t env e1 <*> t env e2
     t env (Fix e) = PCF.Fix <$> t env e
     t env (Cond e cs) =
-      PCF.Cond <$> (t env e) <*> mapM tc cs
+      PCF.Cond <$> t env e <*> mapM tc cs
       where
-        toBdy [] f = f
-        toBdy (v:vs) f = Abs v (toBdy vs f)
+        toBdy vs f = foldr Abs f vs
         tc (g, vs, f) = do
           f' <- t env (toBdy vs f)
           return (PCF.symbol g (length vs), f')   
@@ -79,7 +79,7 @@ lexeme :: Parser a -> Parser a
 lexeme p = do { x <- p; _ <- whiteSpace; return x }
 
 symbol :: String -> Parser ()
-symbol name = lexeme (string name) >> return ()
+symbol name = void (lexeme (string name) <?> "keyword '" ++ name ++ "'")
 
 identifier :: Parser String -> Parser String
 identifier p = do
@@ -88,10 +88,14 @@ identifier p = do
    then unexpected ("reserved word " ++ show s)
    else return s
 
+ident' :: Parser String
+ident' = many (try alphaNum <|> oneOf "'_/#?")
+
 variable :: Parser String
-variable = identifier ((:) <$> lower <*> many alphaNum)
+variable = identifier ((:) <$> lower <*> ident') <?> "variable"
+
 constructor :: Parser String
-constructor = identifier ((:) <$> upper <*> many alphaNum)
+constructor = identifier ((:) <$> (try upper <|> digit) <*> ident') <?> "constructor"
 
 parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")
@@ -154,6 +158,9 @@ term = (lambdaExp <?> "lambda expression")
 
     var = Var <$> variable
 
-expFromString :: String -> String -> Either ParseError Exp
-expFromString source input = runParser p () source input
+expFromString :: String -> String -> Either String Exp
+expFromString source input = 
+  case runParser p () source input of
+   Left e -> Left (show e)
+   Right r -> Right r
   where p = do {_ <- whiteSpace; t <- term; eof; return t }

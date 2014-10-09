@@ -1,4 +1,0 @@
-let rec h x = case x of 
-  G(y) -> H(h y); 
-  Z -> Y;
-in h 
