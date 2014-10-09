@@ -56,7 +56,7 @@ instance PP.Pretty Exp where
   pretty (Fix e) =
     PP.parens (PP.bold (PP.text "fix") $$ PP.pretty e)
   pretty (Cond e cs) =
-    PP.parens ((PP.bold (PP.text "caseC") PP.<+> PP.pretty e PP.<+> PP.text "of")
+    PP.parens ((PP.bold (PP.text "caseC") PP.<+> PP.pretty e PP.<+> PP.bold (PP.text "of"))
                $$ PP.vsep [ PP.pretty g PP.<+> PP.text "->" PP.<+> PP.pretty e'
                           | (g,e') <- cs ])
 

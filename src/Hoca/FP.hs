@@ -30,17 +30,17 @@ prettyLet n v vs e1 e2 =
     PP.<$> PP.text "in" PP.<+> PP.indent 0 (PP.pretty e2)
 
 instance PP.Pretty Exp where
-  pretty (Abs v e) = PP.parens (PP.text "\\" PP.<+> PP.text v PP.<+> PP.text "." PP.<+> PP.pretty e)
+  pretty (Abs v e) = PP.parens (PP.text "fun" PP.<+> PP.text v PP.<+> PP.text "->" PP.<+> PP.pretty e)
   pretty (Var v) = PP.text v
   pretty (Con f as) =
     PP.pretty f PP.<> PP.encloseSep PP.lparen PP.rparen PP.comma [PP.pretty ai | ai <- as]
   pretty (App e1 e2) = PP.parens (PP.pretty e1 PP.<+> PP.pretty e2)
   pretty (Fix e) = PP.parens (PP.text "fix" PP.<+> PP.pretty e)
   pretty (Cond e cs) =
-    PP.parens (PP.text "case" PP.<+> PP.pretty e PP.<+> PP.text "of"
-               PP.<$> PP.nest 2 (PP.vsep [ PP.pretty (Con g (map Var vs))
-                                           PP.<+> PP.text "->"
-                                           PP.<+> PP.indent 2 (PP.pretty e') PP.<> PP.text ";" | (g,vs,e') <- cs ]))
+    PP.parens (PP.text "match" PP.<+> PP.pretty e PP.<+> PP.text "with"
+               PP.<$> PP.vsep [ PP.text "|" PP.<> PP.pretty (Con g (map Var vs))
+                                PP.<+> PP.text "->" PP.<+> PP.indent 2 (PP.pretty e')
+                              | (g,vs,e') <- cs ])
   pretty (Let v vs e1 e2) = prettyLet "let" v vs e1 e2
   pretty (LetRec v vs e1 e2) = prettyLet "let rec" v vs e1 e2  
   
@@ -70,7 +70,7 @@ type Parser = CharParser ()
 
 -- lexing
 reservedWords :: [String]
-reservedWords = words "fix let rec in = . \\ ; case of ->"
+reservedWords = words "fix let rec in = fun match with | ->"
 
 whiteSpace :: Parser String
 whiteSpace = many ((space <|> tab <|> newline) <?> "whitespace")
@@ -106,7 +106,7 @@ term :: Parser Exp
 term = (lambdaExp <?> "lambda expression")
        <|> (letExp <?> "let expression")
        <|> (fixExp <?> "fix expression")
-       <|> (condExp <?> "case expression")               
+       <|> (condExp <?> "match expression")               
        <|> foldl1 App <$> apps
   where
     apps = many1 ((try var <?> "variable")
@@ -114,9 +114,9 @@ term = (lambdaExp <?> "lambda expression")
                   <|> (parens term <?> "parenthesised expression"))
            
     lambdaExp = do
-      try (symbol "\\")
+      try (symbol "fun")
       vs <- many1 variable
-      symbol "."
+      symbol "->"
       e <- term
       return (foldr Abs e vs)
 
@@ -143,16 +143,16 @@ term = (lambdaExp <?> "lambda expression")
       return (Fix e)
 
     caseExp = do
+      symbol "|"
       (g,vs) <- constructorWith variable
       symbol "->"
       e <- term
-      symbol ";"
       return (g,vs,e)
       
     condExp  = do
-      try (symbol "case")
+      try (symbol "match")
       e <- term
-      symbol "of"
+      symbol "with"
       cs <- many1 caseExp
       return (Cond e cs)
 
