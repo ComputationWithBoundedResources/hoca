@@ -149,12 +149,12 @@ toTRS = toTRS' []
             vs' = take ar (freshVars vs)
         (tg, fvarsg) <- toTRSM (reverse vs' ++ vs) (caseBdy ar fg)
         return (g, tg, vs', fvarsg Set.\\ Set.fromList vs')
-      let fvars = Set.unions (fvarsf : [ fvarsg | (_,_,_,fvarsg) <- cs' ] )
+      let fvars = Set.unions [ fvarsg | (_,_,_,fvarsg) <- cs' ]
           cond t = T.Fun (Cond f cs) (t : cvars fvars)
           rs = [ cond (T.Fun (Constr g) vars) --> tg
                | (g,tg,vs',_) <- cs' , let vars = map cvar vs' ]
       tell rs
-      return (cond tf, fvars)
+      return (cond tf, fvarsf `Set.union` fvars)
 
     toTRSM vs (PCF.Fix (PCF.Abs _ b)) = do
       let v = head (freshVars vs)

@@ -30,7 +30,9 @@ library
     exposed-modules:
         Hoca.PCF
         Hoca.FP
-        Hoca.PCF2Trs        
+        Hoca.PCF2Trs  
+        Hoca.UsableRules
+        Hoca.Narrowing
     other-modules:
     build-depends:
         containers >= 0.3 && < 0.6,
