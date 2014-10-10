@@ -3,7 +3,7 @@ import           Control.Applicative ((<$>))
 import           Control.Monad (foldM)
 import qualified Hoca.FP as FP
 import qualified Hoca.PCF as PCF
-import           Hoca.PCF2Trs (toProblem, prettyProblem)
+import           Hoca.PCF2Trs (simplify, toProblem, prettyProblem)
 import           System.Environment (getArgs)
 import           System.Exit (exitFailure)
 import           System.IO (hPutStrLn, stderr)
@@ -39,9 +39,12 @@ main = do
    "--pcf" : fname : as -> do
      e <- expressionFromArgs fname as
      putDocLn (pretty e)
-   fname : as -> do
+   "--nosimp" : fname : as -> do
      e <- expressionFromArgs fname as
      putDocLn (prettyProblem (toProblem e))
+   fname : as -> do
+     e <- expressionFromArgs fname as
+     putDocLn (prettyProblem (simplify (toProblem e)))
    _ -> 
-     error "pcf2trs [--eval|--pcf] <file> [args]*"
+     error "pcf2trs [--eval|--pcf|--nosimp] <file> [args]*"
 

@@ -18,6 +18,8 @@ module Hoca.PCF
 import           Control.Applicative ((<$>), (<|>))
 import qualified Data.Set as Set
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
+import Control.Monad (foldM)
+
 data Symbol = Symbol { sname :: String, sarity :: Int } deriving (Show, Eq, Ord)
 
 symbol :: String -> Int -> Symbol
@@ -96,38 +98,30 @@ subst j e (App f1 f2) = App (subst j e f1) (subst j e f2)
 subst j e (Cond f cs) = Cond (subst j e f) [(g, subst j e e') | (g,e') <- cs]
 subst j e (Fix f) = Fix (subst j e f)
 
-applylist :: Exp -> [Exp] -> Exp
-applylist = foldl App
-
 -- * steps
 beta :: Exp -> Maybe Exp
 beta (App (Abs _ e) f) = Just (shift (-1) (subst 0 (shift 1 f) e))
 beta _ = Nothing
 
+-- cond g(e1,...,en) [... (g,\a1...an.e) ...] -> e{e1/a1,...,en/an}
 cond :: Exp -> Maybe Exp
-cond (Cond (Con f es) cs) =
-  case lookup f cs of
+cond (Cond (Con g es) cs) =
+  case lookup g cs of
    Nothing -> Just Bot
-   Just e' -> Just (e' `applylist` es)
+   Just eg -> foldM (\ e ei -> beta (App e ei)) eg es
 cond _ = Nothing
 
 
--- fix(e) --> e (\ z. fix(e) z)
+-- fix(\e.f) --> f{(\z.fix(\e.f) z) / e}
 fixCBV :: Exp -> Maybe Exp
-fixCBV f@(Fix e) = Just (App e (delay f))
+fixCBV f@(Fix e) = beta (App e (delay f))
   where delay f' = Abs Nothing (App (shift 1 f') (Var 0))
 fixCBV _ = Nothing
 
 -- * call-by-value
 cbvWith :: (Exp -> Maybe Exp) -> Exp -> Maybe Exp
 cbvWith stp e = ctxt e <|> stp e
-  where
-    cbvl [] = Nothing
-    cbvl (f:fs) =
-      case cbvWith stp f of
-       Just f' -> Just (f':fs)
-       Nothing -> (:) f <$> cbvl fs
-
+  where       
     ctxt (App e1 e2) = do
       [f1,f2] <- cbvl [e1,e2]
       return (App f1 f2)
@@ -136,6 +130,12 @@ cbvWith stp e = ctxt e <|> stp e
       f' <- cbvWith stp f
       return (Cond f' cs)
     ctxt _ = Nothing
+
+    cbvl [] = Nothing
+    cbvl (f:fs) =
+      case cbvWith stp f of
+       Just f' -> Just (f':fs)
+       Nothing -> (:) f <$> cbvl fs
 
 cbv :: Exp -> Maybe Exp
 cbv = cbvWith (\ e -> beta e <|> fixCBV e <|> cond e)

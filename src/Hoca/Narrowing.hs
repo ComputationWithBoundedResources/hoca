@@ -1,3 +1,4 @@
+{-# LANGUAGE ViewPatterns #-}
 -- | 
 
 module Hoca.Narrowing (

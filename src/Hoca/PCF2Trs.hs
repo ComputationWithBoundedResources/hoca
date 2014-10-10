@@ -1,20 +1,21 @@
 -- | 
 
 module Hoca.PCF2Trs (
-  toProblem
-  , prettyProblem
-  , Symbol (..)
+  Symbol (..)
   , Term
   , Rule
   , Problem
-  )
-
-       where
+  , toProblem
+  , prettyProblem
+  , simplify
+  ) where
 
 import           Control.Applicative ((<$>))
 import           Control.Monad.Writer.Lazy as W
 import qualified Data.IntSet as Set
 import           Data.List (sort, nub)
+import Data.Either (partitionEithers)
+import Data.Maybe (listToMaybe, fromJust)
 import qualified Data.Map as Map
 import qualified Data.Rewriting.Problem as P
 import qualified Data.Rewriting.Rule as R
@@ -22,41 +23,39 @@ import qualified Data.Rewriting.Rules as RS
 import qualified Data.Rewriting.Substitution as S
 import qualified Data.Rewriting.Substitution.Type as ST
 import qualified Data.Rewriting.Term as T
-import qualified Hoca.PCF as PCF
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 
-data Symbol e =
-  Constr PCF.Symbol
-  | Lambda e
+import qualified Hoca.PCF as PCF
+import Hoca.UsableRules (usableRules)
+import Hoca.Narrowing
+
+type Var = Int
+
+data Symbol =
+  Con PCF.Symbol
+  | Lambda PCF.Exp
   | Bot
   | App
-  | Cond e [(PCF.Symbol, e)]
-  | Fix e
+  | Cond PCF.Exp [(PCF.Symbol, PCF.Exp)]
+  | Fix PCF.Exp
   | Main
     deriving (Show, Eq)
-             
-    
-data Var =
-  ClosureVar Int
-  | FVar Int
-    deriving (Show, Eq, Ord)
 
-type Term e = T.Term (Symbol e) Var
-type Rule e = R.Rule (Symbol e) Var
+type Term = T.Term Symbol Var
+type Rule = R.Rule Symbol Var
+type Problem = P.Problem Symbol Var
 
-(-->) :: Term e -> Term e -> Rule e
+
+(-->) :: T.Term f v -> T.Term f v -> R.Rule f v
 (-->) = R.Rule
 
-app :: T.Term (Symbol e) v -> T.Term (Symbol e) v -> T.Term (Symbol e) v
+app :: T.Term Symbol v -> T.Term Symbol v -> T.Term Symbol v
 app t1 t2 = T.Fun App [t1,t2]
 
-
-type Problem e = P.Problem (Symbol e) Var
-
-prettyProblem :: Problem PCF.Exp -> PP.Doc
+prettyProblem :: Problem -> PP.Doc
 prettyProblem = P.prettyWST ppFun ppVar
     where
-      ppFun (Constr g) = ppSym g
+      ppFun (Con g) = ppSym g
       ppFun (Lambda e) = PP.text "L" PP.<> PP.braces (ppExp e)
       ppFun App = PP.text "@"
       ppFun (Cond e cs) = PP.text "C" PP.<> PP.braces (ppCond e cs)
@@ -64,8 +63,7 @@ prettyProblem = P.prettyWST ppFun ppVar
       ppFun Bot = PP.text "_|_"      
       ppFun Main = PP.text "main"
       
-      ppVar (ClosureVar i) = PP.text "x" PP.<> PP.int i
-      ppVar (FVar i) = PP.text "y" PP.<> PP.int i      
+      ppVar i = PP.text "x" PP.<> PP.int i
 
       ppExp (PCF.Var i) = PP.int i
       ppExp (PCF.Con f as) =
@@ -86,7 +84,7 @@ prettyProblem = P.prettyWST ppFun ppVar
         PP.<> PP.hcat [ ppSym g PP.<> PP.text ":" PP.<> ppExp e' <> PP.text ";" | (g,e') <- cs ]
       ppSym = PP.text . PCF.sname
       
-toProblem :: PCF.Exp -> Problem PCF.Exp
+toProblem :: PCF.Exp -> Problem
 toProblem e = P.Problem {
   P.startTerms = P.BasicTerms
   , P.strategy = P.Innermost
@@ -98,33 +96,32 @@ toProblem e = P.Problem {
   where
     trs = toTRS e
     
-toTRS :: PCF.Exp -> [Rule PCF.Exp]
+toTRS :: PCF.Exp -> [Rule]
 toTRS = toTRS' []
   where
     freshVars [] = [0..]
     freshVars (v:_) = [v+1..]
-
-    cvar = T.Var . ClosureVar
-    cvars = map cvar . sort . Set.toList
+    freshVar = head . freshVars
     
---    fvar = T.Var . FVar
+    var = T.Var
+    cvars = map var . sort . Set.toList
     
-    toTRS' vs (PCF.Abs _ f) = toTRS' (head (freshVars vs):vs) f
+    toTRS' vs (PCF.Abs _ f) = toTRS' (freshVar vs:vs) f
     toTRS' vs e =
       W.execWriter $ do
         (e',fvars) <- toTRSM vs e
         W.tell [T.Fun Main (cvars fvars) --> e' ]
 
-    toTRSM vs (PCF.Var i) = return (cvar v,Set.singleton v)
+    toTRSM vs (PCF.Var i) = return (var v,Set.singleton v)
       where v = vs!!i
 
     toTRSM vs (PCF.Abs _ f) = do
-      let v' = head (freshVars vs)
+      let v' = freshVar vs
       (tf,fvarsf) <- toTRSM (v':vs) f
       let
         fvars = Set.delete v' fvarsf
         te = T.Fun (Lambda f) (cvars fvars)
-      tell [ app te (cvar v') --> tf ]
+      tell [ app te (var v') --> tf ]
       return (te, fvars)
 
     toTRSM vs (PCF.App e1 e2) = do
@@ -134,36 +131,37 @@ toTRS = toTRS' []
 
     toTRSM vs (PCF.Con g es) = do
       (es',fvars) <- unzip <$> mapM (toTRSM vs) es
-      return (T.Fun (Constr g) es', Set.unions fvars)
+      return (T.Fun (Con g) es', Set.unions fvars)
       
     toTRSM _ PCF.Bot = return (T.Fun Bot [], Set.empty)
     
     toTRSM vs (PCF.Cond f cs) = do
+      
       (tf,fvarsf) <- toTRSM vs f
+      
       let caseBdy 0 fg = fg
           caseBdy (n+1) (PCF.Abs _ fg) = caseBdy n fg
           caseBdy _ _ = error "case expression with invalid body"
           
       cs' <- forM cs $ \ (g,fg) -> do
-        let ar = PCF.sarity g
-            vs' = take ar (freshVars vs)
-        (tg, fvarsg) <- toTRSM (reverse vs' ++ vs) (caseBdy ar fg)
+        let vs' = take (PCF.sarity g) (freshVars vs)
+        (tg, fvarsg) <- toTRSM (reverse vs' ++ vs) (caseBdy (PCF.sarity g) fg)
         return (g, tg, vs', fvarsg Set.\\ Set.fromList vs')
+        
       let fvars = Set.unions [ fvarsg | (_,_,_,fvarsg) <- cs' ]
           cond t = T.Fun (Cond f cs) (t : cvars fvars)
-          rs = [ cond (T.Fun (Constr g) vars) --> tg
-               | (g,tg,vs',_) <- cs' , let vars = map cvar vs' ]
-      tell rs
+          
+      tell [ cond (T.Fun (Con g) vars) --> tg | (g,tg,vs',_) <- cs' , let vars = map var vs' ]
       return (cond tf, fvarsf `Set.union` fvars)
 
     toTRSM vs (PCF.Fix (PCF.Abs _ b)) = do
-      let v = head (freshVars vs)
+      let v = freshVar vs
       (tb,fvarsb) <- toTRSM (v:vs) b
       let
         fvars = Set.delete v fvarsb
         tf = T.Fun (Fix b) (cvars fvars)
-        subst = ST.fromMap (Map.singleton (ClosureVar v) tf)
-      tell [ app tf (cvar v) --> app (S.apply subst tb) (cvar v) ]
+        subst = ST.fromMap (Map.singleton v tf)
+      tell [ app tf (var v) --> app (S.apply subst tb) (var v) ]
       return (tf,fvars)
     toTRSM _ (PCF.Fix _) =
       error "non-lambda abstraction given to fixpoint combinator"
@@ -174,3 +172,67 @@ toTRS = toTRS' []
     --   tell [ app tf (fvar 0) --> app (app te tf) (fvar 0) ]
     --   return (tf,fvars)
       
+-- simplification ---------------------------------------------------------------------
+
+
+iter :: (a -> Maybe a) -> a -> a
+iter f a = case f a of { Nothing -> a; Just b -> iter f b }
+
+renameRule :: R.Rule f (Either Var Var) -> R.Rule f Var
+renameRule rl = R.rename f rl
+  where
+    f = either (\ v -> fromJust (lookup v lvs)) id
+    lhs = R.lhs rl
+    lvs = foldl insrt [(v,v) | Right v <- T.vars lhs] [v | Left v <- T.vars lhs]
+    insrt vs v = (v, head (dropWhile (`elem` map snd vs) [v..])):vs
+    
+
+isCaseRule :: R.Rule Symbol v -> Bool
+isCaseRule rl =
+  case T.root (R.lhs rl) of {Right Cond{} -> True; _ -> False}
+
+isLambdaApplication :: R.Rule Symbol v -> Bool
+isLambdaApplication rl =
+  case R.lhs rl of
+   T.Fun App [T.Fun (Lambda _) _, _] -> True
+   _ -> False
+
+simplify :: Problem -> Problem
+simplify prob =
+  prob { P.rules = P.RulesPair { P.strictRules = simplifiedTrs
+                               , P.weakRules = []}
+       , P.variables = nub (RS.vars simplifiedTrs)
+       , P.symbols = nub (RS.funs simplifiedTrs) }
+  where
+    
+    trs = P.strictRules (P.rules prob) ++ P.weakRules (P.rules prob)
+    
+    simplifiedTrs = iter narrowRules trs
+
+    mains = [t | t@(T.Fun Main _) <- RS.lhss trs]
+
+    sound rs nr =
+      case narrowSubterm nr of
+       T.Fun _ ts -> null (usableRules ts rs)
+       _ -> False
+               
+    sensible nr =
+      all (\ nw -> isCaseRule nw
+                   || isLambdaApplication nw)
+      (map narrowedWith (narrowings nr))
+      
+    narrowRules rs =
+      case partitionEithers (map (narrowRule rs) rs) of
+       (_,[]) -> Nothing 
+       (untransformed,transformed) ->
+         Just (usableRules mains rs')
+         where 
+           rs' = untransformed ++ concat transformed
+
+    narrowRule rs r = 
+      case listToMaybe [ ni | ni <- narrow r rs, sound rs ni, sensible ni ] of
+       Nothing -> Left r
+       Just ni -> Right [renameRule (narrowing n) | n <- narrowings ni]
+
+
+
