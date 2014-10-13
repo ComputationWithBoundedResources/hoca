@@ -28,11 +28,15 @@ expressionFromArgs fname args = do
       foldM (\ p (i,si) -> PCF.App p <$> fromString ("argument " ++ show i) si)
         fun (zip [(1::Int)..] args)
     fromString src str = FP.expFromString src str >>= FP.toPCF
-    
+
+helpMsg :: String
+helpMsg = "pcf2trs [--eval|--pcf|--no-simp|--num-simps <nat>] <file> [args]*"
+
 main :: IO ()
 main = do
   args <- getArgs  
   case args of
+   "--help" : _ -> putStrLn helpMsg
    "--eval" : fname : as -> do
      e <- expressionFromArgs fname as
      putDocLn (pretty (PCF.nf PCF.cbv e))
@@ -49,5 +53,5 @@ main = do
      e <- expressionFromArgs fname as
      putDocLn (prettyProblem (simplify Nothing (toProblem e)))
    _ -> 
-     error "pcf2trs [--eval|--pcf|--no-simp|--num-simps <nat>] <file> [args]*"
+     error helpMsg
 

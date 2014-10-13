@@ -10,7 +10,7 @@ module Hoca.PCF2Trs (
   , simplify
   ) where
 
-import           Control.Applicative ((<$>),(<*>))
+import           Control.Applicative ((<$>),(<*>),(<|>), Alternative, empty, pure)
 import           Control.Monad.Writer.Lazy as W
 import qualified Control.Monad.State.Lazy as State
 import qualified Data.IntSet as Set
@@ -72,7 +72,7 @@ prettyProblem = P.prettyWST ppFun ppVar
       ppFun App = PP.text "@"
       ppFun (Cond e cs) = PP.text "C" PP.<> PP.braces (ppCond e cs)
       ppFun (Fix Nothing e) = PP.text "F" PP.<> PP.braces (ppExp e)
-      ppFun (Fix (Just l) _) = PP.text "F" PP.<> PP.braces (ppLab l)
+      ppFun (Fix (Just l) _) = ppLab l
       ppFun Bot = PP.text "_|_"      
       ppFun Main = PP.text "main"
 
@@ -115,7 +115,6 @@ toProblem e = P.Problem {
 
 label :: PCF.Exp String -> PCF.Exp Label
 label e = State.evalState (labelM e) []
-        
   where
     labelM (PCF.Var v) = return (PCF.Var v)
     labelM (PCF.Con g es) = PCF.Con g <$> mapM labelM es
@@ -126,13 +125,13 @@ label e = State.evalState (labelM e) []
     labelM (PCF.Cond e1 cs) =
       PCF.Cond <$> labelM e1 <*> mapM (\ (g,eg) -> (,) g <$> labelM eg) cs
     labelM (PCF.Fix (PCF.Abs (Just l) e1)) = do
-      l' <- fresh [LString l]
-      e1' <- labelBdyM l' [] e1
-      return (PCF.Fix (PCF.Abs (Just l') e1'))
+      lfx <- fresh [LString l]
+      e1' <- labelBdyM lfx [LString "cl"] e1
+      return (PCF.Fix (PCF.Abs (Just lfx) e1'))
     labelM (PCF.Fix e1) = PCF.Fix <$> labelM e1
     
     labelBdyM l1 l2 (PCF.Abs (Just l3) e1) = do
-      l' <- if null l2 then return l1 else fresh (l2 ++ l1)
+      l' <- fresh (l2 ++ l1)
       PCF.Abs (Just l') <$> labelBdyM l' [LString l3] e1
     labelBdyM _ _ e1 = labelM e1        
       
@@ -235,26 +234,21 @@ isLambdaApplication :: R.Rule Symbol v -> Bool
 isLambdaApplication rl =
   case definedSymbol rl of {Lambda{} -> True; _ -> False}
 
--- isFixApplication :: R.Rule Symbol v -> Bool
--- isFixApplication rl =
---   case definedSymbol rl of {Fix{} -> True; _ -> False}
+isFixApplication :: R.Rule Symbol v -> Bool
+isFixApplication rl =
+  case definedSymbol rl of {Fix{} -> True; _ -> False}
+      
 
-
-
-
-narrowRules :: [R.Rule Symbol Var] -> Maybe [R.Rule Symbol Var]
-narrowRules rules = 
+narrowRules :: (Alternative m, Ord v, Enum v) => (NarrowedRule Symbol (Either v v) -> Bool) -> [R.Rule Symbol v] -> m [R.Rule Symbol v]
+narrowRules sensible rules = 
   case partitionEithers (map narrowRule rules) of
-   (_,[]) -> Nothing 
-   (untransformed,transformed) -> Just (untransformed ++ concat transformed)
+   (_,[]) -> empty
+   (untransformed,transformed) -> pure (untransformed ++ concat transformed)
   where
     sound nr = 
       case narrowSubterm nr of
        T.Fun _ ts -> null (UR.usableRules ts rules)
        _ -> False
-    sensible nr =
-      all (\ n -> isCaseRule (narrowedWith n) || isLambdaApplication (narrowedWith n))
-      (narrowings nr)
 
     renameRule rl = R.rename f rl
       where
@@ -268,9 +262,44 @@ narrowRules rules =
        Nothing -> Left rl
        Just ni -> Right [renameRule (narrowing n) | n <- narrowings ni]
 
-iterateM :: Monad m => (a -> m a) -> a -> [m a]
-iterateM f x = iterate (f =<<) (return x)
+usableRules :: (Alternative m, Ord v) => [R.Rule Symbol v] -> m [R.Rule Symbol v]
+usableRules rs = pure (UR.usableRules [ t | t@(T.Fun Main _) <- RS.lhss rs] rs)
+
+neededRules :: (Alternative m, Ord v) => [R.Rule Symbol v] -> m [R.Rule Symbol v]
+neededRules rs = pure (filter needed rs)
+  where
+    needed rl =
+      case definedSymbol rl of
+       l@Lambda {} -> l `elem` createdFuns
+       l@Fix {} -> l `elem` createdFuns           
+       _ -> True
+    createdFuns = foldr T.funsDL [] (RS.rhss rs)
+
+
+try :: (Monad m, Alternative m) => (a -> m a) -> a -> m a
+try m a = m a <|> return a
+
+repeated :: (Monad m, Alternative m) => Int -> (a -> m a) -> a -> m a
+repeated n m
+  | n <= 0 = return
+  | otherwise = try (\ a -> m a >>= repeated (n-1) m)
+
+
+simplifyRules :: (Monad m, Ord v, Enum v, Alternative m) => Int -> [R.Rule Symbol v] -> m [R.Rule Symbol v]
+simplifyRules numTimes rules
+  | numTimes <= 0 = return rules
+  | otherwise =
+      try (narrowWith fixPoint) rules
+      >>= repeated (numTimes - 1) (narrowWith betaOrCase)
+  where
+    narrowWith sel rs' = narrowRules sel rs' >>= neededRules >>= usableRules
     
+    betaOrCase nr =
+          all (\ n -> isCaseRule (narrowedWith n) || isLambdaApplication (narrowedWith n))
+          (narrowings nr)
+    fixPoint nr =
+      all (\ n -> isFixApplication (narrowedWith n)) (narrowings nr)
+      
 simplify :: Maybe Int -> Problem -> Problem
 simplify repeats prob =
   prob { P.rules = P.RulesPair { P.strictRules = simplifiedTrs
@@ -278,23 +307,5 @@ simplify repeats prob =
        , P.variables = nub (RS.vars simplifiedTrs)
        , P.symbols = nub (RS.funs simplifiedTrs) }
   where
-    simplifiedTrs = (last . take n . catJusts . iterateM simplifyTrs) (P.allRules (P.rules prob))
-      where
-        catJusts (Just rs:l) = rs : catJusts l
-        catJusts _ = []
-        n = maybe 30 (max 1) repeats
-    
-    simplifyTrs rs = usableRules <$> neededRules <$> narrowRules rs
-    usableRules rs = UR.usableRules [ t | t@(T.Fun Main _) <- RS.lhss rs] rs
-    neededRules rs = filter needed rs
-      where
-        needed rl =
-          case definedSymbol rl of
-           l@Lambda {} -> l `elem` createdFuns
-           _ -> True
-        createdFuns = foldr T.funsDL [] (RS.rhss rs)
-
-
-
-
-
+    numTimes = maybe 15 (max 0) repeats
+    simplifiedTrs = fromJust (simplifyRules numTimes (P.allRules (P.rules prob)))
