@@ -2,6 +2,7 @@
 module Hoca.PCF
   ( Exp (..)
   , Symbol (..)
+--  , Label (..)
 
     -- * constructors
   , symbol
@@ -26,14 +27,14 @@ symbol :: String -> Int -> Symbol
 symbol = Symbol
 
 type Variable = Int
-data Exp =
+data Exp l =
   Var Variable
-  | Con Symbol [Exp]
+  | Con Symbol [Exp l]
   | Bot
-  | Abs (Maybe String) Exp 
-  | App Exp Exp
-  | Cond Exp [(Symbol, Exp)]
-  | Fix Exp
+  | Abs (Maybe l) (Exp l)
+  | App (Exp l) (Exp l)
+  | Cond (Exp l) [(Symbol, (Exp l))]
+  | Fix (Exp l)
   deriving (Show, Eq)
 
 instance PP.Pretty Symbol where
@@ -45,14 +46,14 @@ pa $$ pb = PP.align (pa PP.<$> PP.indent 1 pb)
 (//) :: PP.Doc -> PP.Doc -> PP.Doc
 pa // pb = PP.align (pa PP.</> pb)
 
-instance PP.Pretty Exp where
+instance PP.Pretty l => PP.Pretty (Exp l) where
   pretty (Var i) = PP.underline (PP.int i)
   pretty (Con f as) =
     PP.pretty f PP.<> PP.tupled [PP.pretty ai | ai <- as]
   pretty Bot = PP.bold (PP.text "_|_")
   pretty (Abs l e) =
     PP.parens (PP.bold (PP.text "λ") PP.<+> ppl l // PP.pretty e)
-    where ppl = maybe PP.empty (\ v -> PP.underline (PP.text v) PP.<> PP.text ".")
+    where ppl = maybe (PP.empty) (\ v -> PP.pretty v PP.<> PP.text ".")
   pretty (App e1 e2) =
     PP.parens (PP.pretty e1 // PP.pretty e2)
   pretty (Fix e) =
@@ -62,7 +63,7 @@ instance PP.Pretty Exp where
                $$ PP.vsep [ PP.pretty g PP.<+> PP.text "->" PP.<+> PP.pretty e'
                           | (g,e') <- cs ])
 
-constructors :: Exp -> Set.Set Symbol
+constructors :: Exp l -> Set.Set Symbol
 constructors (Con g _) = Set.singleton g
 constructors (Abs _ e) = constructors e
 constructors (App e1 e2) = constructors e2 `Set.union` constructors e1
@@ -73,7 +74,7 @@ constructors _ = Set.empty
 
 
 -- * substitution 
-shift :: Int -> Exp -> Exp
+shift :: Int -> Exp l -> Exp l
 shift = shift' 0
   where 
     shift' c d (Var k)
@@ -87,7 +88,7 @@ shift = shift' 0
     shift' c d (Fix e) = Fix (shift' c d e)
       
 -- | @subst j e1 e2 == e2[j <- e1]@
-subst :: Int -> Exp -> Exp -> Exp
+subst :: Int -> Exp l -> Exp l -> Exp l
 subst j e (Var k)
   | k == j = e
   | otherwise = Var k
@@ -99,12 +100,12 @@ subst j e (Cond f cs) = Cond (subst j e f) [(g, subst j e e') | (g,e') <- cs]
 subst j e (Fix f) = Fix (subst j e f)
 
 -- * steps
-beta :: Exp -> Maybe Exp
+beta :: Exp l -> Maybe (Exp l)
 beta (App (Abs _ e) f) = Just (shift (-1) (subst 0 (shift 1 f) e))
 beta _ = Nothing
 
 -- cond g(e1,...,en) [... (g,\a1...an.e) ...] -> e{e1/a1,...,en/an}
-cond :: Exp -> Maybe Exp
+cond :: Exp l -> Maybe (Exp l)
 cond (Cond (Con g es) cs) =
   case lookup g cs of
    Nothing -> Just Bot
@@ -113,13 +114,13 @@ cond _ = Nothing
 
 
 -- fix(\e.f) --> f{(\z.fix(\e.f) z) / e}
-fixCBV :: Exp -> Maybe Exp
+fixCBV :: Exp l -> Maybe (Exp l)
 fixCBV f@(Fix e) = beta (App e (delay f))
   where delay f' = Abs Nothing (App (shift 1 f') (Var 0))
 fixCBV _ = Nothing
 
 -- * call-by-value
-cbvWith :: (Exp -> Maybe Exp) -> Exp -> Maybe Exp
+cbvWith :: (Exp l -> Maybe (Exp l)) -> Exp l -> Maybe (Exp l)
 cbvWith stp e = ctxt e <|> stp e
   where       
     ctxt (App e1 e2) = do
@@ -137,10 +138,10 @@ cbvWith stp e = ctxt e <|> stp e
        Just f' -> Just (f':fs)
        Nothing -> (:) f <$> cbvl fs
 
-cbv :: Exp -> Maybe Exp
+cbv :: Exp l -> Maybe (Exp l)
 cbv = cbvWith (\ e -> beta e <|> fixCBV e <|> cond e)
 
-nf :: (Exp -> Maybe Exp) -> Exp -> Exp
+nf :: (Exp l -> Maybe (Exp l)) -> Exp l -> Exp l
 nf rel e = maybe e (nf rel) (rel e)
 
 

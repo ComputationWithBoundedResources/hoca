@@ -44,4 +44,5 @@ library
     extensions:
         TypeSynonymInstances, 
         FlexibleContexts, 
-        FlexibleInstances
+        FlexibleInstances, 
+        GeneralizedNewtypeDeriving

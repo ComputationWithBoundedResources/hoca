@@ -44,8 +44,7 @@ instance PP.Pretty Exp where
   pretty (Let v vs e1 e2) = prettyLet "let" v vs e1 e2
   pretty (LetRec v vs e1 e2) = prettyLet "let rec" v vs e1 e2  
   
-
-toPCF :: Exp -> Either String PCF.Exp
+toPCF :: Exp -> Either String (PCF.Exp String)
 toPCF = t []
   where
     t env (Abs v e) = PCF.Abs (Just v) <$> t env' e

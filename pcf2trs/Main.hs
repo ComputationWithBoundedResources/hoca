@@ -16,7 +16,7 @@ putDocLn e = putStrLn (render e "")
 putErrLn :: String -> IO ()
 putErrLn = hPutStrLn stderr
 
-expressionFromArgs :: FilePath -> [String] -> IO PCF.Exp
+expressionFromArgs :: FilePath -> [String] -> IO (PCF.Exp String)
 expressionFromArgs fname args = do
   r <- mk <$> readFile fname
   case r of
@@ -39,12 +39,15 @@ main = do
    "--pcf" : fname : as -> do
      e <- expressionFromArgs fname as
      putDocLn (pretty e)
-   "--nosimp" : fname : as -> do
+   "--no-simp" : fname : as -> do
      e <- expressionFromArgs fname as
      putDocLn (prettyProblem (toProblem e))
+   "--num-simps" : i : fname : as -> do
+     e <- expressionFromArgs fname as
+     putDocLn (prettyProblem (simplify (Just (read i)) (toProblem e)))
    fname : as -> do
      e <- expressionFromArgs fname as
-     putDocLn (prettyProblem (simplify (toProblem e)))
+     putDocLn (prettyProblem (simplify Nothing (toProblem e)))
    _ -> 
-     error "pcf2trs [--eval|--pcf|--nosimp] <file> [args]*"
+     error "pcf2trs [--eval|--pcf|--no-simp|--num-simps <nat>] <file> [args]*"
 
