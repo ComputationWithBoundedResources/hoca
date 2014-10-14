@@ -160,8 +160,8 @@ toTRS = toTRS' [] . label
     toTRS' vs (PCF.Abs _ f) = toTRS' (freshVar vs:vs) f
     toTRS' vs e =
       W.execWriter $ do
-        (e',fvars) <- toTRSM vs e
-        W.tell [T.Fun Main (cvars fvars) --> e' ]
+        (e',_) <- toTRSM vs e
+        W.tell [T.Fun Main (map T.Var (sort vs)) --> e' ]
 
     toTRSM vs (PCF.Var i) = return (var v,Set.singleton v)
       where v = vs!!i
