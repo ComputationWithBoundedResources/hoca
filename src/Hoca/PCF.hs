@@ -14,9 +14,10 @@ module Hoca.PCF
   , fixCBV
   , nf
   , cbv
+  , ctxtClosure
   ) where
 
-import           Control.Applicative ((<$>), (<|>))
+import           Control.Applicative ((<$>), Alternative(..))
 import qualified Data.Set as Set
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Control.Monad (foldM)
@@ -33,12 +34,23 @@ data Exp l =
   | Bot
   | Abs (Maybe l) (Exp l)
   | App (Exp l) (Exp l)
-  | Cond (Exp l) [(Symbol, (Exp l))]
+  | Cond (Exp l) [(Symbol, Exp l)]
   | Fix (Exp l)
   deriving (Show, Eq)
 
 instance PP.Pretty Symbol where
   pretty = PP.bold . PP.text . sname
+
+class (Alternative m, Monad m) => Strategy m where
+  (<||>) :: m a -> m a -> m a -- | left biased choice
+
+instance Strategy Maybe where
+  Nothing <||> a = a
+  Just a <||> _ = Just a  
+
+instance Strategy [] where
+  [] <||> l2 = l2
+  l1 <||> _  = l1
 
 ($$) :: PP.Doc -> PP.Doc -> PP.Doc
 pa $$ pb = PP.align (pa PP.<$> PP.indent 1 pb)
@@ -53,7 +65,7 @@ instance PP.Pretty l => PP.Pretty (Exp l) where
   pretty Bot = PP.bold (PP.text "_|_")
   pretty (Abs l e) =
     PP.parens (PP.bold (PP.text "λ") PP.<+> ppl l // PP.pretty e)
-    where ppl = maybe (PP.empty) (\ v -> PP.pretty v PP.<> PP.text ".")
+    where ppl = maybe PP.empty (\ v -> PP.pretty v PP.<> PP.text ".")
   pretty (App e1 e2) =
     PP.parens (PP.pretty e1 // PP.pretty e2)
   pretty (Fix e) =
@@ -100,49 +112,80 @@ subst j e (Cond f cs) = Cond (subst j e f) [(g, subst j e e') | (g,e') <- cs]
 subst j e (Fix f) = Fix (subst j e f)
 
 -- * steps
-beta :: Exp l -> Maybe (Exp l)
-beta (App (Abs _ e) f) = Just (shift (-1) (subst 0 (shift 1 f) e))
-beta _ = Nothing
+beta :: Strategy m => Exp l -> m (Exp l)
+beta (App (Abs _ e) f) = return (shift (-1) (subst 0 (shift 1 f) e))
+beta _ = empty
 
 -- cond g(e1,...,en) [... (g,\a1...an.e) ...] -> e{e1/a1,...,en/an}
-cond :: Exp l -> Maybe (Exp l)
+cond :: Strategy m => Exp l -> m (Exp l)
 cond (Cond (Con g es) cs) =
   case lookup g cs of
-   Nothing -> Just Bot
+   Nothing -> return Bot
    Just eg -> foldM (\ e ei -> beta (App e ei)) eg es
-cond _ = Nothing
+cond _ = empty
 
 
 -- fix(\e.f) --> f{(\z.fix(\e.f) z) / e}
-fixCBV :: Exp l -> Maybe (Exp l)
+fixCBV :: Strategy m => Exp l -> m (Exp l)
 fixCBV f@(Fix e) = beta (App e (delay f))
   where delay f' = Abs Nothing (App (shift 1 f') (Var 0))
-fixCBV _ = Nothing
+fixCBV _ = empty
+
+-- * combinators 
+leftToRight :: Strategy m => (Exp l -> m (Exp l)) -> [Exp l] -> m [Exp l]
+leftToRight _ [] = empty
+leftToRight stp (f:fs) = reduceF <||> reduceFS
+      where
+        reduceF = (: fs) <$> stp f
+        reduceFS = (:) f <$> leftToRight stp fs
+
+oneOf :: Strategy m => (Exp l -> m (Exp l)) -> [Exp l] -> m [Exp l]
+oneOf _ [] = empty
+oneOf stp (f:fs) = reduceF <|> reduceFS
+      where
+        reduceF = (: fs) <$> stp f
+        reduceFS = (:) f <$> oneOf stp fs
+
+ctxtClosure :: Strategy m => (Exp l -> m (Exp l)) -> Exp l -> m (Exp l)
+ctxtClosure stp e = ctxt e <|> stp e
+  where
+    ctxt (App e1 e2) = do
+      [f1,f2] <- oneOf (ctxtClosure stp) [e1,e2]
+      return (App f1 f2)
+    ctxt (Con g es) = Con g <$> oneOf (ctxtClosure stp) es
+    ctxt (Cond f cs) = redF <|> redCS
+      where
+        redF = do
+          f' <- ctxtClosure stp f
+          return (Cond f' cs)
+        redCS = do
+          let (gs,es) = unzip cs
+          es' <- oneOf (ctxtClosure stp) es
+          return (Cond f (zip gs es'))
+    ctxt (Abs l f) = Abs l <$> ctxtClosure stp f
+    ctxt (Fix f) = Fix <$> ctxtClosure stp f    
+    ctxt _ = empty
+    
+
+nf :: Strategy m => (Exp l -> m (Exp l)) -> Exp l -> m (Exp l)
+nf rel e = (rel e >>= nf rel) <||> return e
 
 -- * call-by-value
-cbvWith :: (Exp l -> Maybe (Exp l)) -> Exp l -> Maybe (Exp l)
-cbvWith stp e = ctxt e <|> stp e
+cbvCtxtClosure :: Strategy m => (Exp l -> m (Exp l)) -> Exp l -> m (Exp l)
+cbvCtxtClosure stp e = ctxt e <||> stp e
   where       
     ctxt (App e1 e2) = do
-      [f1,f2] <- cbvl [e1,e2]
+      [f1,f2] <- leftToRight (cbvCtxtClosure stp) [e1,e2]
       return (App f1 f2)
-    ctxt (Con g es) = Con g <$> cbvl es
+    ctxt (Con g es) = Con g <$> leftToRight (cbvCtxtClosure stp) es
     ctxt (Cond f cs) = do
-      f' <- cbvWith stp f
+      f' <- cbvCtxtClosure stp f
       return (Cond f' cs)
-    ctxt _ = Nothing
+    ctxt _ = empty
 
-    cbvl [] = Nothing
-    cbvl (f:fs) =
-      case cbvWith stp f of
-       Just f' -> Just (f':fs)
-       Nothing -> (:) f <$> cbvl fs
+cbv :: Strategy m => Exp l -> m (Exp l)
+cbv = cbvCtxtClosure (\ e -> beta e <|> fixCBV e <|> cond e)    
 
-cbv :: Exp l -> Maybe (Exp l)
-cbv = cbvWith (\ e -> beta e <|> fixCBV e <|> cond e)
-
-nf :: (Exp l -> Maybe (Exp l)) -> Exp l -> Exp l
-nf rel e = maybe e (nf rel) (rel e)
 
 
 

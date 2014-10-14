@@ -8,6 +8,7 @@ import           System.Environment (getArgs)
 import           System.Exit (exitFailure)
 import           System.IO (hPutStrLn, stderr)
 import           Text.PrettyPrint.ANSI.Leijen (Doc, renderSmart, Pretty (..), displayS)
+import Data.Maybe (fromJust)
 
 putDocLn :: Doc -> IO ()
 putDocLn e = putStrLn (render e "")
@@ -15,6 +16,9 @@ putDocLn e = putStrLn (render e "")
 
 putErrLn :: String -> IO ()
 putErrLn = hPutStrLn stderr
+
+normalise :: (PCF.Exp l -> Maybe (PCF.Exp l)) -> PCF.Exp l -> PCF.Exp l
+normalise rel = fromJust . PCF.nf rel
 
 expressionFromArgs :: FilePath -> [String] -> IO (PCF.Exp String)
 expressionFromArgs fname args = do
@@ -24,7 +28,7 @@ expressionFromArgs fname args = do
    Right pcf -> return pcf
   where
     mk s = do
-      fun <- PCF.nf PCF.beta <$> fromString fname s
+      fun <- normalise (PCF.ctxtClosure PCF.beta) <$> fromString fname s
       foldM (\ p (i,si) -> PCF.App p <$> fromString ("argument " ++ show i) si)
         fun (zip [(1::Int)..] args)
     fromString src str = FP.expFromString src str >>= FP.toPCF
@@ -39,7 +43,7 @@ main = do
    "--help" : _ -> putStrLn helpMsg
    "--eval" : fname : as -> do
      e <- expressionFromArgs fname as
-     putDocLn (pretty (PCF.nf PCF.cbv e))
+     putDocLn (pretty (normalise PCF.cbv e))
    "--pcf" : fname : as -> do
      e <- expressionFromArgs fname as
      putDocLn (pretty e)
@@ -52,6 +56,5 @@ main = do
    fname : as -> do
      e <- expressionFromArgs fname as
      putDocLn (prettyProblem (simplify Nothing (toProblem e)))
-   _ -> 
-     error helpMsg
+   _ -> error helpMsg
 
