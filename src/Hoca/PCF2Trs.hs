@@ -164,6 +164,9 @@ toTRS = toTRS' [] . label
         W.tell [T.Fun Main (map T.Var (sort vs)) --> e' ]
 
     toTRSM vs (PCF.Var i) = return (var v,Set.singleton v)
+      -- (e1',fvars1) <- toTRSM vs e1
+      -- (e2', fvars2) <- toTRSM vs e2
+      -- return (app e1' e2', fvars1 `Set.union` fvars2)
       where v = vs!!i
 
     toTRSM vs (PCF.Abs l f) = do
@@ -179,6 +182,24 @@ toTRS = toTRS' [] . label
       (e1',fvars1) <- toTRSM vs e1
       (e2', fvars2) <- toTRSM vs e2
       return (app e1' e2', fvars1 `Set.union` fvars2)
+      -- case flatten e of
+      --  Just (f,es) -> do
+      --    let vs' = take (length es) (freshVars vs)
+      --    (tf,fvarsf) <- toTRSM (reverse vs' ++ vs) f
+      --    (tes,fvarsas) <- unzip <$> mapM (toTRSM vs) es
+      --    let subst = ST.fromMap (Map.fromList (zip vs' tes))
+      --    return (S.apply subst tf, Set.unions (fvarsf:fvarsas))
+      --  Nothing -> do
+      --    (e1',fvars1) <- toTRSM vs e1
+      --    (e2', fvars2) <- toTRSM vs e2
+      --    return (app e1' e2', fvars1 `Set.union` fvars2)
+      -- where
+      --   flatten (PCF.App f1 f2) =
+      --     case flatten f1 of
+      --      Just (PCF.Abs _ f1', es) -> Just (f1',es ++ [f2])
+      --      _ -> Nothing
+      --   flatten f = Just (f,[])
+        
 
     toTRSM vs (PCF.Con g es) = do
       (es',fvars) <- unzip <$> mapM (toTRSM vs) es
@@ -292,7 +313,7 @@ simplifyRules numTimes rules
       try (narrowWith fixPoint) rules
       >>= repeated (numTimes - 1) (narrowWith betaOrCase)
   where
-    narrowWith sel rs' = narrowRules sel rs' >>= neededRules >>= usableRules
+    narrowWith sel rs' = narrowRules sel rs' >>= usableRules >>= neededRules
     
     betaOrCase nr =
           all (\ n -> isCaseRule (narrowedWith n) || isLambdaApplication (narrowedWith n))
