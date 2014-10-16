@@ -21,7 +21,7 @@ let rec sort ord ys =
      insert ord y (sort ord ys')
 in 
 
-fun ys -> sort leq ys
+fun zs -> sort leq zs
 
 		
 	   
