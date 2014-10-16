@@ -54,7 +54,7 @@ toPCF = t []
     t env (App e1 e2) = PCF.App <$> t env e1 <*> t env e2
     t env (Fix e) = PCF.Fix <$> t env e
     t env (Cond e cs) =
-      PCF.Cond <$> t env e <*> mapM tc cs
+      PCF.Cond Nothing <$> t env e <*> mapM tc cs
       where
         toBdy vs f = foldr Abs f vs
         tc (g, vs, f) = do
