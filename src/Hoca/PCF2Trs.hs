@@ -8,17 +8,17 @@ module Hoca.PCF2Trs (
   , toProblem
   , prettyProblem
   , simplify
+  , sig
+  , BaseType (..)
   ) where
 
-import           Control.Applicative ((<$>),(<*>),(<|>), Alternative, empty, pure)
-import           Control.Monad.Writer.Lazy as W
-import qualified Control.Monad.State.Lazy as State
+import           Control.Applicative ((<$>),(<*>),Alternative, empty, pure)
 import           Control.Monad.RWS
-import qualified Data.Set as Set
-import           Data.List (sort, nub)
+import qualified Control.Monad.State.Lazy as State
 import           Data.Either (partitionEithers)
-import           Data.Maybe (listToMaybe, fromJust)
+import           Data.List (sort, nub)
 import qualified Data.Map as Map
+import           Data.Maybe (listToMaybe, fromJust)
 import qualified Data.MultiSet as MS
 import qualified Data.Rewriting.Problem as P
 import qualified Data.Rewriting.Rule as R
@@ -26,10 +26,12 @@ import qualified Data.Rewriting.Rules as RS
 import qualified Data.Rewriting.Substitution as S
 import qualified Data.Rewriting.Substitution.Type as ST
 import qualified Data.Rewriting.Term as T
+import qualified Data.Set as Set
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 
 import           Control.Applicative (Applicative)
 import           Hoca.Narrowing
+import           Hoca.ATRS
 import           Hoca.PCF (Strategy(..))
 import qualified Hoca.PCF as PCF
 import qualified Hoca.UsableRules as UR
@@ -41,71 +43,68 @@ data Lbl = LString String
                   
 type Label = [Lbl]
 
+instance PP.Pretty Lbl where
+  pretty (LInt i) = PP.int i
+  pretty (LString i) = PP.text i
+
 data Symbol =
   Con PCF.Symbol
   | Lambda (Maybe Label) (PCF.Exp Label)
   | Bot
-  | App
   | Cond (Maybe Label) (PCF.Exp Label) [(PCF.Symbol, PCF.Exp Label)]
   | Fix (Maybe Label) (PCF.Exp Label)
   | Main
     deriving (Show, Eq, Ord)
 
+ppSym :: PCF.Symbol -> PP.Doc
+ppSym = PP.text . PCF.sname
 
-instance PP.Pretty Lbl where
-  pretty (LInt i) = PP.int i
-  pretty (LString i) = PP.text i
+ppCond :: PP.Pretty a => PCF.Exp a -> [(PCF.Symbol, PCF.Exp a)] -> PP.Doc
+ppCond e cs =
+  ppExp e PP.<> PP.text ";"
+  PP.<> PP.hcat [ ppSym g PP.<> PP.text ":" PP.<> ppExp e' <> PP.text ";" | (g,e') <- cs ]
 
+ppExp :: PP.Pretty a => PCF.Exp a -> PP.Doc
+ppExp (PCF.Var i) = PP.int i
+ppExp (PCF.Con f as) = ppSym f PP.<> PP.brackets (PP.hcat (PP.punctuate (PP.text "*") [ppExp ai | ai <- as]))
+ppExp PCF.Bot = PP.text "_|_"
+ppExp (PCF.Abs Nothing e) =
+  PP.text "L" PP.<> PP.brackets (ppExp e)
+ppExp (PCF.Abs (Just l) _) = PP.pretty l
+ppExp (PCF.App e1 e2) = PP.brackets (ppExp e1 PP.<> PP.text "." PP.<> ppExp e2)
+ppExp (PCF.Fix e) = PP.text "FIX" PP.<> PP.brackets (ppExp e)
+ppExp (PCF.Cond Nothing e cs) = PP.text "C" PP.<> PP.brackets (ppCond e cs)
+ppExp (PCF.Cond (Just l) _ _) = PP.pretty l
+
+ppLab :: Label -> PP.Doc
+ppLab [] = PP.empty
+ppLab [l] = PP.pretty l
+ppLab (l:ls) = ppLab ls PP.<> PP.text "_" PP.<> PP.pretty l
+
+instance PP.Pretty Symbol where
+  pretty (Con g) = ppSym g
+  pretty (Lambda Nothing e) = PP.text "L" PP.<> PP.braces (ppExp e)
+  pretty (Lambda (Just l) _) = ppLab l
+  pretty (Cond Nothing e cs) = PP.text "C" PP.<> PP.braces (ppCond e cs)
+  pretty (Cond (Just l) _ _) = ppLab l
+  pretty (Fix Nothing e) = PP.text "F" PP.<> PP.braces (ppExp e)
+  pretty (Fix (Just l) _) = ppLab l
+  pretty Bot = PP.text "_|_"      
+  pretty Main = PP.text "main"
+              
 type Var = Int
-type Term = T.Term Symbol Var
-type Rule = R.Rule Symbol Var
-type Problem = P.Problem Symbol Var
-
+type Problem = P.Problem (ASym Symbol) Var
 
 (-->) :: T.Term f v -> T.Term f v -> R.Rule f v
 (-->) = R.Rule
 
-app :: T.Term Symbol v -> T.Term Symbol v -> T.Term Symbol v
-app t1 t2 = T.Fun App [t1,t2]
-
 prettyProblem :: Problem -> PP.Doc
 prettyProblem = P.prettyWST ppFun ppVar
     where
-      ppFun (Con g) = ppSym g
-      ppFun (Lambda Nothing e) = PP.text "L" PP.<> PP.braces (ppExp e)
-      ppFun (Lambda (Just l) _) = ppLab l
       ppFun App = PP.text "@"
-      ppFun (Cond Nothing e cs) = PP.text "C" PP.<> PP.braces (ppCond e cs)
-      ppFun (Cond (Just l) _ _) = ppLab l
-      ppFun (Fix Nothing e) = PP.text "F" PP.<> PP.braces (ppExp e)
-      ppFun (Fix (Just l) _) = ppLab l
-      ppFun Bot = PP.text "_|_"      
-      ppFun Main = PP.text "main"
-
-      ppLab [] = PP.empty
-      ppLab [l] = PP.pretty l
-      ppLab (l:ls) = ppLab ls PP.<> PP.text "_" PP.<> PP.pretty l
-      
+      ppFun (Sym f) = PP.pretty f
       ppVar i = PP.text "x" PP.<> PP.int i
 
-      ppExp (PCF.Var i) = PP.int i
-      ppExp (PCF.Con f as) =
-        ppSym f PP.<> PP.brackets (PP.hcat (PP.punctuate (PP.text "*") [ppExp ai | ai <- as]))
-      ppExp PCF.Bot = PP.text "_|_"
-      ppExp (PCF.Abs Nothing e) =
-        PP.text "L" PP.<> PP.brackets (ppExp e)
-      ppExp (PCF.Abs (Just l) _) = PP.pretty l
-      ppExp (PCF.App e1 e2) =
-        PP.brackets (ppExp e1 PP.<> PP.text "." PP.<> ppExp e2)
-      ppExp (PCF.Fix e) = PP.text "FIX" PP.<> PP.brackets (ppExp e)
-      ppExp (PCF.Cond Nothing e cs) = PP.text "C" PP.<> PP.brackets (ppCond e cs)
-      ppExp (PCF.Cond (Just l) _ _) = PP.pretty l
-
-      ppCond e cs =
-        ppExp e PP.<> PP.text ";"
-        PP.<> PP.hcat [ ppSym g PP.<> PP.text ":" PP.<> ppExp e' <> PP.text ";" | (g,e') <- cs ]
-      ppSym = PP.text . PCF.sname
-      
 toProblem :: PCF.Exp String -> Problem
 toProblem e = P.Problem {
   P.startTerms = P.BasicTerms
@@ -155,19 +154,14 @@ label e = State.evalState (labelM e) []
     fromLast f = do
       seen <- State.get
       fresh (f (head (seen ++ [])))
-      
--- flattenExp :: PCF.Exp e -> (PCF.Exp e, [PCF.Exp e])
--- flattenExp (PCF.App e1 e2) =
---   case flattenExp e1 of (e11,es) -> (e11,es++[e2])
--- flattenExp e = (e,[])
 
-newtype TM a = TM { execute :: RWS [Int] [Rule] [PCF.Exp Label] a }
+newtype TM a = TM { execute :: RWS [Int] [Rule Symbol Var] [PCF.Exp Label] a }
              deriving (Applicative, Functor, Monad
                       , MonadReader [Int]
-                      , MonadWriter [Rule]
+                      , MonadWriter [Rule Symbol Var]
                       , MonadState [PCF.Exp Label])
 
-eval :: TM a -> (a, [Rule])
+eval :: TM a -> (a, [Rule Symbol Var])
 eval m = evalRWS (execute m) [] []
 
 freshVars :: TM [Int]
@@ -176,27 +170,42 @@ freshVars = fv <$> ask
     fv [] = [0..]
     fv (v:_) = [v+1..]
 
-withVar :: TM r -> TM (Term, r)
+withVar :: TM r -> TM (Term Symbol Var, r)
 withVar m = do
   v <- head <$> freshVars
   r <- local (\vs' -> v : vs') m
   return (T.Var v, r)
 
-withVars :: Int -> TM r -> TM ([Term], r)
+withVars :: Int -> TM r -> TM ([Term Symbol Var], r)
 withVars n m = do
   vs <- take n <$> freshVars
   r <- local (\vs' -> reverse vs ++ vs') m
   return (map T.Var vs, r)
   
-variable :: Int -> TM Term
+variable :: Int -> TM (Term Symbol Var)
 variable i = do
   vs <- ask
   return (T.Var (vs!!i))
 
-variables :: TM [Term]
+variables :: TM [Term Symbol Var]
 variables = reverse <$> map T.Var <$> ask
 
-toTRS :: PCF.Exp String -> [Rule]
+freeVars :: PCF.Exp t -> TM (Set.Set (Term Symbol Var))
+freeVars (PCF.Var i) = Set.singleton <$> variable i
+freeVars (PCF.Abs _ f) = uncurry Set.delete <$> withVar (freeVars f)
+freeVars (PCF.App e1 e2) =
+  Set.union <$> freeVars e1 <*> freeVars e2
+freeVars (PCF.Con _ es) =
+  foldM (\ vs e -> Set.union vs <$> freeVars e) Set.empty es
+freeVars PCF.Bot = return Set.empty
+freeVars (PCF.Cond _ e cs) = do
+  vse <- freeVars e
+  foldM (\ vs (_,eg) -> Set.union vs <$> freeVars eg) vse cs
+freeVars (PCF.Fix f) = freeVars f
+
+
+
+toTRS :: PCF.Exp String -> [Rule Symbol Var]
 toTRS = snd . eval . mainM . label
   where
     cvars = sort . Set.toList
@@ -205,91 +214,152 @@ toTRS = snd . eval . mainM . label
     mainM e = do
       t <- toTRSM e
       vs <- variables
-      tell [T.Fun Main vs --> t ]
+      tell [fun Main vs --> t ]
 
-    freeVars (PCF.Var i) = Set.singleton <$> variable i
-    freeVars (PCF.Abs _ f) = uncurry Set.delete <$> withVar (freeVars f)
-    freeVars (PCF.App e1 e2) =
-      Set.union <$> freeVars e1 <*> freeVars e2
-    freeVars (PCF.Con _ es) =
-      foldM (\ vs e -> Set.union vs <$> freeVars e) Set.empty es
-    freeVars PCF.Bot = return Set.empty
-    freeVars (PCF.Cond _ e cs) = do
-      vse <- freeVars e
-      foldM (\ vs (_,eg) -> Set.union vs <$> freeVars eg) vse cs
-    freeVars (PCF.Fix f) = freeVars f
-      
     toTRSM (PCF.Var i) = variable i
     toTRSM e@(PCF.Abs l f) = do
       (v,tf) <- withVar (toTRSM f)
       vs <- freeVars e
-      let te = T.Fun (Lambda l f) (cvars vs)
+      let te = fun (Lambda l f) (cvars vs)
       tell [ app te v --> tf ]
       return te
     toTRSM (PCF.App e1 e2) = app <$> toTRSM e1 <*> toTRSM e2
-    toTRSM (PCF.Con g es) = T.Fun (Con g) <$> mapM toTRSM es
-    toTRSM PCF.Bot = return (T.Fun Bot [])
+    toTRSM (PCF.Con g es) = fun (Con g) <$> mapM toTRSM es
+    toTRSM PCF.Bot = return (fun Bot [])
     
     toTRSM (PCF.Cond l f cs) = do
       vs <- foldM (\ vs' (_,eg) -> Set.union vs' <$> freeVars eg) Set.empty cs
-      let cond t = T.Fun (Cond l f cs) (t : cvars vs)
+      let cond t = fun (Cond l f cs) (t : cvars vs)
       forM_ cs $ \ (g,eg) -> do
         let ar = PCF.sarity g
         (vsg,tg) <- withVars ar (toTRSM (caseBdy ar eg))
-        tell [cond (T.Fun (Con g) vsg) --> tg]
+        tell [cond (fun (Con g) vsg) --> tg]
       cond <$> toTRSM f
       where
         caseBdy 0 fg = fg
         caseBdy (n+1) (PCF.Abs _ fg) = caseBdy n fg
         caseBdy _ _ = error "case expression with invalid body"
 
-    toTRSM e@(PCF.Fix f@(PCF.Abs l b)) = do 
-      visited <- elem e <$> get
-      vs <- freeVars e
-      let te = T.Fun (Fix l b) (cvars vs)
-      unless visited $ do
-        modify (e :)
-        (v,tf) <- withVar (toTRSM (fromJust (PCF.beta (PCF.App f e))))
-        tell [ app te v --> app tf v ]
+    -- toTRSM e@(PCF.Fix f@(PCF.Abs l b)) = do 
+    --   visited <- elem e <$> get
+    --   vs <- freeVars e
+    --   let te = T.Fun (Fix l b) (cvars vs)
+    --   unless visited $ do
+    --     modify (e :)
+    --     (v,tf) <- withVar (toTRSM (fromJust (PCF.beta (PCF.App f e))))
+    --     tell [ app te v --> app tf v ]
+    --   return te
+
+    toTRSM (PCF.Fix (PCF.Abs l b)) = do
+      (v@(T.Var i),tb) <- withVar (toTRSM b)
+      vs <- Set.delete v <$> freeVars b
+      let
+        te = fun (Fix l b) (cvars vs)
+        subst = ST.fromMap (Map.singleton i te)
+      tell [ app te v --> app (S.apply subst tb) v ]
       return te
-    --   mr <- 
-    --   case mr of
-    --    Just r -> return r
-    --    Nothing -> do
-    --     v <- freshVar
-    --     (tb,fvarsb) <- pushVar v (toTRSM (fromJust (PCF.beta (PCF.App f e))))
-    --     let
-    --       fvars = Set.delete v fvarsb
-    --       tf = T.Fun (Fix l b) (cvars fvars)
-    --     tell [ app tf (var v) --> app tb (var v) ]
-    --     modify (Map.insert e (tf,fvars))
-    --     return (tf,fvars)
+      
     toTRSM (PCF.Fix _) =
       error "non-lambda abstraction given to fixpoint combinator"
 
+-- -- Typing -----------------------------------------------------------------------------
+
+-- data TVar = TFresh Int
+--           | TRet Symboln
+--           | TArg Symbol Int
+--           deriving (Eq, Ord, Show)
+                   
+-- data TSym = TApp | TBase
+--           deriving (Eq, Ord, Show)
+-- type TExp = T.Term TSym TVar 
+
+-- type Sig = Map.Map TVar TExp
+
+-- type UP = [(TExp, TExp)]
+
+-- newtype InferM a = 
+--   InferM { runInfer :: RWS () UP Int a }
+--   deriving (Applicative, Functor, Monad, MonadWriter UP, MonadState Int)
+
+
+-- (~>) :: TExp -> TExp -> TExp
+-- a ~> b = T.Fun TApp [a,b]
+
+-- baseType :: TExp
+-- baseType = T.Fun TBase []
+
+-- targ :: Symbol -> Int -> TExp
+-- targ f i = T.Var (TArg f i)
+
+-- tret :: Symbol -> TExp
+-- tret f = T.Var (TRet f)
+
+-- returnType :: Symbol -> Sig -> Maybe TExp
+-- returnType f = Map.lookup (TRet f)
+
+-- argType :: Symbol -> Int -> Sig -> Maybe TExp
+-- argType f i = Map.lookup (TArg f i)
+
+-- signature :: [R.Rule Symbol IntMap.Key] -> Maybe Sig
+-- signature rules = ST.toMap <$> solve (snd (evalRWS (runInfer (mapM typeM rules)) () 0))
+--   where
+--     freshVar = State.modify succ >> (T.Var <$> TFresh <$> State.get)
+    
+--     initialEnv t =
+--       foldM (\e v -> IntMap.insert v <$> freshVar <*> return e)
+--       IntMap.empty (nub (T.vars t))
+      
+--     lookupEnv e v = fromJust (IntMap.lookup v e)
+
+--     top e (T.Var v) = lookupEnv e v
+--     top _ (T.Fun f _) = T.Var (TRet f)
+
+--     a =~ b = tell [(a,b)]
+    
+--     typeM (R.Rule lhs rhs) = do
+--       e <- initialEnv lhs
+--       top e lhs =~ top e rhs
+--       e |- (lhs, top e lhs)
+--       e |- (rhs, top e rhs)
+      
+--     e |- (T.Var v,a) = lookupEnv e v =~ a
+--     e |- (T.Fun Main ts, a) = do
+--       a =~ baseType
+--       forM_ ts $ \ ti -> e |- (ti,baseType)
+--     e |- (T.Fun (Con _) ts, a) = do
+--       a =~ baseType
+--       forM_ ts $ \ ti -> e |- (ti,baseType)
+--     e |- (T.Fun App [e1,e2], a) = do
+--       b <- freshVar
+--       e |- (e1, b ~> a)
+--       e |- (e2, b)
+--     e |- (T.Fun f es, a) = do
+--       tret f =~ a
+--       forM_ (zip [0..] es) $  \ (i,ei) ->
+--         e |- (ei, targ f i)
+        
+--     solve [] = return (ST.fromMap Map.empty)
+--     solve ((c1,c2):cs) = do
+--       u <- solve cs 
+--       flip S.compose u <$> unify (S.apply u c1) (S.apply u c2)
+        
+    
 -- simplification ---------------------------------------------------------------------
 
+isCaseRule :: Rule Symbol v -> Bool
+isCaseRule (headSymbol . R.lhs -> Just Cond {}) = True
+isCaseRule _ = False
 
-definedSymbol :: R.Rule Symbol v -> Symbol
-definedSymbol rl = case R.lhs rl of
-  T.Fun App [T.Fun s _, _] -> s
-  T.Fun s _ -> s
-  _ -> error "PCF2Trs.definedSymbols: rule defines variable"
+isLambdaApplication :: Rule Symbol v -> Bool
+isLambdaApplication (headSymbol . R.lhs -> Just Lambda {}) = True
+isLambdaApplication _ = False
 
-isCaseRule :: R.Rule Symbol v -> Bool
-isCaseRule rl =
-  case definedSymbol rl of {Cond{} -> True; _ -> False}
-
-isLambdaApplication :: R.Rule Symbol v -> Bool
-isLambdaApplication rl =
-  case definedSymbol rl of {Lambda{} -> True; _ -> False}
-
-isFixApplication :: R.Rule Symbol v -> Bool
-isFixApplication rl =
-  case definedSymbol rl of {Fix{} -> True; _ -> False}
+isFixApplication :: Rule Symbol v -> Bool
+isFixApplication (headSymbol . R.lhs -> Just Fix {}) = True
+isFixApplication _ = False
       
 
-narrowRules :: (Alternative m, Ord v, Enum v) => (NarrowedRule Symbol (Either v v) -> Bool) -> [R.Rule Symbol v] -> m [R.Rule Symbol v]
+narrowRules :: (Alternative m, Ord v, Enum v) => (NarrowedRule (ASym Symbol) (Either v v) -> Bool) -> [Rule Symbol v] -> m [Rule Symbol v]
 narrowRules sensible rules = 
   case partitionEithers (map narrowRule rules) of
    (_,[]) -> empty
@@ -318,18 +388,18 @@ narrowRules sensible rules =
        Nothing -> Left rl
        Just ni -> Right [renameRule (narrowing n) | n <- narrowings ni]
 
-usableRules :: (Alternative m, Ord v) => [R.Rule Symbol v] -> m [R.Rule Symbol v]
-usableRules rs = pure (UR.usableRules [ t | t@(T.Fun Main _) <- RS.lhss rs] rs)
+usableRules :: (Alternative m, Ord v) => [Rule Symbol v] -> m [Rule Symbol v]
+usableRules rs = pure (UR.usableRules [ t | t@(T.Fun (Sym Main) _) <- RS.lhss rs] rs)
 
-neededRules :: (Alternative m, Ord v) => [R.Rule Symbol v] -> m [R.Rule Symbol v]
+neededRules :: (Alternative m, Ord v) => [Rule Symbol v] -> m [Rule Symbol v]
 neededRules rs = pure (filter needed rs)
   where
     needed rl =
-      case definedSymbol rl of
-       l@Lambda {} -> l `elem` createdFuns
-       l@Fix {} -> l `elem` createdFuns           
+      case headSymbol (R.lhs rl) of
+       Just (l@Lambda {}) -> l `elem` createdFuns
+       Just (l@Fix {}) -> l `elem` createdFuns           
        _ -> True
-    createdFuns = foldr T.funsDL [] (RS.rhss rs)
+    createdFuns = foldr funsDL [] (RS.rhss rs)
 
 
 try :: (Strategy m) => (a -> m a) -> a -> m a
@@ -343,7 +413,7 @@ repeated n m
 exhaustive :: Strategy m => (a -> m a) -> a -> m a
 exhaustive rel = try (rel >=> exhaustive rel) 
 
-simplifyRules :: (Strategy m, Ord v, Enum v) => Int -> [R.Rule Symbol v] -> m [R.Rule Symbol v]
+simplifyRules :: (Strategy m, Ord v, Enum v) => Int -> [Rule Symbol v] -> m [Rule Symbol v]
 simplifyRules nt =
   exhaustive (narrowWith caseRule)
   >=> exhaustive (narrowWith fixPointRule)
@@ -366,12 +436,6 @@ simplifyRules nt =
 
     nonRec rs nr =
       not ((any (R.isVariantOf (narrowedRule nr))) (UR.usableRules [ R.rhs (narrowedWith n) | n <- narrowings nr ] rs)  )
-
-    -- betaOrCase nr =
-    --       all (\ n -> isCaseRule (narrowedWith n) || isLambdaApplication (narrowedWith n))
-    --       (narrowings nr)
-    -- fixPoint nr =
-    --   all (\ n -> isFixApplication (narrowedWith n)) (narrowings nr)
       
 simplify :: Maybe Int -> Problem -> Problem
 simplify repeats prob =
@@ -382,3 +446,13 @@ simplify repeats prob =
   where
     numTimes = maybe 15 (max 0) repeats
     simplifiedTrs = fromJust (simplifyRules numTimes (P.allRules (P.rules prob)))
+
+
+data BaseType = BaseType deriving (Eq, Ord, Show)
+
+instance PP.Pretty BaseType where
+  pretty BaseType = PP.text "*"
+
+sig :: Problem -> Either String (Signature Symbol BaseType)
+sig = signature BaseType . P.allRules . P.rules
+  

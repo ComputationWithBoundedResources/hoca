@@ -30,6 +30,7 @@ library
     exposed-modules:
         Hoca.PCF
         Hoca.FP
+        Hoca.ATRS
         Hoca.PCF2Trs  
         Hoca.UsableRules
         Hoca.Narrowing
@@ -46,4 +47,5 @@ library
         TypeSynonymInstances, 
         FlexibleContexts, 
         FlexibleInstances, 
-        GeneralizedNewtypeDeriving
+        GeneralizedNewtypeDeriving, 
+        ViewPatterns

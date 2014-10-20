@@ -8,6 +8,9 @@ module Hoca.PCF
   , symbol
     -- * operations
   , constructors
+  , match
+  , isInstanceOf
+  , applySubst
     -- * reduction
   , Strategy (..)
   , beta
@@ -22,6 +25,12 @@ import           Control.Applicative ((<$>), Alternative(..))
 import qualified Data.Set as Set
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Control.Monad (foldM)
+import qualified Data.IntMap as IntMap
+import Data.Maybe (isJust)
+import Control.Monad ((>=>))
+import Data.Function (on)
+import Data.List (sortBy)
+import Control.Monad (guard)
 
 data Symbol = Symbol { sname :: String, sarity :: Int } deriving (Show, Eq, Ord)
 
@@ -75,19 +84,66 @@ constructors (Fix e) = constructors e
 constructors _ = Set.empty
 
 
+type Subst l = IntMap.IntMap (Exp l)
+
+match :: (Show l, Eq l) => Exp l -> Exp l -> Maybe (Subst l)
+match e f = go 0 e f IntMap.empty where
+  go k (Var i) t sub
+    | i >= k = -- free variable
+        let t' = (shift' (-k) (-k) t)
+        in case IntMap.lookup (i-k) sub of
+            Nothing | nonVarCapture k t -> Just (IntMap.insert (i-k) t' sub)
+            Just s | s == t' -> Just sub
+            _ -> Nothing
+    | t == Var i = Just sub
+    | otherwise = Nothing
+  go k (Con g1 ss) (Con g2 ts) sub
+    | g1 /= g2 || length ss /= length ts = Nothing
+    | otherwise = composeM (zipWith (go k) ss ts) sub
+  go _ Bot Bot sub = Just sub
+  go k (App s1 s2) (App t1 t2) sub =
+   go k s1 t1 sub >>= go k s2 t2
+  go k (Cond _ s cs) (Cond _ t ct) sub = do
+    let
+      srt = sortBy (compare `on` fst)
+      (cs',ct') = (srt cs, srt ct)
+    guard (map fst cs' == map fst ct')    
+    go k s t sub >>= composeM (zipWith (go k) (map snd cs') (map snd ct'))
+  go k (Fix s) (Fix t) sub = go k s t sub
+  go k (Abs _ s) (Abs _ t) sub = go (k+1) s t sub
+  go _ _ _ _ = Nothing
+  
+  nonVarCapture k (Var v) = v >= k
+  nonVarCapture k (Abs _ s) = nonVarCapture (k+1) s
+  nonVarCapture k (Con _ ss) = all (nonVarCapture k) ss
+  nonVarCapture k (App s1 s2) = nonVarCapture k s1 && nonVarCapture k s2
+  nonVarCapture _ Bot = True
+  nonVarCapture k (Cond _ s cs) = nonVarCapture k s && all (nonVarCapture k . snd) cs
+  nonVarCapture k (Fix s) = nonVarCapture k s
+
+applySubst :: Exp l -> Subst l -> Exp l
+applySubst = IntMap.foldWithKey subst
+
+composeM :: Monad m => [a -> m a] -> a -> m a
+composeM = foldr (>=>) return
+
+isInstanceOf :: (Show l, Eq l) => Exp l -> Exp l -> Bool
+isInstanceOf e f = isJust (match f e)
+
 -- * substitution 
 shift :: Int -> Exp l -> Exp l
 shift = shift' 0
-  where 
-    shift' c d (Var k)
-      | k < c = Var k
-      | otherwise = Var (k + d)
-    shift' c d (Con f as) = Con f (map (shift' c d) as)
-    shift' _ _ Bot = Bot
-    shift' c d (Abs l e) = Abs l (shift' (c+1) d e)
-    shift' c d (App e1 e2) = App (shift' c d e1) (shift' c d e2)
-    shift' c d (Cond l e cs) = Cond l (shift' c d e) [(g, shift' c d e') | (g,e') <- cs]
-    shift' c d (Fix e) = Fix (shift' c d e)
+
+shift' :: Variable -> Variable -> Exp l -> Exp l
+shift' c d (Var k)
+  | k < c = Var k
+  | otherwise = Var (k + d)
+shift' c d (Con f as) = Con f (map (shift' c d) as)
+shift' _ _ Bot = Bot
+shift' c d (Abs l e) = Abs l (shift' (c+1) d e)
+shift' c d (App e1 e2) = App (shift' c d e1) (shift' c d e2)
+shift' c d (Cond l e cs) = Cond l (shift' c d e) [(g, shift' c d e') | (g,e') <- cs]
+shift' c d (Fix e) = Fix (shift' c d e)
       
 -- | @subst j e1 e2 == e2[j <- e1]@
 subst :: Int -> Exp l -> Exp l -> Exp l
