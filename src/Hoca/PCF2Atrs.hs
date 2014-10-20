@@ -1,6 +1,6 @@
 -- | 
 
-module Hoca.PCF2Trs (
+module Hoca.PCF2Atrs (
   Symbol (..)
   , Term
   , Rule

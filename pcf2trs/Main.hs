@@ -3,7 +3,7 @@ import           Control.Applicative ((<$>))
 import           Control.Monad (foldM)
 import qualified Hoca.FP as FP
 import qualified Hoca.PCF as PCF
-import           Hoca.PCF2Trs (simplify, toProblem, prettyProblem)
+import           Hoca.PCF2Atrs (simplify, toProblem, prettyProblem)
 import           System.Environment (getArgs)
 import           System.Exit (exitFailure)
 import           System.IO (hPutStrLn, stderr)

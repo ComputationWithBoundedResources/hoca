@@ -31,7 +31,7 @@ library
         Hoca.PCF
         Hoca.FP
         Hoca.ATRS
-        Hoca.PCF2Trs  
+        Hoca.PCF2Atrs
         Hoca.UsableRules
         Hoca.Narrowing
     other-modules:
