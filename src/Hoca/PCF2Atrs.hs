@@ -8,7 +8,7 @@ module Hoca.PCF2Atrs (
   , toProblem
   , prettyProblem
   , simplify
-  , sig
+  , signature
   , BaseType (..)
   ) where
 
@@ -17,14 +17,11 @@ import           Control.Monad.RWS
 import qualified Control.Monad.State.Lazy as State
 import           Data.Either (partitionEithers)
 import           Data.List (sort, nub)
-import qualified Data.Map as Map
-import           Data.Maybe (listToMaybe, fromJust)
+import           Data.Maybe (listToMaybe, fromJust, fromMaybe)
 import qualified Data.MultiSet as MS
 import qualified Data.Rewriting.Problem as P
 import qualified Data.Rewriting.Rule as R
 import qualified Data.Rewriting.Rules as RS
-import qualified Data.Rewriting.Substitution as S
-import qualified Data.Rewriting.Substitution.Type as ST
 import qualified Data.Rewriting.Term as T
 import qualified Data.Set as Set
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
@@ -35,7 +32,6 @@ import           Hoca.ATRS
 import           Hoca.PCF (Strategy(..))
 import qualified Hoca.PCF as PCF
 import qualified Hoca.UsableRules as UR
-
 
 data Lbl = LString String
          | LInt Int
@@ -99,10 +95,8 @@ type Problem = P.Problem (ASym Symbol) Var
 (-->) = R.Rule
 
 prettyProblem :: Problem -> PP.Doc
-prettyProblem = P.prettyWST ppFun ppVar
+prettyProblem = P.prettyWST PP.pretty ppVar
     where
-      ppFun App = PP.text "@"
-      ppFun (Sym f) = PP.pretty f
       ppVar i = PP.text "x" PP.<> PP.int i
 
 toProblem :: PCF.Exp String -> Problem
@@ -155,6 +149,9 @@ label e = State.evalState (labelM e) []
       seen <- State.get
       fresh (f (head (seen ++ [])))
 
+
+-- transformation ----------------------------------------------------------------------
+      
 newtype TM a = TM { execute :: RWS [Int] [Rule Symbol Var] [PCF.Exp Label] a }
              deriving (Applicative, Functor, Monad
                       , MonadReader [Int]
@@ -204,7 +201,6 @@ freeVars (PCF.Cond _ e cs) = do
 freeVars (PCF.Fix f) = freeVars f
 
 
-
 toTRS :: PCF.Exp String -> [Rule Symbol Var]
 toTRS = snd . eval . mainM . label
   where
@@ -240,109 +236,29 @@ toTRS = snd . eval . mainM . label
         caseBdy (n+1) (PCF.Abs _ fg) = caseBdy n fg
         caseBdy _ _ = error "case expression with invalid body"
 
-    -- toTRSM e@(PCF.Fix f@(PCF.Abs l b)) = do 
-    --   visited <- elem e <$> get
-    --   vs <- freeVars e
-    --   let te = T.Fun (Fix l b) (cvars vs)
-    --   unless visited $ do
-    --     modify (e :)
-    --     (v,tf) <- withVar (toTRSM (fromJust (PCF.beta (PCF.App f e))))
-    --     tell [ app te v --> app tf v ]
-    --   return te
-
-    toTRSM (PCF.Fix (PCF.Abs l b)) = do
-      (v@(T.Var i),tb) <- withVar (toTRSM b)
-      vs <- Set.delete v <$> freeVars b
-      let
-        te = fun (Fix l b) (cvars vs)
-        subst = ST.fromMap (Map.singleton i te)
-      tell [ app te v --> app (S.apply subst tb) v ]
+    toTRSM e@(PCF.Fix f@(PCF.Abs l b)) = do 
+      visited <- elem e <$> get
+      vs <- freeVars e
+      let te = fun (Fix l b) (cvars vs)
+      unless visited $ do
+        modify (e :)
+        (v,tf) <- withVar (toTRSM (fromJust (PCF.beta (PCF.App f e))))
+        tell [ app te v --> app tf v ]
       return te
+
+    -- MA: free variable not properly allocated
+    -- toTRSM (PCF.Fix (PCF.Abs l b)) = do
+    --   (v@(T.Var i),tb) <- withVar (toTRSM b)
+    --   vs <- Set.delete v <$> freeVars b
+    --   let
+    --     te = fun (Fix l b) (cvars vs)
+    --     subst = ST.fromMap (Map.singleton i te)
+    --   tell [ app te v --> app (S.apply subst tb) v ]
+    --   return te
       
     toTRSM (PCF.Fix _) =
       error "non-lambda abstraction given to fixpoint combinator"
 
--- -- Typing -----------------------------------------------------------------------------
-
--- data TVar = TFresh Int
---           | TRet Symboln
---           | TArg Symbol Int
---           deriving (Eq, Ord, Show)
-                   
--- data TSym = TApp | TBase
---           deriving (Eq, Ord, Show)
--- type TExp = T.Term TSym TVar 
-
--- type Sig = Map.Map TVar TExp
-
--- type UP = [(TExp, TExp)]
-
--- newtype InferM a = 
---   InferM { runInfer :: RWS () UP Int a }
---   deriving (Applicative, Functor, Monad, MonadWriter UP, MonadState Int)
-
-
--- (~>) :: TExp -> TExp -> TExp
--- a ~> b = T.Fun TApp [a,b]
-
--- baseType :: TExp
--- baseType = T.Fun TBase []
-
--- targ :: Symbol -> Int -> TExp
--- targ f i = T.Var (TArg f i)
-
--- tret :: Symbol -> TExp
--- tret f = T.Var (TRet f)
-
--- returnType :: Symbol -> Sig -> Maybe TExp
--- returnType f = Map.lookup (TRet f)
-
--- argType :: Symbol -> Int -> Sig -> Maybe TExp
--- argType f i = Map.lookup (TArg f i)
-
--- signature :: [R.Rule Symbol IntMap.Key] -> Maybe Sig
--- signature rules = ST.toMap <$> solve (snd (evalRWS (runInfer (mapM typeM rules)) () 0))
---   where
---     freshVar = State.modify succ >> (T.Var <$> TFresh <$> State.get)
-    
---     initialEnv t =
---       foldM (\e v -> IntMap.insert v <$> freshVar <*> return e)
---       IntMap.empty (nub (T.vars t))
-      
---     lookupEnv e v = fromJust (IntMap.lookup v e)
-
---     top e (T.Var v) = lookupEnv e v
---     top _ (T.Fun f _) = T.Var (TRet f)
-
---     a =~ b = tell [(a,b)]
-    
---     typeM (R.Rule lhs rhs) = do
---       e <- initialEnv lhs
---       top e lhs =~ top e rhs
---       e |- (lhs, top e lhs)
---       e |- (rhs, top e rhs)
-      
---     e |- (T.Var v,a) = lookupEnv e v =~ a
---     e |- (T.Fun Main ts, a) = do
---       a =~ baseType
---       forM_ ts $ \ ti -> e |- (ti,baseType)
---     e |- (T.Fun (Con _) ts, a) = do
---       a =~ baseType
---       forM_ ts $ \ ti -> e |- (ti,baseType)
---     e |- (T.Fun App [e1,e2], a) = do
---       b <- freshVar
---       e |- (e1, b ~> a)
---       e |- (e2, b)
---     e |- (T.Fun f es, a) = do
---       tret f =~ a
---       forM_ (zip [0..] es) $  \ (i,ei) ->
---         e |- (ei, targ f i)
-        
---     solve [] = return (ST.fromMap Map.empty)
---     solve ((c1,c2):cs) = do
---       u <- solve cs 
---       flip S.compose u <$> unify (S.apply u c1) (S.apply u c2)
-        
     
 -- simplification ---------------------------------------------------------------------
 
@@ -350,9 +266,9 @@ isCaseRule :: Rule Symbol v -> Bool
 isCaseRule (headSymbol . R.lhs -> Just Cond {}) = True
 isCaseRule _ = False
 
-isLambdaApplication :: Rule Symbol v -> Bool
-isLambdaApplication (headSymbol . R.lhs -> Just Lambda {}) = True
-isLambdaApplication _ = False
+-- isLambdaApplication :: Rule Symbol v -> Bool
+-- isLambdaApplication (headSymbol . R.lhs -> Just Lambda {}) = True
+-- isLambdaApplication _ = False
 
 isFixApplication :: Rule Symbol v -> Bool
 isFixApplication (headSymbol . R.lhs -> Just Fix {}) = True
@@ -391,6 +307,16 @@ narrowRules sensible rules =
 usableRules :: (Alternative m, Ord v) => [Rule Symbol v] -> m [Rule Symbol v]
 usableRules rs = pure (UR.usableRules [ t | t@(T.Fun (Sym Main) _) <- RS.lhss rs] rs)
 
+narrowedUsableRules :: (Alternative m) => Int -> [Rule Symbol Var] -> m [Rule Symbol Var]
+narrowedUsableRules maxTimes rs = 
+  case inferTypes rs of
+   Left _ -> empty
+   Right (_,ers) -> maybe empty (pure . unTypeRules) (UR.narrowedUsableRules maxTimes stt rst)
+     where
+       rst = map fst ers
+       stt = [ t | t@(T.Fun (Sym Main,_) _) <- RS.lhss rst]       
+
+
 neededRules :: (Alternative m, Ord v) => [Rule Symbol v] -> m [Rule Symbol v]
 neededRules rs = pure (filter needed rs)
   where
@@ -413,29 +339,28 @@ repeated n m
 exhaustive :: Strategy m => (a -> m a) -> a -> m a
 exhaustive rel = try (rel >=> exhaustive rel) 
 
-simplifyRules :: (Strategy m, Ord v, Enum v) => Int -> [Rule Symbol v] -> m [Rule Symbol v]
+simplifyRules :: (Strategy m) => Int -> [Rule Symbol Var] -> m [Rule Symbol Var]
 simplifyRules nt =
-  exhaustive (narrowWith caseRule)
-  >=> exhaustive (narrowWith fixPointRule)
-  >=> repeated nt (\rs -> narrowWith (nonRecRule rs) rs)
+  try (narrowedUsableRules 1000)
+  -- >=>
+  -- exhaustive (narrowWith caseRule)
+  -- >=> exhaustive (narrowWith fixPointRule)
+  -- >=> repeated nt (\rs -> narrowWith (nonRecRule rs) rs)
 
-      -- >>= narrowWith fixPointRule
   where
     narrowWith sel = narrowRules sel >=> usableRules >=> neededRules
-
     caseRule nr = all (\ n -> isCaseRule (narrowedWith n)) (narrowings nr)
-    betaRule nr = all (\ n -> isLambdaApplication (narrowedWith n)) (narrowings nr)
     fixPointRule nr = all (\ n -> isFixApplication (narrowedWith n)) (narrowings nr)
-    simpleRule nr = all (\ n -> isSimpleRule (narrowedWith n)) (narrowings nr)
-      where
-        isSimpleRule rl = not (any isApp (T.funs (R.rhs rl)))
-          where isApp App{} = True
-                isApp _ = False
     nonRecRule rs nr = all (\ n -> isNonRec (narrowedWith n)) (narrowings nr)
-      where isNonRec rl = not (any (R.isVariantOf rl) (UR.usableRules [R.rhs rl] rs)) -- FIX type of 
-
-    nonRec rs nr =
-      not ((any (R.isVariantOf (narrowedRule nr))) (UR.usableRules [ R.rhs (narrowedWith n) | n <- narrowings nr ] rs)  )
+      where isNonRec rl = not (any (R.isVariantOf rl) (UR.usableRules [R.rhs rl] rs)) -- FIX type of
+    -- betaRule nr = all (\ n -> isLambdaApplication (narrowedWith n)) (narrowings nr)            
+    -- simpleRule nr = all (\ n -> isSimpleRule (narrowedWith n)) (narrowings nr)
+    --   where
+    --     isSimpleRule rl = not (any isApp (T.funs (R.rhs rl)))
+    --       where isApp App{} = True
+    --             isApp _ = False
+    -- nonRec rs nr =
+    --   not ((any (R.isVariantOf (narrowedRule nr))) (UR.usableRules [ R.rhs (narrowedWith n) | n <- narrowings nr ] rs)  )
       
 simplify :: Maybe Int -> Problem -> Problem
 simplify repeats prob =
@@ -445,7 +370,8 @@ simplify repeats prob =
        , P.symbols = nub (RS.funs simplifiedTrs) }
   where
     numTimes = maybe 15 (max 0) repeats
-    simplifiedTrs = fromJust (simplifyRules numTimes (P.allRules (P.rules prob)))
+    simplifiedTrs = fromMaybe trs (simplifyRules numTimes trs)
+      where trs = P.allRules (P.rules prob)
 
 
 data BaseType = BaseType deriving (Eq, Ord, Show)
@@ -453,6 +379,6 @@ data BaseType = BaseType deriving (Eq, Ord, Show)
 instance PP.Pretty BaseType where
   pretty BaseType = PP.text "*"
 
-sig :: Problem -> Either String (Signature Symbol BaseType)
-sig = signature BaseType . P.allRules . P.rules
+signature :: Problem -> Either String (Signature Symbol)
+signature = (fst <$>) . inferTypes . P.allRules . P.rules
   
