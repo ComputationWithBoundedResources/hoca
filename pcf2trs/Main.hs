@@ -18,9 +18,6 @@ putDocLn e = putStrLn (render e "")
 putErrLn :: String -> IO ()
 putErrLn = hPutStrLn stderr
 
-normalise :: (PCF.Exp l -> Maybe (PCF.Exp l)) -> PCF.Exp l -> PCF.Exp l
-normalise rel = fromJust . PCF.nf rel
-
 expressionFromArgs :: FilePath -> [String] -> IO (PCF.Exp String)
 expressionFromArgs fname args = do
   r <- mk <$> readFile fname
@@ -29,7 +26,7 @@ expressionFromArgs fname args = do
    Right pcf -> return pcf
   where
     mk s = do
-      fun <- normalise PCF.beta <$> fromString fname s
+      fun <- fromString fname s
       foldM (\ p (i,si) -> PCF.App p <$> fromString ("argument " ++ show i) si)
         fun (zip [(1::Int)..] args)
     fromString src str = FP.expFromString src str >>= FP.toPCF
@@ -65,7 +62,7 @@ main = do
    "--help" : _ -> putStrLn helpMsg
    "--eval" : fname : as -> do
      e <- expressionFromArgs fname as
-     putDocLn (pretty (normalise PCF.cbv e))
+     putDocLn (pretty (fromJust (PCF.nf PCF.cbv e)))
    "--pcf" : fname : as -> do
      e <- expressionFromArgs fname as
      putDocLn (pretty e)

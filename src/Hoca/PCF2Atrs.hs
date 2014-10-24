@@ -198,12 +198,12 @@ freeVars (PCF.Cond _ e cs) = do
   foldM (\ vs (_,eg) -> Set.union vs <$> freeVars eg) vse cs
 freeVars (PCF.Fix f) = freeVars f
 
-
 toTRS :: PCF.Exp String -> [Rule Symbol Var]
-toTRS = snd . eval . mainM . label
+toTRS = snd . eval . mainM . betaNormalise . label
   where
+    betaNormalise = fromJust . PCF.nf PCF.beta
     cvars = sort . Set.toList
-
+    
     mainM (PCF.Abs _ f) = void (withVar (mainM f))
     mainM e = do
       t <- toTRSM e
