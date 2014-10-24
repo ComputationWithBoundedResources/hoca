@@ -90,17 +90,21 @@ tpe (T.Fun (_,tp) _) = tp
 
 newtype RS f v = RS [R.Rule f v]
 
+rsInsertInto :: (Ord v, Eq f) => [R.Rule f v] -> [R.Rule f v] -> [R.Rule f v]
+rs1 `rsInsertInto` rs2 = foldl insert rs2 rs1
+  where
+    insert [] rl2 = [rl2]
+    insert (rl1:rs) rl2
+      | rl1 `R.isInstanceOf` rl2 = insert rs rl2
+      | rl2 `R.isInstanceOf` rl1 = rl1:rs
+      | otherwise = rl1 : insert rs rl2
+
 instance (Eq f, Ord v) => Monoid (RS f v) where
   mempty = RS []
-  mappend (RS rs1) (RS rs2) = RS $ dropInstances (rs1 ++ rs2)
-    where
-
-dropInstances :: (Ord v, Eq f) => [R.Rule f v] -> [R.Rule f v]
-dropInstances rs = nub (filter (\ r -> not (any (`isProperInstanceOf` r) rs)) rs)
- where r1 `isProperInstanceOf` r2 = r1 /= r2 && r1 `R.isInstanceOf` r2
+  mappend (RS rs1) (RS rs2) = RS (rs1 `rsInsertInto` rs2)
 
 rsFromList :: (Ord v, Eq f) => [R.Rule f v] -> RS f v 
-rsFromList = RS . dropInstances
+rsFromList rs = RS (rs `rsInsertInto` [])
 
 rsToList :: RS f v -> [R.Rule f v]
 rsToList (RS l) = l
@@ -108,31 +112,32 @@ rsToList (RS l) = l
 narrowedUsableRules :: (PP.Pretty f, Ord v1, Eq f) => Int -> [TypedTerm f v] -> [TypedRule f v1] -> Maybe [TypedRule f Int]
 narrowedUsableRules numVisits tts trules = maybeFromErr (rsToList . snd <$> evalRWST (runVarSupplyT runM) () (0,[]))
   where
+    maybeFromErr = either (const Nothing) Just
+
     runM = do
       rts <- mapM renameTerm tts
       rrules <- mapM renameRule trules
       narrowedUsableRulesM rrules rts 
 
-    maybeFromErr = either (const Nothing) Just
-
-    abort = lift (lift (throwError ()))
-    
     narrowedUsableRulesM rules = mapM_ evalM
-      where 
+      where
+        abort = lift (lift (throwError ()))
+        
         visited t = do
           (nv,seen) <- lift get
           when (nv > numVisits) abort
           if any (T.isInstanceOf t) seen
-            then lift (put (nv+1,seen)) >> return True
-            else lift (put (nv+1,t : seen)) >> return False
+            then lift (put (nv+1, seen)) >> return True
+            else lift (put (nv+1, t : seen)) >> return False
+                 
 
+        
         evalM (T.Var (_,tp)) = (: []) <$> freshTVar tp
         evalM t@(T.Fun f ts) = do
           seen <- visited t
           case tpe t of
            tp@(BT {}) | seen -> (: []) <$> freshTVar tp
            _ -> do
-             tracePretty (unType t) (return ())
              ss <- map (T.Fun f) <$> prod <$> mapM evalM ts
              foldM (\ us si -> (++ us) <$> stepM si) [] ss
          
@@ -140,7 +145,7 @@ narrowedUsableRules numVisits tts trules = maybeFromErr (rsToList . snd <$> eval
                    [] -> return [t]
                    urs -> do
                      lift (tell (rsFromList urs))
-                     -- tracePretty (unTypeRules urs) (return ())
+                     tracePretty (unTypeRules urs) (return ())
                      concat <$> mapM evalM (RS.rhss urs)
           where
             step rl = appMgu rl <$> unify t (R.lhs rl)

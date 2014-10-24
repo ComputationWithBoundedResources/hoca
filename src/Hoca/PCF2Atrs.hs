@@ -12,7 +12,7 @@ module Hoca.PCF2Atrs (
   , BaseType (..)
   ) where
 
-import           Control.Applicative ((<$>),(<*>),Alternative, empty, pure)
+import           Control.Applicative ((<$>),(<*>), Applicative, Alternative, empty, pure)
 import           Control.Monad.RWS
 import qualified Control.Monad.State.Lazy as State
 import           Data.Either (partitionEithers)
@@ -25,8 +25,6 @@ import qualified Data.Rewriting.Rules as RS
 import qualified Data.Rewriting.Term as T
 import qualified Data.Set as Set
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
-
-import           Control.Applicative (Applicative)
 import           Hoca.Narrowing
 import           Hoca.ATRS
 import           Hoca.PCF (Strategy(..))
@@ -139,7 +137,7 @@ label e = State.evalState (labelM e) []
     fresh l = do 
       seen <- State.get
       let
-        inc (LInt i :ls) = (LInt (i+1) :ls)
+        inc (LInt i :ls) = LInt (i+1) :ls
         inc vs = LInt 1:vs
         v = head (dropWhile (`elem` seen) (iterate inc l))
       State.put (v:seen)
@@ -341,17 +339,16 @@ exhaustive rel = try (rel >=> exhaustive rel)
 
 simplifyRules :: (Strategy m) => Int -> [Rule Symbol Var] -> m [Rule Symbol Var]
 simplifyRules nt =
-  try (narrowedUsableRules 1000)
-  -- >=>
-  -- exhaustive (narrowWith caseRule)
+  narrowedUsableRules 1000
+  -- >=> exhaustive (narrowWith caseRule)
   -- >=> exhaustive (narrowWith fixPointRule)
   -- >=> repeated nt (\rs -> narrowWith (nonRecRule rs) rs)
 
   where
     narrowWith sel = narrowRules sel >=> usableRules >=> neededRules
-    caseRule nr = all (\ n -> isCaseRule (narrowedWith n)) (narrowings nr)
-    fixPointRule nr = all (\ n -> isFixApplication (narrowedWith n)) (narrowings nr)
-    nonRecRule rs nr = all (\ n -> isNonRec (narrowedWith n)) (narrowings nr)
+    caseRule nr = all (isCaseRule . narrowedWith) (narrowings nr)
+    fixPointRule nr = all (isFixApplication . narrowedWith) (narrowings nr)
+    nonRecRule rs nr = all (isNonRec . narrowedWith) (narrowings nr)
       where isNonRec rl = not (any (R.isVariantOf rl) (UR.usableRules [R.rhs rl] rs)) -- FIX type of
     -- betaRule nr = all (\ n -> isLambdaApplication (narrowedWith n)) (narrowings nr)            
     -- simpleRule nr = all (\ n -> isSimpleRule (narrowedWith n)) (narrowings nr)
@@ -362,16 +359,15 @@ simplifyRules nt =
     -- nonRec rs nr =
     --   not ((any (R.isVariantOf (narrowedRule nr))) (UR.usableRules [ R.rhs (narrowedWith n) | n <- narrowings nr ] rs)  )
       
-simplify :: Maybe Int -> Problem -> Problem
-simplify repeats prob =
-  prob { P.rules = P.RulesPair { P.strictRules = simplifiedTrs
-                               , P.weakRules = []}
-       , P.variables = nub (RS.vars simplifiedTrs)
-       , P.symbols = nub (RS.funs simplifiedTrs) }
+simplify :: Maybe Int -> Problem -> Maybe Problem
+simplify repeats prob = do
+  rs <- simplifyRules numTimes (P.allRules (P.rules prob))
+  return prob { P.rules = P.RulesPair { P.strictRules = rs
+                                      , P.weakRules = []}
+              , P.variables = nub (RS.vars rs)
+              , P.symbols = nub (RS.funs rs) }
   where
     numTimes = maybe 15 (max 0) repeats
-    simplifiedTrs = fromMaybe trs (simplifyRules numTimes trs)
-      where trs = P.allRules (P.rules prob)
 
 
 data BaseType = BaseType deriving (Eq, Ord, Show)

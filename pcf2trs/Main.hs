@@ -34,20 +34,29 @@ expressionFromArgs fname args = do
         fun (zip [(1::Int)..] args)
     fromString src str = FP.expFromString src str >>= FP.toPCF
 
+
+transform :: Bool -> Maybe Int -> FilePath -> [String] -> IO ()
+transform doSimp nt fname as = do
+  e <- expressionFromArgs fname as  
+  case probFromExpression e of
+   Just prob -> putDocLn (prettyProblem (withSignature prob))
+   Nothing -> putErrLn "the program cannot be transformed"
+  where
+    probFromExpression e
+      | doSimp = simplify nt (toProblem e)
+      | otherwise = Just (toProblem e)
+                    
+    withSignature prob = prob { P.comment = Just (displayS (renderSmart 1.0 75 cmt) "") }
+      where cmt = 
+              case signature prob of
+               Left err -> text "The system is not typeable:" <+> text err
+               Right s -> text "Types are as follows:"
+                          </> linebreak
+                          </> indent 5 (align (pretty s))
+                          </> linebreak
+
 helpMsg :: String
 helpMsg = "pcf2trs [--eval|--pcf|--no-simp|--num-simps <nat>] <file> [args]*"
-
-withSignature :: Problem -> Problem
-withSignature prob = prob { P.comment = Just (displayS (renderSmart 1.0 75 cmt) "") }
-  where
-    cmt = 
-      case signature prob of
-       Left err -> text "The system is not typeable:" <+> text err
-       Right s ->
-         text "Types are as follows:"
-         </> linebreak
-         </> indent 5 (align (pretty s))
-         </> linebreak
 
 main :: IO ()
 main = do
@@ -60,14 +69,11 @@ main = do
    "--pcf" : fname : as -> do
      e <- expressionFromArgs fname as
      putDocLn (pretty e)
-   "--no-simp" : fname : as -> do
-     e <- expressionFromArgs fname as
-     putDocLn (prettyProblem (withSignature (toProblem e)))
-   "--num-simps" : i : fname : as -> do
-     e <- expressionFromArgs fname as
-     putDocLn (prettyProblem (withSignature (simplify (Just (read i)) (toProblem e))))
-   fname : as -> do
-     e <- expressionFromArgs fname as
-     putDocLn (prettyProblem (withSignature (simplify Nothing (toProblem e))))
+   "--no-simp" : fname : as -> 
+     transform False Nothing fname as
+   "--num-simps" : i : fname : as -> 
+     transform True (Just (read i)) fname as
+   fname : as ->
+     transform True Nothing fname as     
    _ -> error helpMsg
 
