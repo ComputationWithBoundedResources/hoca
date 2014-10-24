@@ -11,7 +11,7 @@ import qualified Data.Rewriting.Rules as RS
 import qualified Data.Rewriting.Term as T
 import qualified Data.Rewriting.Substitution as S
 import qualified Data.Rewriting.Substitution.Type as ST
-import           Data.List (partition, nub)
+import           Data.List (partition)
 import qualified Data.Map as Map
 import Control.Monad.RWS
 import Control.Monad.Error
@@ -21,7 +21,7 @@ import Data.Rewriting.Substitution.Unify (unify)
 import Data.Maybe (isJust, mapMaybe, fromJust)
 import  Hoca.ATRS
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
-import Debug.Trace (trace)
+-- import Debug.Trace (trace)
 
 fresh :: MonadState Int m => m Int
 fresh = State.modify succ >> get
@@ -51,8 +51,6 @@ cap rs t = runVarSupply (capM t)
       s <- T.Fun f <$> mapM tcapM ts
       if any (isUnifiableWith s) lhss then freshVar else return s
 
-
-
 usableRules :: (Eq f, Ord v1, Ord v2) => [T.Term f v1] -> [R.Rule f v2] -> [R.Rule f v2]
 usableRules ts rules = walk (caps ts) [] rules
   where
@@ -63,31 +61,7 @@ usableRules ts rules = walk (caps ts) [] rules
     caps ss = [ cap rules s | si <- ss, s@T.Fun{} <- T.subterms si ]    
 
 
-tracePretty :: PP.Pretty e => e -> a -> a
-tracePretty e a = trace (render (PP.pretty e) "") a
-  where render = PP.displayS . PP.renderSmart 1.0 80
-
-freshTVar :: MonadState Int m => Type -> m (TypedTerm f Int)
-freshTVar tp = do {v <- fresh; return (T.Var (v,tp)) }
-
-renameTerm :: (MonadState Int m, Functor m) => TypedTerm f v -> m (TypedTerm f Int)
-renameTerm (T.Var (_,tp)) = freshTVar tp
-renameTerm (T.Fun f ts) = T.Fun f <$> mapM renameTerm ts
-
-renameRule :: (MonadState Int m, Applicative m, Ord v) => TypedRule f v -> m (TypedRule f Int)
-renameRule rl = do
-  subst <- ST.fromMap <$> foldM (\ m v@(_,tp) -> Map.insert v <$> freshTVar tp <*> return m) Map.empty (R.vars rl)
-  return (R.map (fromJust . S.gApply subst) rl) 
-
-prod :: [[a]] -> [[a]]
-prod [] = [[]]
-prod (as:ass) = [ ai:asi | ai <- as, asi <- prod ass ]
-
-tpe :: TypedTerm f v -> Type
-tpe (T.Var (_,tp)) = tp
-tpe (T.Fun (_,tp) _) = tp
-
-
+-- rulesets -- avoid redundant rules, i.e. those that are instances of other rules
 newtype RS f v = RS [R.Rule f v]
 
 rsInsertInto :: (Ord v, Eq f) => [R.Rule f v] -> [R.Rule f v] -> [R.Rule f v]
@@ -108,34 +82,52 @@ rsFromList rs = RS (rs `rsInsertInto` [])
 
 rsToList :: RS f v -> [R.Rule f v]
 rsToList (RS l) = l
-  
+
+-- tracePretty :: PP.Pretty e => e -> a -> a
+-- tracePretty e a = trace (render (PP.pretty e) "") a
+--   where render = PP.displayS . PP.renderSmart 1.0 80
+
+
 narrowedUsableRules :: (PP.Pretty f, Ord v1, Eq f) => Int -> [TypedTerm f v] -> [TypedRule f v1] -> Maybe [TypedRule f Int]
 narrowedUsableRules numVisits tts trules = maybeFromErr (rsToList . snd <$> evalRWST (runVarSupplyT runM) () (0,[]))
   where
     maybeFromErr = either (const Nothing) Just
 
     runM = do
-      rts <- mapM renameTerm tts
-      rrules <- mapM renameRule trules
+      rts <- mapM renameTermM tts
+      rrules <- mapM renameRuleM trules
       narrowedUsableRulesM rrules rts 
+
+    freshTVar tp = do {v <- fresh; return (T.Var (v,tp)) }
+
+    renameTermM (T.Var (_,tp)) = freshTVar tp
+    renameTermM (T.Fun f ts) = T.Fun f <$> mapM renameTermM ts
+
+    renameRuleM rl = do
+      subst <- ST.fromMap <$> foldM (\ m v@(_,tp) -> Map.insert v <$> freshTVar tp <*> return m)
+                               Map.empty (R.vars rl)
+      return (R.map (fromJust . S.gApply subst) rl) 
+
 
     narrowedUsableRulesM rules = mapM_ evalM
       where
-        abort = lift (lift (throwError ()))
+        prod :: [[a]] -> [[a]]
+        prod [] = [[]]
+        prod (as:ass) = [ ai:asi | ai <- as, asi <- prod ass ]
         
+        abort = lift (lift (throwError ()))
+
         visited t = do
           (nv,seen) <- lift get
           when (nv > numVisits) abort
           if any (T.isInstanceOf t) seen
             then lift (put (nv+1, seen)) >> return True
-            else lift (put (nv+1, t : seen)) >> return False
-                 
-
+            else lift (put (nv+1, t : seen)) >> return False                 
         
         evalM (T.Var (_,tp)) = (: []) <$> freshTVar tp
         evalM t@(T.Fun f ts) = do
           seen <- visited t
-          case tpe t of
+          case getType t of
            tp@(BT {}) | seen -> (: []) <$> freshTVar tp
            _ -> do
              ss <- map (T.Fun f) <$> prod <$> mapM evalM ts
@@ -145,7 +137,7 @@ narrowedUsableRules numVisits tts trules = maybeFromErr (rsToList . snd <$> eval
                    [] -> return [t]
                    urs -> do
                      lift (tell (rsFromList urs))
-                     tracePretty (unTypeRules urs) (return ())
+                     -- tracePretty (unTypeRules urs) (return ())
                      concat <$> mapM evalM (RS.rhss urs)
           where
             step rl = appMgu rl <$> unify t (R.lhs rl)

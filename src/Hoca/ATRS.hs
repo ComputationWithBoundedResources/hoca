@@ -117,6 +117,10 @@ typeOf env sig t =
       _ -> Nothing
    _ -> Nothing       
 
+getType :: TypedTerm f v -> Type
+getType (T.Var (_,tp)) = tp
+getType (T.Fun (_,tp) _) = tp
+
 withType :: (Ord v, Ord f) => Env v -> Signature f -> Term f v -> Maybe (TypedTerm f v)
 withType env sig t@(T.Var v) = do
   tp <- typeOf env sig t
