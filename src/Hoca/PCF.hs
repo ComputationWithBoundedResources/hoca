@@ -160,7 +160,8 @@ subst j e (Fix f) = Fix (subst j e f)
 -- * steps
 
 class (Alternative m, Monad m) => Strategy m where
-  (<||>) :: m a -> m a -> m a -- | left biased choice
+  -- | left biased choice
+  (<||>) :: m a -> m a -> m a 
 
 instance Strategy Maybe where
   Nothing <||> a = a
@@ -228,7 +229,6 @@ ctxtClosure stp e = ctxt e <|> stp e
 nf :: Strategy m => (Exp l -> m (Exp l)) -> Exp l -> m (Exp l)
 nf rel e = (rel e >>= nf rel) <||> return e
 
--- * call-by-value
 cbvCtxtClosure :: Strategy m => (Exp l -> m (Exp l)) -> Exp l -> m (Exp l)
 cbvCtxtClosure stp e = ctxt e <||> stp e
   where       

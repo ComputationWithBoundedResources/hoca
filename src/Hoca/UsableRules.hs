@@ -21,7 +21,7 @@ import Data.Rewriting.Substitution.Unify (unify)
 import Data.Maybe (isJust, mapMaybe, fromJust)
 import  Hoca.ATRS
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
--- import Debug.Trace (trace)
+import Debug.Trace (trace)
 
 fresh :: MonadState Int m => m Int
 fresh = State.modify succ >> get
@@ -61,31 +61,47 @@ usableRules ts rules = walk (caps ts) [] rules
     caps ss = [ cap rules s | si <- ss, s@T.Fun{} <- T.subterms si ]    
 
 
--- rulesets -- avoid redundant rules, i.e. those that are instances of other rules
-newtype RS f v = RS [R.Rule f v]
 
-rsInsertInto :: (Ord v, Eq f) => [R.Rule f v] -> [R.Rule f v] -> [R.Rule f v]
-rs1 `rsInsertInto` rs2 = foldl insert rs2 rs1
-  where
-    insert [] rl2 = [rl2]
-    insert (rl1:rs) rl2
-      | rl1 `R.isInstanceOf` rl2 = insert rs rl2
-      | rl2 `R.isInstanceOf` rl1 = rl1:rs
-      | otherwise = rl1 : insert rs rl2
+
+insertInto :: (t -> t -> Bool) -> [t] -> t -> [t]
+insertInto _ [] b = [b]
+insertInto isInstanceOf (a:as) b
+  | a `isInstanceOf` b = insertInto isInstanceOf as b
+  | b `isInstanceOf` a = a:as
+  | otherwise = a : insertInto isInstanceOf as b
+
+-- avoid redundant rules, i.e. those that are instances of other rules
+newtype RS f v = RS [R.Rule f v]
 
 instance (Eq f, Ord v) => Monoid (RS f v) where
   mempty = RS []
-  mappend (RS rs1) (RS rs2) = RS (rs1 `rsInsertInto` rs2)
+  mappend (RS rs1) (RS rs2) = RS (foldl (insertInto R.isInstanceOf) rs1 rs2)
 
 rsFromList :: (Ord v, Eq f) => [R.Rule f v] -> RS f v 
-rsFromList rs = RS (rs `rsInsertInto` [])
+rsFromList rs = RS (foldl (insertInto R.isInstanceOf) [] rs)
 
 rsToList :: RS f v -> [R.Rule f v]
 rsToList (RS l) = l
 
--- tracePretty :: PP.Pretty e => e -> a -> a
--- tracePretty e a = trace (render (PP.pretty e) "") a
---   where render = PP.displayS . PP.renderSmart 1.0 80
+-- termset, implicitly closed under instances
+
+newtype TS f v = TS [T.Term f v]
+
+instance (Eq f, Ord v) => Monoid (TS f v) where
+  mempty = TS []
+  mappend (TS rs1) (TS rs2) = TS (foldl (insertInto T.isInstanceOf) rs1 rs2)
+
+tsFromList :: (Ord v, Eq f) => [T.Term f v] -> TS f v 
+tsFromList ts = TS (foldl (insertInto T.isInstanceOf) [] ts)
+
+tsToList :: TS f v -> [T.Term f v]
+tsToList (TS l) = l
+
+-- ts1 `tsInsertInto` ts2 = foldl insert 
+
+tracePretty :: PP.Pretty e => e -> a -> a
+tracePretty e = trace (render (PP.pretty e) "")
+  where render = PP.displayS . PP.renderSmart 1.0 80
 
 
 narrowedUsableRules :: (PP.Pretty f, Ord v1, Eq f) => Int -> [TypedTerm f v] -> [TypedRule f v1] -> Maybe [TypedRule f Int]
@@ -104,41 +120,60 @@ narrowedUsableRules numVisits tts trules = maybeFromErr (rsToList . snd <$> eval
     renameTermM (T.Fun f ts) = T.Fun f <$> mapM renameTermM ts
 
     renameRuleM rl = do
-      subst <- ST.fromMap <$> foldM (\ m v@(_,tp) -> Map.insert v <$> freshTVar tp <*> return m)
-                               Map.empty (R.vars rl)
+      subst <- ST.fromMap <$>
+               foldM (\ m v@(_,tp) -> Map.insert v <$> freshTVar tp <*> return m)
+               Map.empty (R.vars rl)
       return (R.map (fromJust . S.gApply subst) rl) 
 
+    abort = lift (lift (throwError ()))
+
+    logStderr t rs =
+      tracePretty (PP.pretty (unType t)
+                   PP.<+> PP.text "::"
+                   PP.<+> (PP.pretty (getType t))
+                   PP.<$> PP.indent 2 (PP.text "~>"
+                                       PP.<+> PP.semiBraces (map (PP.pretty . unType) (tsToList rs))
+                                       PP.<> PP.line))
+         (return ())
+
+    record urs = lift (tell (rsFromList urs))
+
+    visited t = do
+      (nv,seen) <- lift get
+      when (nv > numVisits) abort
+      if any (T.isInstanceOf t) seen
+        then lift (put (nv+1, seen)) >> return True
+        else lift (put (nv+1, t : seen)) >> return False                 
 
     narrowedUsableRulesM rules = mapM_ evalM
       where
         prod :: [[a]] -> [[a]]
         prod [] = [[]]
         prod (as:ass) = [ ai:asi | ai <- as, asi <- prod ass ]
-        
-        abort = lift (lift (throwError ()))
 
-        visited t = do
-          (nv,seen) <- lift get
-          when (nv > numVisits) abort
-          if any (T.isInstanceOf t) seen
-            then lift (put (nv+1, seen)) >> return True
-            else lift (put (nv+1, t : seen)) >> return False                 
-        
-        evalM (T.Var (_,tp)) = (: []) <$> freshTVar tp
+        recursive t = any (t `T.isInstanceOf`) [R.lhs r | r <- rules, r `elem` usableRules [R.rhs r] rules]
+
+        ofBaseType t = case getType t of {BT{} -> True; _ -> False}
+
+        tsFromTerm t = tsFromList [t]
+
+        evalM (T.Var (_,tp)) = tsFromTerm <$> freshTVar tp
         evalM t@(T.Fun f ts) = do
           seen <- visited t
-          case getType t of
-           tp@(BT {}) | seen -> (: []) <$> freshTVar tp
-           _ -> do
-             ss <- map (T.Fun f) <$> prod <$> mapM evalM ts
-             foldM (\ us si -> (++ us) <$> stepM si) [] ss
+          if seen && (ofBaseType t || recursive t)
+           then tsFromTerm <$> freshTVar (getType t)
+           else do
+             ss <- map (T.Fun f) <$> (prod . map tsToList) <$> mapM evalM ts
+             foldM (\ us si -> (`mappend` us) <$> stepM si) (tsFromList []) ss
          
         stepM t = case mapMaybe step rules of
-                   [] -> return [t]
+                   [] -> return (tsFromList [t])
                    urs -> do
-                     lift (tell (rsFromList urs))
-                     -- tracePretty (unTypeRules urs) (return ())
-                     concat <$> mapM evalM (RS.rhss urs)
+                     record urs
+                     -- logStderr (unTypeRules urs)
+                     rs <- mconcat <$> mapM evalM (RS.rhss urs)
+                     logStderr t rs
+                     return rs
           where
             step rl = appMgu rl <$> unify t (R.lhs rl)
             appMgu rl mgu = R.map (S.apply mgu) rl

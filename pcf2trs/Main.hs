@@ -3,13 +3,13 @@ import           Control.Applicative ((<$>))
 import           Control.Monad (foldM)
 import qualified Hoca.FP as FP
 import qualified Hoca.PCF as PCF
-import           Hoca.PCF2Atrs (simplify, toProblem, prettyProblem, signature, Problem)
+import           Hoca.PCF2Atrs (simplify, toProblem, prettyProblem, signature)
 import           System.Environment (getArgs)
-import           System.Exit (exitFailure)
 import           System.IO (hPutStrLn, stderr)
 import           Text.PrettyPrint.ANSI.Leijen (Doc, renderSmart, Pretty (..), displayS, (</>), (<+>), align, linebreak, indent, text)
 import Data.Maybe (fromJust)
 import qualified Data.Rewriting.Problem as P
+import System.Exit (exitSuccess,exitFailure)
 
 putDocLn :: Doc -> IO ()
 putDocLn e = putStrLn (render e "")
@@ -37,7 +37,9 @@ transform doSimp nt fname as = do
   e <- expressionFromArgs fname as  
   case probFromExpression e of
    Just prob -> putDocLn (prettyProblem (withSignature prob))
-   Nothing -> putErrLn "the program cannot be transformed"
+   Nothing -> do
+     putErrLn "the program cannot be transformed"
+     exitFailure
   where
     probFromExpression e
       | doSimp = simplify nt (toProblem e)
@@ -73,4 +75,5 @@ main = do
    fname : as ->
      transform True Nothing fname as     
    _ -> error helpMsg
+  exitSuccess
 

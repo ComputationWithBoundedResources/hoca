@@ -1,6 +1,35 @@
 -- | 
 
-module Hoca.ATRS where
+module Hoca.ATRS
+       (
+         -- * Types and Constructors
+         ASym (..)
+       , AView (..)
+       , Term
+       , Rule
+       , atermM
+         , aterm
+         , app
+         , fun
+         , var
+         -- * operations
+         , headSymbol
+         , funsDL
+         -- * Typing
+         , Type (..)
+         , TypeDecl
+         , Signature
+         , Env
+         , inferTypes
+         -- ** Typed Terms
+         , TypedTerm
+         , TypedRule
+         , withType
+         , unType
+         , unTypeRules
+         , getType
+       )
+where
 
 import qualified Data.Rewriting.Term as T
 import qualified Data.Rewriting.Rule as R

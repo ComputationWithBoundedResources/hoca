@@ -17,7 +17,7 @@ import           Control.Monad.RWS
 import qualified Control.Monad.State.Lazy as State
 import           Data.Either (partitionEithers)
 import           Data.List (sort, nub)
-import           Data.Maybe (listToMaybe, fromJust, fromMaybe)
+import           Data.Maybe (listToMaybe, fromJust)
 import qualified Data.MultiSet as MS
 import qualified Data.Rewriting.Problem as P
 import qualified Data.Rewriting.Rule as R
@@ -116,10 +116,10 @@ label e = State.evalState (labelM e) []
     labelM (PCF.Con g es) = PCF.Con g <$> mapM labelM es
     labelM PCF.Bot = return PCF.Bot
     labelM (PCF.Abs Nothing e1) = PCF.Abs Nothing <$> labelM e1
-    labelM (PCF.Abs (Just l) e1) = PCF.Abs <$> (Just <$> fresh [LString l]) <*> labelM e1
+    labelM (PCF.Abs (Just l) e1) = PCF.Abs <$> (Just <$> fresh [LString "Lam", LString l]) <*> labelM e1
     labelM (PCF.App e1 e2) = PCF.App <$> labelM e1 <*> labelM e2
     labelM (PCF.Cond _ e1 cs) =
-      PCF.Cond <$> (Just <$> fromLast (++ [LString "cond"]))
+      PCF.Cond <$> (Just <$> fromLast ([LString "cond"] ++))
                <*> labelM e1
                <*> mapM (\ (g,eg) -> (,) g <$> labelM eg) cs
     labelM (PCF.Fix (PCF.Abs (Just l) e1)) = do
@@ -142,6 +142,7 @@ label e = State.evalState (labelM e) []
         v = head (dropWhile (`elem` seen) (iterate inc l))
       State.put (v:seen)
       return v
+      
     fromLast :: (Label -> Label) -> State.State [Label] Label
     fromLast f = do
       seen <- State.get
@@ -340,9 +341,9 @@ exhaustive rel = try (rel >=> exhaustive rel)
 simplifyRules :: (Strategy m) => Int -> [Rule Symbol Var] -> m [Rule Symbol Var]
 simplifyRules nt =
   narrowedUsableRules 1000
-  -- >=> exhaustive (narrowWith caseRule)
-  -- >=> exhaustive (narrowWith fixPointRule)
-  -- >=> repeated nt (\rs -> narrowWith (nonRecRule rs) rs)
+  >=> exhaustive (narrowWith caseRule)
+  >=> exhaustive (narrowWith fixPointRule)
+  >=> repeated nt (\rs -> narrowWith (nonRecRule rs) rs)
 
   where
     narrowWith sel = narrowRules sel >=> usableRules >=> neededRules
