@@ -162,8 +162,11 @@ withType env sig t@(T.Fun f ts) = do
 unType :: TypedTerm f v -> Term f v
 unType = T.map fst fst
 
+mapRule :: (R.Term f1 v1 -> R.Term f v) -> R.Rule f1 v1 -> R.Rule f v
+mapRule f r = R.Rule{ R.lhs = f (R.lhs r), R.rhs = f (R.rhs r) }
+
 unTypeRules :: [TypedRule f v] -> [Rule f v]
-unTypeRules = map (R.map unType)
+unTypeRules = map (mapRule unType)
 
 inferTypes :: (Ord v, Ord f, Eq v) => [Rule f v] -> Either String (Signature f, [(TypedRule f v,Env v)])
 inferTypes rs = do
@@ -172,7 +175,7 @@ inferTypes rs = do
   return $ flip State.evalState (Map.empty, 0::Int) $ do
         sig <- mkSignature assign
         envs <- mapM (mkEnv assign) es
-        return (sig,[ (R.map (fromJust . withType env sig) rl, env) | (rl,env) <- zip rs envs ])
+        return (sig,[ (mapRule (fromJust . withType env sig) rl, env) | (rl,env) <- zip rs envs ])
   where
     freshM = modify succ >> (TFresh <$> get)
     freshVar = T.Var <$> freshM
@@ -241,5 +244,5 @@ inferTypes rs = do
                 return (Map.insert f (TypeDecl ins out) sig))       
       Map.empty fs
       where 
-        fs = nub [ (f,ar) | (Sym f,ar) <- RS.funs (map (R.map T.withArity) rs)]
+        fs = nub [ (f,ar) | (Sym f,ar) <- RS.funs (map (mapRule T.withArity) rs)]
 
