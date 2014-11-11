@@ -29,6 +29,8 @@ library
     hs-source-dirs:
         src
     exposed-modules:
+        Hoca.Utils
+        Hoca.DFA
         Hoca.PCF
         Hoca.FP
         Hoca.ATRS

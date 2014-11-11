@@ -77,3 +77,7 @@ main = do
    _ -> error helpMsg
   exitSuccess
 
+
+rulesFromFile fname = do
+  e <- expressionFromArgs fname []
+  return (P.allRules (P.rules (toProblem e)))

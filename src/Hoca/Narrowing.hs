@@ -13,6 +13,7 @@ import qualified Data.Rewriting.Substitution as S
 import           Data.Rewriting.Substitution.Unify (unify)
 import qualified Data.Rewriting.Term as T
 import Control.Monad (guard)
+import Hoca.Utils
 import Data.Maybe (catMaybes, mapMaybe)
 
 data NarrowedRule f v =
@@ -30,16 +31,6 @@ data Narrowing f v =
     , narrowing :: R.Rule f v
     } deriving (Show)
 
--- | @(C,s) `elem` contexts t@ if and only if @t = C[s]@.
-contexts :: T.Term f v -> [(C.Ctxt f v, T.Term f v)]
-contexts = walk id
-  where
-    walk c s@(T.Var _) = [(c C.Hole,s)]
-    walk c s@(T.Fun f ss) =
-      (c C.Hole, s) : concatMap (\ (ls,si,rs) -> walk (\ ctxt -> c (C.Ctxt f ls ctxt rs)) si) (parts [] ss)
-
-    parts _ [] = []
-    parts ls (t:rs) = (ls,t,rs) : parts (ls ++ [t]) rs
 
 narrow :: (Eq f, Ord v1, Ord v2) => R.Rule f v1 -> [R.Rule f v2] -> [NarrowedRule f (Either v1 v2)]
 narrow rl rs = catMaybes [ narrowAt ci ri | (ci,ri) <- contexts rhs, T.isFun ri ]

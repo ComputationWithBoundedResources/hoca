@@ -8,26 +8,28 @@ module Hoca.ATRS
        , Term
        , Rule
        , atermM
-         , aterm
-         , app
-         , fun
-         , var
+       , aterm
+       , app
+       , fun
+       , var
          -- * operations
-         , headSymbol
-         , funsDL
+       , headSymbol
+       , headVars
+       , funsDL
          -- * Typing
-         , Type (..)
-         , TypeDecl
-         , Signature
-         , Env
-         , inferTypes
+       , Type (..)
+       , TypeDecl (..)
+       , Signature
+       , Env
+       , inferTypes
          -- ** Typed Terms
-         , TypedTerm
-         , TypedRule
-         , withType
-         , unType
-         , unTypeRules
-         , getType
+       , TypedTerm
+       , TypedRule
+       , withType
+       , unType
+       , unTypeRule
+       , unTypeRules
+       , getType
        )
 where
 
@@ -82,11 +84,15 @@ headSymbol (atermM -> Just (Fun f _)) = Just f
 headSymbol (atermM -> Just (t1 :@ _)) = headSymbol t1
 headSymbol _ = Nothing
 
+headVars :: Term f v -> [v]
+headVars (atermM -> Just (T.Var v :@ t2)) = v : headVars t2
+headVars (T.Var _) = []
+headVars (T.Fun _ ts) = concatMap headVars ts
+
 funsDL :: Term f v -> [f] -> [f]
 funsDL t l = [f | (Sym f) <- T.funsDL t (map Sym l)]
 
 -- typing
-
 
 data Type = Type :~> Type | BT Int deriving (Eq, Ord, Show)
 
@@ -165,8 +171,11 @@ unType = T.map fst fst
 mapRule :: (R.Term f1 v1 -> R.Term f v) -> R.Rule f1 v1 -> R.Rule f v
 mapRule f r = R.Rule{ R.lhs = f (R.lhs r), R.rhs = f (R.rhs r) }
 
+unTypeRule :: TypedRule f v -> Rule f v
+unTypeRule  = mapRule unType
+
 unTypeRules :: [TypedRule f v] -> [Rule f v]
-unTypeRules = map (mapRule unType)
+unTypeRules = map unTypeRule
 
 inferTypes :: (Ord v, Ord f, Eq v) => [Rule f v] -> Either String (Signature f, [(TypedRule f v,Env v)])
 inferTypes rs = do
@@ -216,10 +225,9 @@ inferTypes rs = do
       case Map.lookup v env of
        Nothing ->
          case Map.lookup v assign of
-          mt | mt == Nothing
-             || mt == Just (T.Var v) -> do
-            State.put (Map.insert v (BT fresh) env, fresh+1)
-            return (BT fresh)
+          mt | mt == Nothing || mt == Just (T.Var v) -> do
+                 State.put (Map.insert v (BT fresh) env, fresh+1)
+                 return (BT fresh)
           mt -> do
             tp <- toTypeM assign (fromJust mt)
             State.modify (\ (e, f) -> (Map.insert v tp e, f))

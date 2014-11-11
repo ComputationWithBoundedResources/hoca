@@ -9,7 +9,7 @@ module Hoca.PCF2Atrs (
   , prettyProblem
   , simplify
   , signature
-  , BaseType (..)
+  , dfaInstantiate
   ) where
 
 import           Control.Applicative ((<$>),(<*>), Applicative, Alternative, empty, pure)
@@ -17,7 +17,8 @@ import           Control.Monad.RWS
 import qualified Control.Monad.State.Lazy as State
 import           Data.Either (partitionEithers)
 import           Data.List (sort, nub)
-import           Data.Maybe (listToMaybe, fromJust)
+import qualified Data.Map as Map
+import           Data.Maybe (listToMaybe, fromJust, isNothing)
 import qualified Data.MultiSet as MS
 import qualified Data.Rewriting.Problem as P
 import qualified Data.Rewriting.Rule as R
@@ -30,6 +31,9 @@ import           Hoca.ATRS
 import           Hoca.PCF (Strategy(..))
 import qualified Hoca.PCF as PCF
 import qualified Hoca.UsableRules as UR
+import qualified Hoca.DFA as DFA
+import Hoca.Utils (rsFromList, rsToList)
+import Data.Rewriting.Substitution (unify)
 
 data Lbl = LString String
          | LInt Int
@@ -97,6 +101,10 @@ prettyProblem = P.prettyWST PP.pretty ppVar
     where
       ppVar i = PP.text "x" PP.<> PP.int i
 
+signature :: Problem -> Either String (Signature Symbol)
+signature = (fst <$>) . inferTypes . P.allRules . P.rules
+  
+
 toProblem :: PCF.Exp String -> Problem
 toProblem e = P.Problem {
   P.startTerms = P.BasicTerms
@@ -116,25 +124,25 @@ label e = State.evalState (labelM e) []
     labelM (PCF.Con g es) = PCF.Con g <$> mapM labelM es
     labelM PCF.Bot = return PCF.Bot
     labelM (PCF.Abs Nothing e1) = PCF.Abs Nothing <$> labelM e1
-    labelM (PCF.Abs (Just l) e1) = PCF.Abs <$> (Just <$> fresh [LString "Lam", LString l]) <*> labelM e1
+    labelM (PCF.Abs (Just l) e1) = PCF.Abs <$> (Just <$> freshL [LString "Lam", LString l]) <*> labelM e1
     labelM (PCF.App e1 e2) = PCF.App <$> labelM e1 <*> labelM e2
     labelM (PCF.Cond _ e1 cs) =
       PCF.Cond <$> (Just <$> fromLast ([LString "cond"] ++))
                <*> labelM e1
                <*> mapM (\ (g,eg) -> (,) g <$> labelM eg) cs
     labelM (PCF.Fix (PCF.Abs (Just l) e1)) = do
-      lfx <- fresh [LString l]
+      lfx <- freshL [LString l]
       e1' <- labelBdyM lfx [LString "cl"] e1
       return (PCF.Fix (PCF.Abs (Just lfx) e1'))
     labelM (PCF.Fix e1) = PCF.Fix <$> labelM e1
     
     labelBdyM l1 l2 (PCF.Abs (Just l3) e1) = do
-      l' <- fresh (l2 ++ l1)
+      l' <- freshL (l2 ++ l1)
       PCF.Abs (Just l') <$> labelBdyM l' [LString l3] e1
     labelBdyM _ _ e1 = labelM e1        
       
-    fresh :: Label -> State.State [Label] Label
-    fresh l = do 
+    freshL :: Label -> State.State [Label] Label
+    freshL l = do 
       seen <- State.get
       let
         inc (LInt i :ls) = LInt (i+1) :ls
@@ -146,7 +154,7 @@ label e = State.evalState (labelM e) []
     fromLast :: (Label -> Label) -> State.State [Label] Label
     fromLast f = do
       seen <- State.get
-      fresh (f (head (seen ++ [])))
+      freshL (f (head (seen ++ [])))
 
 
 -- transformation ----------------------------------------------------------------------
@@ -244,16 +252,6 @@ toTRS = snd . eval . mainM . betaNormalise . label
         (v,tf) <- withVar (toTRSM (fromJust (PCF.beta (PCF.App f e))))
         tell [ app te v --> app tf v ]
       return te
-
-    -- MA: free variable not properly allocated
-    -- toTRSM (PCF.Fix (PCF.Abs l b)) = do
-    --   (v@(T.Var i),tb) <- withVar (toTRSM b)
-    --   vs <- Set.delete v <$> freeVars b
-    --   let
-    --     te = fun (Fix l b) (cvars vs)
-    --     subst = ST.fromMap (Map.singleton i te)
-    --   tell [ app te v --> app (S.apply subst tb) v ]
-    --   return te
       
     toTRSM (PCF.Fix _) =
       error "non-lambda abstraction given to fixpoint combinator"
@@ -261,33 +259,20 @@ toTRS = snd . eval . mainM . betaNormalise . label
     
 -- simplification ---------------------------------------------------------------------
 
-isCaseRule :: Rule Symbol v -> Bool
-isCaseRule (headSymbol . R.lhs -> Just Cond {}) = True
-isCaseRule _ = False
-
--- isLambdaApplication :: Rule Symbol v -> Bool
--- isLambdaApplication (headSymbol . R.lhs -> Just Lambda {}) = True
--- isLambdaApplication _ = False
-
-isFixApplication :: Rule Symbol v -> Bool
-isFixApplication (headSymbol . R.lhs -> Just Fix {}) = True
-isFixApplication _ = False
-      
-
 narrowRules :: (Alternative m, Ord v, Enum v) => (NarrowedRule (ASym Symbol) (Either v v) -> Bool) -> [Rule Symbol v] -> m [Rule Symbol v]
 narrowRules sensible rules = 
   case partitionEithers (map narrowRule rules) of
    (_,[]) -> empty
-   (untransformed,transformed) -> pure (untransformed ++ concat transformed)
+   (untransformed,transformed) -> pure (rsToList (foldl mappend (rsFromList untransformed) (map rsFromList transformed)))
   where
     sound nr =
-      all (variablePreserving . narrowedWith) (narrowings nr)
+      all (not . redexDeleting . narrowedWith) (narrowings nr)
       || argumentNormalised (narrowSubterm nr)
       where
-        -- redexDeleting rl = varsMS (R.lhs rl) `MS.isProperSubsetOf` varsMS (R.rhs rl)
-        --   where varsMS = MS.fromList . T.vars
-        variablePreserving rl = varsMS (R.lhs rl) == varsMS (R.rhs rl)
+        redexDeleting rl = varsMS (R.lhs rl) `MS.isProperSubsetOf` varsMS (R.rhs rl)
           where varsMS = MS.fromList . T.vars
+        -- variablePreserving rl = varsMS (R.lhs rl) == varsMS (R.rhs rl)
+        --   where varsMS = MS.fromList . T.vars
         argumentNormalised (T.Fun _ ts) = null (UR.usableRules ts rules)
         argumentNormalised _ = True
         
@@ -306,16 +291,6 @@ narrowRules sensible rules =
 usableRules :: (Alternative m, Ord v) => [Rule Symbol v] -> m [Rule Symbol v]
 usableRules rs = pure (UR.usableRules [ t | t@(T.Fun (Sym Main) _) <- RS.lhss rs] rs)
 
-narrowedUsableRules :: (Alternative m) => Int -> [Rule Symbol Var] -> m [Rule Symbol Var]
-narrowedUsableRules maxTimes rs = 
-  case inferTypes rs of
-   Left _ -> empty
-   Right (_,ers) -> maybe empty (pure . unTypeRules) (UR.narrowedUsableRules maxTimes stt rst)
-     where
-       rst = map fst ers
-       stt = [ t | t@(T.Fun (Sym Main,_) _) <- RS.lhss rst]       
-
-
 neededRules :: (Alternative m, Ord v) => [Rule Symbol v] -> m [Rule Symbol v]
 neededRules rs = pure (filter needed rs)
   where
@@ -326,6 +301,38 @@ neededRules rs = pure (filter needed rs)
        _ -> True
     createdFuns = foldr funsDL [] (RS.rhss rs)
 
+dfaInstantiate :: Alternative f => [Rule Symbol Var] -> f [Rule Symbol Var]
+dfaInstantiate  rs =
+  case inferTypes rs of
+   Left _ -> empty
+   Right (sig, ers) -> pure (concatMap refinements ers)
+     where
+       
+       initialDFA = startRules ++ constructorRules
+         where
+           startRules =
+             [DFA.startSymbol --> DFA.fun (Sym Main) [DFA.auxSymbol t | t <- inputTypes td]
+             | (Main, td) <- Map.toList sig]
+           constructorRules = 
+             [ DFA.auxSymbol (outputType td) --> DFA.fun (Sym c) [DFA.auxSymbol t | t <- inputTypes td]
+             | (c@Con{}, td) <- Map.toList sig ]
+
+       mkRefinements = DFA.refinements rs initialDFA
+
+       refinements (trl,_) = filter argumentNormalised (mkRefinements rl (`elem` abstractedVars))
+         where
+           rl = unTypeRule trl
+           abstractedVars =
+             case R.rhs trl of 
+              T.Var (v, _ :~> _) -> [v]
+              _ -> headVars (R.rhs rl)
+
+      
+       argumentNormalised rl = all norm (T.properSubterms (R.lhs rl))
+        where
+          norm (T.Var _) = True
+          norm (atermM -> Just (_ :@ _)) = False
+          norm li = all (isNothing . unify li) (RS.lhss rs)
 
 try :: (Strategy m) => (a -> m a) -> a -> m a
 try m a = m a <||> return a
@@ -340,25 +347,17 @@ exhaustive rel = try (rel >=> exhaustive rel)
 
 simplifyRules :: (Strategy m) => Int -> [Rule Symbol Var] -> m [Rule Symbol Var]
 simplifyRules nt =
-  narrowedUsableRules 1000
-  >=> exhaustive (narrowWith caseRule)
-  >=> exhaustive (narrowWith fixPointRule)
+  exhaustive (narrowWith caseRule)
+  >=> repeated nt (\rs -> narrowWith (nonRecRule rs) rs)  
+  >=> dfaInstantiate
   >=> repeated nt (\rs -> narrowWith (nonRecRule rs) rs)
-
   where
     narrowWith sel = narrowRules sel >=> usableRules >=> neededRules
     caseRule nr = all (isCaseRule . narrowedWith) (narrowings nr)
-    fixPointRule nr = all (isFixApplication . narrowedWith) (narrowings nr)
+      where isCaseRule (headSymbol . R.lhs -> Just Cond {}) = True
+            isCaseRule _ = False
     nonRecRule rs nr = all (isNonRec . narrowedWith) (narrowings nr)
       where isNonRec rl = not (any (R.isVariantOf rl) (UR.usableRules [R.rhs rl] rs)) -- FIX type of
-    -- betaRule nr = all (\ n -> isLambdaApplication (narrowedWith n)) (narrowings nr)            
-    -- simpleRule nr = all (\ n -> isSimpleRule (narrowedWith n)) (narrowings nr)
-    --   where
-    --     isSimpleRule rl = not (any isApp (T.funs (R.rhs rl)))
-    --       where isApp App{} = True
-    --             isApp _ = False
-    -- nonRec rs nr =
-    --   not ((any (R.isVariantOf (narrowedRule nr))) (UR.usableRules [ R.rhs (narrowedWith n) | n <- narrowings nr ] rs)  )
       
 simplify :: Maybe Int -> Problem -> Maybe Problem
 simplify repeats prob = do
@@ -371,11 +370,5 @@ simplify repeats prob = do
     numTimes = maybe 15 (max 0) repeats
 
 
-data BaseType = BaseType deriving (Eq, Ord, Show)
 
-instance PP.Pretty BaseType where
-  pretty BaseType = PP.text "*"
 
-signature :: Problem -> Either String (Signature Symbol)
-signature = (fst <$>) . inferTypes . P.allRules . P.rules
-  
