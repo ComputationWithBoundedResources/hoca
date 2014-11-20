@@ -266,10 +266,10 @@ narrowRules sensible rules =
    (untransformed,transformed) -> pure (rsToList (foldl mappend (rsFromList untransformed) (map rsFromList transformed)))
   where
     sound nr =
-      all (not . redexDeleting . narrowedWith) (narrowings nr)
+      all (redexPreserving . narrowedWith) (narrowings nr)
       || argumentNormalised (narrowSubterm nr)
       where
-        redexDeleting rl = varsMS (R.lhs rl) `MS.isProperSubsetOf` varsMS (R.rhs rl)
+        redexPreserving rl = varsMS (R.lhs rl) `MS.isSubsetOf` varsMS (R.rhs rl)
           where varsMS = MS.fromList . T.vars
         -- variablePreserving rl = varsMS (R.lhs rl) == varsMS (R.rhs rl)
         --   where varsMS = MS.fromList . T.vars
@@ -348,14 +348,23 @@ exhaustive rel = try (rel >=> exhaustive rel)
 simplifyRules :: (Strategy m) => Int -> [Rule Symbol Var] -> m [Rule Symbol Var]
 simplifyRules nt =
   exhaustive (narrowWith caseRule)
-  >=> repeated nt (\rs -> narrowWith (nonRecRule rs) rs)  
+  >=> repeated nt (\rs -> narrowWith (nonRecRule rs) rs)
+  -- >=> repeated nt (narrowWith lambdaRule) 
   >=> dfaInstantiate
+  -- >=> try (narrowWith fixRule)
   >=> repeated nt (\rs -> narrowWith (nonRecRule rs) rs)
   where
     narrowWith sel = narrowRules sel >=> usableRules >=> neededRules
     caseRule nr = all (isCaseRule . narrowedWith) (narrowings nr)
       where isCaseRule (headSymbol . R.lhs -> Just Cond {}) = True
             isCaseRule _ = False
+    lambdaRule nr = all (islambdaRule . narrowedWith) (narrowings nr)
+      where islambdaRule (headSymbol . R.lhs -> Just Lambda {}) = True
+            islambdaRule _ = False
+    fixRule nr = all (isFixRule . narrowedWith) (narrowings nr)
+      where isFixRule (headSymbol . R.lhs -> Just Fix {}) = True
+            isFixRule _ = False
+            
     nonRecRule rs nr = all (isNonRec . narrowedWith) (narrowings nr)
       where isNonRec rl = not (any (R.isVariantOf rl) (UR.usableRules [R.rhs rl] rs)) -- FIX type of
       
