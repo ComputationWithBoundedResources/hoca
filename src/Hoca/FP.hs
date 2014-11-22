@@ -12,56 +12,118 @@ import Control.Monad (void)
 
 type Var = String
 type Symbol = String
-data Exp =
-  Abs Var Exp
-  | Var Var
-  | Con Symbol [Exp]
-  | App Exp Exp
-  | Fix Exp
-  | Cond Exp [(Symbol, [Var], Exp)]  
-  | Let Var [Var] Exp Exp
-  | LetRec Var [Var] Exp Exp
-  deriving (Show)
 
+data Pos = Pos {sn :: String, ln :: Int, cn :: Int}
+           deriving (Show, Eq, Ord)
+data Exp =
+  Abs Pos Var Exp
+  | Var Pos Var
+  | Con Pos Symbol [Exp]
+  | App Pos Exp Exp
+  | Cond Pos Exp [(Symbol, [Var], Exp, Pos)]
+  | Let Pos Var [Var] Exp Exp
+  | LetRec Pos Var [Var] Exp Exp    
+  deriving (Show)
 
 prettyLet :: (PP.Pretty a1, PP.Pretty a) => String -> String -> [String] -> a -> a1 -> PP.Doc
 prettyLet n v vs e1 e2 =
     PP.text n PP.<+> PP.hsep (map PP.text (v:vs)) PP.<+> PP.text "=" PP.<+> PP.pretty e1
     PP.<$> PP.text "in" PP.<+> PP.indent 0 (PP.pretty e2)
 
+
+prettyCon :: PP.Pretty a => a -> [PP.Doc] -> PP.Doc
+prettyCon f ds = PP.pretty f PP.<> PP.encloseSep PP.lparen PP.rparen PP.comma ds
+
 instance PP.Pretty Exp where
-  pretty (Abs v e) = PP.parens (PP.text "fun" PP.<+> PP.text v PP.<+> PP.text "->" PP.<+> PP.pretty e)
-  pretty (Var v) = PP.text v
-  pretty (Con f as) =
-    PP.pretty f PP.<> PP.encloseSep PP.lparen PP.rparen PP.comma [PP.pretty ai | ai <- as]
-  pretty (App e1 e2) = PP.parens (PP.pretty e1 PP.<+> PP.pretty e2)
-  pretty (Fix e) = PP.parens (PP.text "fix" PP.<+> PP.pretty e)
-  pretty (Cond e cs) =
+  pretty (Abs _ v e) = PP.parens (PP.text "fun" PP.<+> PP.text v PP.<+> PP.text "->" PP.<+> PP.pretty e)
+  pretty (Var _ v) = PP.text v
+  pretty (Con _ f as) = prettyCon f (map PP.pretty as)
+    
+  pretty (App _ e1 e2) = PP.parens (PP.pretty e1 PP.<+> PP.pretty e2)
+  -- pretty (Fix _ e) = PP.parens (PP.text "fix" PP.<+> PP.pretty e)
+  pretty (Cond _ e cs) =
     PP.parens (PP.text "match" PP.<+> PP.pretty e PP.<+> PP.text "with"
-               PP.<$> PP.vsep [ PP.text "|" PP.<> PP.pretty (Con g (map Var vs))
+               PP.<$> PP.vsep [ PP.text "|" PP.<+> prettyCon g (map PP.text vs)
                                 PP.<+> PP.text "->" PP.<+> PP.indent 2 (PP.pretty e')
-                              | (g,vs,e') <- cs ])
-  pretty (Let v vs e1 e2) = prettyLet "let" v vs e1 e2
-  pretty (LetRec v vs e1 e2) = prettyLet "let rec" v vs e1 e2  
-  
-toPCF :: Exp -> Either String (PCF.Exp String)
-toPCF = t []
+                              | (g,vs,e',_) <- cs ])
+  pretty (Let _ v vs e1 e2) = prettyLet "let" v vs e1 e2
+  pretty (LetRec _ v vs e1 e2) = prettyLet "let rec" v vs e1 e2  
+
+sourcePos :: Exp -> Pos
+sourcePos (Abs l _ _) = l
+sourcePos (Var l _) = l
+sourcePos (Con l _ _) = l
+sourcePos (App l  _ _) = l
+sourcePos (Cond l _ _) = l
+sourcePos (Let l _ _ _ _) = l
+sourcePos (LetRec l _ _ _ _) = l
+
+
+data ProgramPoint =
+  LetBdy String [String] Exp
+  | LetRecBdy String [String] Exp  
+  | LetArg String String Exp        
+  | LetIn String Exp
+  | LambdaBdy Exp
+  | LambdaVar String Exp
+  | LApp Exp
+  | RApp Exp
+  | CaseGuard Exp
+  | CaseBdy Symbol Exp
+  | CaseVar String Symbol Exp    
+  | ConstructorArg Int Exp
+    deriving (Show)
+             
+type Context = [ProgramPoint]
+           
+toPCF :: Exp -> Either String (PCF.Exp Context)
+toPCF = t [] []
   where
-    t env (Abs v e) = PCF.Abs (Just v) <$> t env' e
-      where env' = (v, 0::Int) : [(v',i+1) | (v',i) <- env]
-    t env (Var v) = PCF.Var <$> maybe (Left ("variable " ++ show v ++ " not bound.")) Right (lookup v env)
-    t env (Con g es) = PCF.Con (PCF.symbol g (length es)) <$> mapM (t env) es
-    t env (App e1 e2) = PCF.App <$> t env e1 <*> t env e2
-    t env (Fix e) = PCF.Fix <$> t env e
-    t env (Cond e cs) =
-      PCF.Cond Nothing <$> t env e <*> mapM tc cs
+    
+    pushEnv env v = (v, 0::Int) : [(v',i+1) | (v',i) <- env]
+
+    toAbs mkBdyCtx mkVCtx = toAbs' []
       where
-        toBdy vs f = foldr Abs f vs
-        tc (g, vs, f) = do
-          f' <- t env (toBdy vs f)
-          return (PCF.symbol g (length vs), f')   
-    t env (Let v vs e1 e2) = t env (App (Abs v e2) (foldr Abs e1 vs))
-    t env (LetRec v vs e1 e2) = t env (App (Abs v e2) (Fix (foldr Abs e1 (v:vs))))
+        toAbs' zs ctx env [] b = t (mkBdyCtx zs : ctx) env b
+        toAbs' zs ctx env (v:vs) b =
+          PCF.Abs (mkVCtx v : ctx) bdyCtx
+            <$> toAbs' (v : zs) bdyCtx (pushEnv env v) vs b
+            where bdyCtx = mkBdyCtx zs : ctx
+
+    t ctx env (Var pos v) = do
+      i <- case lookup v env of
+            Just i -> Right i
+            Nothing -> Left ("Variable " ++ show v ++ " at line " ++ show (ln pos)
+                             ++ ", column" ++ show (cn pos) ++ " not bound.")
+      return (PCF.Var ctx i)
+
+    t ctx env e@(Abs _ v f) =
+      toAbs (const (LambdaBdy e)) (const (LambdaVar v e)) ctx env [v] f
+          
+    t ctx env e@(Con _ g es) =
+      PCF.Con ctx (PCF.symbol g (length es))
+       <$> mapM ( \ (i,ei) -> t (ConstructorArg i e: ctx) env ei) (zip [1..] es)
+      
+    t ctx env e@(App _ e1 e2) =
+      PCF.App ctx <$> t (LApp e : ctx) env e1 <*> t (RApp e : ctx) env e2
+    t ctx env e@(Cond _ gexp cs) = 
+      PCF.Cond ctx <$> t (CaseGuard e:ctx) env gexp
+                   <*> mapM tc cs
+      where
+        tc (g, vs, c, _) = do
+          c' <- toAbs (const (CaseBdy g e)) (\ v -> CaseVar v g e) ctx env vs c 
+          return (PCF.symbol g (length vs), c')
+        
+    -- let v vs = e1 in e2 == (\v . e2) (\ vs . e1)
+    t ctx env e@(Let _ v vs e1 e2) =
+      PCF.App ctx
+       <$> toAbs (const (LetIn v e)) (\ v' -> LetArg v v' e)  ctx env [v] e2 
+       <*> toAbs (\vs' -> LetBdy v vs' e) (\ v' -> LetArg v v' e) ctx env vs e1
+    t ctx env e@(LetRec _ v vs e1 e2) =
+      PCF.App ctx
+       <$> toAbs (const (LetIn v e)) (\ v' -> LetArg v v' e) ctx env [v] e2 
+       <*> (PCF.Fix <$> toAbs (\ vs' -> LetRecBdy v vs' e) (\ v' -> LetArg v v' e) ctx env (v:vs) e1)
+      
 
 -- * parsing
 
@@ -69,7 +131,7 @@ type Parser = CharParser ()
 
 -- lexing
 reservedWords :: [String]
-reservedWords = words "fix let rec in = fun match with | ->"
+reservedWords = words "let rec in = fun match with | ->"
 
 whiteSpace :: Parser String
 whiteSpace = many ((space <|> tab <|> newline) <?> "whitespace")
@@ -101,32 +163,46 @@ parens = between (symbol "(") (symbol ")")
 
 -- parsing
 
+posP :: Parser Pos
+posP = do
+  p <- getPosition
+  return Pos { sn = sourceName p, ln = sourceLine p, cn = sourceColumn p}
+
+withPos :: Parser a -> Parser (Pos,a)
+withPos p = (,) <$> posP <*> p
+  
 term :: Parser Exp
 term = (lambdaExp <?> "lambda expression")
        <|> (letExp <?> "let expression")
-       <|> (fixExp <?> "fix expression")
        <|> (condExp <?> "match expression")               
-       <|> foldl1 App <$> apps
+       <|> (appExp <?> "application")
   where
-    apps = many1 ((try var <?> "variable")
-                  <|> (constrExp <?> "constructor expression")
-                  <|> (parens term <?> "parenthesised expression"))
+    appExp = do
+      (_,e):es <-
+        many1 ((try (withPos var) <?> "variable")
+               <|> (withPos constrExp <?> "constructor expression")
+               <|> (parens (withPos term) <?> "parenthesised expression"))
+      return (foldl (\ f1 (p,f2) -> App p f1 f2) e es)
            
     lambdaExp = do
+      pos <- posP
       try (symbol "fun")
       vs <- many1 variable
       symbol "->"
       e <- term
-      return (foldr Abs e vs)
+      return (foldr (Abs pos) e vs)
 
     constructorWith arg = do
       g <- try constructor
       es <- try (parens (arg `sepBy` (symbol ","))) <|> return []
       return (g,es)
       
-    constrExp = uncurry Con <$> constructorWith term
+    constrExp = do
+      pos <- posP
+      uncurry (Con pos) <$> constructorWith term
 
     letExp = do
+      pos <- posP
       try (symbol "let")
       con <- try (symbol "rec" >> return LetRec) <|> return Let
       (v:vs) <- many1 variable
@@ -134,28 +210,25 @@ term = (lambdaExp <?> "lambda expression")
       e1 <- term
       symbol "in"
       e2 <- term
-      return (con v vs e1 e2)
-
-    fixExp = do
-      try (symbol "fix")
-      e <- term
-      return (Fix e)
+      return (con pos v vs e1 e2)
 
     caseExp = do
+      pos <- posP
       symbol "|"
       (g,vs) <- constructorWith variable
       symbol "->"
       e <- term
-      return (g,vs,e)
+      return (g,vs,e,pos)
       
     condExp  = do
+      pos <- posP
       try (symbol "match")
       e <- term
       symbol "with"
       cs <- many1 caseExp
-      return (Cond e cs)
+      return (Cond pos e cs)
 
-    var = Var <$> variable
+    var = Var <$> posP <*> variable
 
 expFromString :: String -> String -> Either String Exp
 expFromString source input = 

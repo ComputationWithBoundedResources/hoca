@@ -18,7 +18,7 @@ putDocLn e = putStrLn (render e "")
 putErrLn :: String -> IO ()
 putErrLn = hPutStrLn stderr
 
-expressionFromArgs :: FilePath -> [String] -> IO (PCF.Exp String)
+expressionFromArgs :: FilePath -> [String] -> IO (PCF.Exp FP.Context)
 expressionFromArgs fname args = do
   r <- mk <$> readFile fname
   case r of
@@ -27,7 +27,7 @@ expressionFromArgs fname args = do
   where
     mk s = do
       fun <- fromString fname s
-      foldM (\ p (i,si) -> PCF.App p <$> fromString ("argument " ++ show i) si)
+      foldM (\ p (i,si) -> PCF.App [] p <$> fromString ("argument " ++ show i) si)
         fun (zip [(1::Int)..] args)
     fromString src str = FP.expFromString src str >>= FP.toPCF
 
@@ -78,6 +78,7 @@ main = do
   exitSuccess
 
 
+-- rulesFromFile :: FilePath -> IO [Data.Rewriting.Rule.Type.Rule (Hoca.ATRS.ASym Hoca.PCF2Atrs.Symbol) Hoca.PCF2Atrs.Var]
 rulesFromFile fname = do
   e <- expressionFromArgs fname []
   return (P.allRules (P.rules (toProblem e)))
