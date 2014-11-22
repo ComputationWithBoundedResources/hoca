@@ -3,6 +3,7 @@
 
 module Hoca.UsableRules (
   usableRules
+  , isRecursive
   ) where
 
 import qualified Data.Rewriting.Rule as R
@@ -43,6 +44,9 @@ usableRules ts rules = walk (caps ts) [] rules
         (ur',rs') = partition (\ rl -> s `isUnifiableWith` R.lhs rl) rs
     caps ss = [ cap rules s | si <- ss, s@T.Fun{} <- T.subterms si ]    
 
+isRecursive :: (Ord v1, Ord v2, Eq f) => [R.Rule f v1] -> R.Rule f v2 -> Bool
+isRecursive rs rl =
+  any (R.isVariantOf rl) (usableRules [R.rhs rl] rs)
 
 -- narrowedUsableRules :: (PP.Pretty f, Ord v1, Eq f) => Int -> [TypedTerm f v] -> [TypedRule f v1] -> Maybe [TypedRule f Int]
 -- narrowedUsableRules numVisits tts trules = maybeFromErr (rsToList . snd <$> evalRWST (runVarSupplyT runM) () (0,[]))

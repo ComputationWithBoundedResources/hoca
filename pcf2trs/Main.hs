@@ -3,20 +3,19 @@ import           Control.Applicative ((<$>))
 import           Control.Monad (foldM)
 import qualified Hoca.FP as FP
 import qualified Hoca.PCF as PCF
-import           Hoca.PCF2Atrs (simplify, toProblem, prettyProblem, signature)
+import qualified Hoca.Narrowing as N
+import qualified Hoca.UsableRules as U
+import qualified Hoca.ATRS as ATRS
+import           Hoca.Transform
+import           Hoca.PCF2Atrs (prettyProblem, signature)
 import           System.Environment (getArgs)
 import           System.IO (hPutStrLn, stderr)
 import           Text.PrettyPrint.ANSI.Leijen (Doc, renderSmart, Pretty (..), displayS, (</>), (<+>), align, linebreak, indent, text)
 import Data.Maybe (fromJust)
+import qualified Data.Rewriting.Rule as R
+import qualified Data.Rewriting.Term as T
 import qualified Data.Rewriting.Problem as P
 import System.Exit (exitSuccess,exitFailure)
-
-putDocLn :: Doc -> IO ()
-putDocLn e = putStrLn (render e "")
-  where render = displayS . renderSmart 1.0 80
-
-putErrLn :: String -> IO ()
-putErrLn = hPutStrLn stderr
 
 expressionFromArgs :: FilePath -> [String] -> IO (PCF.Exp FP.Context)
 expressionFromArgs fname args = do
@@ -32,18 +31,35 @@ expressionFromArgs fname args = do
     fromString src str = FP.expFromString src str >>= FP.toPCF
 
 
-transform :: Bool -> Maybe Int -> FilePath -> [String] -> IO ()
-transform doSimp nt fname as = do
+simplify :: Problem -> Maybe Problem
+simplify =
+  exhaustive (narrow caseRules >=> try usableRules >=> try neededRules)
+  >=> dfaInstantiate hoHeadVariables
+  >=> exhaustive (narrow nonRecursiveRules >=> try usableRules >=> try neededRules)
+  where
+    hoHeadVariables (R.rhs -> T.Var (v, _ :~> _)) = [v]
+    hoHeadVariables trl = ATRS.headVars (R.rhs (ATRS.unTypeRule trl)) -- TODO: change TypedRule
+
+    narrowedWith = map N.narrowedWith . N.narrowings
+    caseRules _ = all isCaseRule . narrowedWith where
+      isCaseRule (ATRS.headSymbol . R.lhs -> Just Cond {}) = True
+      isCaseRule _ = False
+
+    nonRecursiveRules rs = all (not . U.isRecursive rs) . narrowedWith
+
+                           
+transform :: Bool -> FilePath -> [String] -> IO ()
+transform doSimp fname as = do
   e <- expressionFromArgs fname as  
-  case probFromExpression e of
+  case tr e of
    Just prob -> putDocLn (prettyProblem (withSignature prob))
    Nothing -> do
      putErrLn "the program cannot be transformed"
      exitFailure
   where
-    probFromExpression e
-      | doSimp = simplify nt (toProblem e)
-      | otherwise = Just (toProblem e)
+    tr
+      | doSimp = pcfToTrs >=> simplify
+      | otherwise = pcfToTrs
                     
     withSignature prob = prob { P.comment = Just (displayS (renderSmart 1.0 75 cmt) "") }
       where cmt = 
@@ -55,7 +71,14 @@ transform doSimp nt fname as = do
                           </> linebreak
 
 helpMsg :: String
-helpMsg = "pcf2trs [--eval|--pcf|--no-simp|--num-simps <nat>] <file> [args]*"
+helpMsg = "pcf2trs [--eval|--pcf|--no-simp] <file> [args]*"
+
+putDocLn :: Doc -> IO ()
+putDocLn e = putStrLn (render e "")
+  where render = displayS . renderSmart 1.0 80
+
+putErrLn :: String -> IO ()
+putErrLn = hPutStrLn stderr
 
 main :: IO ()
 main = do
@@ -69,16 +92,14 @@ main = do
      e <- expressionFromArgs fname as
      putDocLn (pretty e)
    "--no-simp" : fname : as -> 
-     transform False Nothing fname as
-   "--num-simps" : i : fname : as -> 
-     transform True (Just (read i)) fname as
+     transform False fname as
    fname : as ->
-     transform True Nothing fname as     
+     transform True fname as     
    _ -> error helpMsg
   exitSuccess
 
 
 -- rulesFromFile :: FilePath -> IO [Data.Rewriting.Rule.Type.Rule (Hoca.ATRS.ASym Hoca.PCF2Atrs.Symbol) Hoca.PCF2Atrs.Var]
-rulesFromFile fname = do
-  e <- expressionFromArgs fname []
-  return (P.allRules (P.rules (toProblem e)))
+-- rulesFromFile fname = do
+--   e <- expressionFromArgs fname []
+--   return (P.allRules (P.rules (toProblem e)))

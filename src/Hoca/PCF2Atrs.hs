@@ -2,39 +2,29 @@
 
 module Hoca.PCF2Atrs (
   Symbol (..)
+  , Var
   , Term
   , Rule
   , Problem
+  , signature
   , toProblem
   , prettyProblem
-  , simplify
-  , signature
-  , dfaInstantiate
   ) where
 
-import           Control.Applicative ((<$>),(<*>), Applicative, Alternative, empty, pure)
+import           Control.Applicative ((<$>),(<*>), Applicative)
 import           Control.Monad.RWS
 import qualified Control.Monad.State.Lazy as State
-import           Data.Either (partitionEithers)
 import           Data.List (sort, nub)
-import qualified Data.Map as Map
-import           Data.Maybe (listToMaybe, fromJust, isNothing)
-import qualified Data.MultiSet as MS
+import           Data.Maybe (fromJust)
 import qualified Data.Rewriting.Problem as P
 import qualified Data.Rewriting.Rule as R
 import qualified Data.Rewriting.Rules as RS
 import qualified Data.Rewriting.Term as T
 import qualified Data.Set as Set
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
-import           Hoca.Narrowing
 import           Hoca.ATRS
-import           Hoca.PCF (Strategy(..))
 import qualified Hoca.PCF as PCF
-import qualified Hoca.UsableRules as UR
-import qualified Hoca.DFA as DFA
 import qualified Hoca.FP as FP
-import Hoca.Utils (rsFromList, rsToList)
-import Data.Rewriting.Substitution (unify)
 
 data Lbl = LString String
          | LInt Int
@@ -46,7 +36,6 @@ instance PP.Pretty Lbl where
   pretty (LInt i) = PP.int i
   pretty (LString i) = PP.text i
 
-
 data Symbol =
   Con PCF.Symbol
   | Lambda Name
@@ -55,26 +44,6 @@ data Symbol =
   | Fix Name
   | Main
   deriving (Show, Eq, Ord)
-
--- ppSym :: PCF.Symbol -> PP.Doc
--- ppSym = PP.text . PCF.sname
-
--- ppCond :: PP.Pretty a => PCF.Exp a -> [(PCF.Symbol, PCF.Exp a)] -> PP.Doc
--- ppCond e cs =
---   ppExp e PP.<> PP.text ";"
---   PP.<> PP.hcat [ ppSym g PP.<> PP.text ":" PP.<> ppExp e' <> PP.text ";" | (g,e') <- cs ]
-
--- ppExp :: PP.Pretty a => PCF.Exp a -> PP.Doc
--- ppExp (PCF.Var i) = PP.int i
--- ppExp (PCF.Con f as) = ppSym f PP.<> PP.brackets (PP.hcat (PP.punctuate (PP.text "*") [ppExp ai | ai <- as]))
--- ppExp PCF.Bot = PP.text "_|_"
--- ppExp (PCF.Abs Nothing e) =
---   PP.text "L" PP.<> PP.brackets (ppExp e)
--- ppExp (PCF.Abs (Just l) _) = PP.pretty l
--- ppExp (PCF.App e1 e2) = PP.brackets (ppExp e1 PP.<> PP.text "." PP.<> ppExp e2)
--- ppExp (PCF.Fix e) = PP.text "FIX" PP.<> PP.brackets (ppExp e)
--- ppExp (PCF.Cond Nothing e cs) = PP.text "C" PP.<> PP.brackets (ppCond e cs)
--- ppExp (PCF.Cond (Just l) _ _) = PP.pretty l
 
 instance PP.Pretty Name where
   pretty (Name []) = PP.empty
@@ -261,129 +230,6 @@ toTRS = snd . eval . mainM . label . betaNormalise
       
     toTRSM (PCF.Fix _) =
       error "non-lambda abstraction given to fixpoint combinator"
-
-    
--- simplification ---------------------------------------------------------------------
-
-narrowRules :: (Alternative m, Ord v, Enum v) => (NarrowedRule (ASym Symbol) (Either v v) -> Bool) -> [Rule Symbol v] -> m [Rule Symbol v]
-narrowRules sensible rules = 
-  case partitionEithers (map narrowRule rules) of
-   (_,[]) -> empty
-   (untransformed,transformed) -> pure (rsToList (foldl mappend (rsFromList untransformed) (map rsFromList transformed)))
-  where
-    sound nr =
-      all (redexPreserving . narrowedWith) (narrowings nr)
-      || argumentNormalised (narrowSubterm nr)
-      where
-        redexPreserving rl = varsMS (R.lhs rl) `MS.isSubsetOf` varsMS (R.rhs rl)
-          where varsMS = MS.fromList . T.vars
-        -- variablePreserving rl = varsMS (R.lhs rl) == varsMS (R.rhs rl)
-        --   where varsMS = MS.fromList . T.vars
-        argumentNormalised (T.Fun _ ts) = null (UR.usableRules ts rules)
-        argumentNormalised _ = True
-        
-    renameRule rl = R.rename f rl
-      where
-        f = either (\ v -> fromJust (lookup v lvs)) id
-        lhs = R.lhs rl
-        lvs = foldl insrt [(v,v) | Right v <- T.vars lhs] [v | Left v <- T.vars lhs]
-        insrt vs v = (v, head (dropWhile (`elem` map snd vs) [v..])):vs
-      
-    narrowRule rl = 
-      case listToMaybe [ ni | ni <- narrow rl rules, sound ni, sensible ni ] of
-       Nothing -> Left rl
-       Just ni -> Right [renameRule (narrowing n) | n <- narrowings ni]
-
-usableRules :: (Alternative m, Ord v) => [Rule Symbol v] -> m [Rule Symbol v]
-usableRules rs = pure (UR.usableRules [ t | t@(T.Fun (Sym Main) _) <- RS.lhss rs] rs)
-
-neededRules :: (Alternative m, Ord v) => [Rule Symbol v] -> m [Rule Symbol v]
-neededRules rs = pure (filter needed rs)
-  where
-    needed rl =
-      case headSymbol (R.lhs rl) of
-       Just (l@Lambda {}) -> l `elem` createdFuns
-       Just (l@Fix {}) -> l `elem` createdFuns           
-       _ -> True
-    createdFuns = foldr funsDL [] (RS.rhss rs)
-
-dfaInstantiate :: Alternative f => [Rule Symbol Var] -> f [Rule Symbol Var]
-dfaInstantiate  rs =
-  case inferTypes rs of
-   Left _ -> empty
-   Right (sig, ers) -> pure (concatMap refinements ers)
-     where
-       
-       initialDFA = startRules ++ constructorRules
-         where
-           startRules =
-             [DFA.startSymbol --> DFA.fun (Sym Main) [DFA.auxSymbol t | t <- inputTypes td]
-             | (Main, td) <- Map.toList sig]
-           constructorRules = 
-             [ DFA.auxSymbol (outputType td) --> DFA.fun (Sym c) [DFA.auxSymbol t | t <- inputTypes td]
-             | (c@Con{}, td) <- Map.toList sig ]
-
-       mkRefinements = DFA.refinements rs initialDFA
-
-       refinements (trl,_) = filter argumentNormalised (mkRefinements rl (`elem` abstractedVars))
-         where
-           rl = unTypeRule trl
-           abstractedVars =
-             case R.rhs trl of 
-              T.Var (v, _ :~> _) -> [v]
-              _ -> headVars (R.rhs rl)
-
-      
-       argumentNormalised rl = all norm (T.properSubterms (R.lhs rl))
-        where
-          norm (T.Var _) = True
-          norm (atermM -> Just (_ :@ _)) = False
-          norm li = all (isNothing . unify li) (RS.lhss rs)
-
-try :: (Strategy m) => (a -> m a) -> a -> m a
-try m a = m a <||> return a
-
-repeated :: (Strategy m) => Int -> (a -> m a) -> a -> m a
-repeated n m
-  | n <= 0 = return
-  | otherwise = try (m >=> repeated (n-1) m)
-
-exhaustive :: Strategy m => (a -> m a) -> a -> m a
-exhaustive rel = try (rel >=> exhaustive rel) 
-
-simplifyRules :: (Strategy m) => Int -> [Rule Symbol Var] -> m [Rule Symbol Var]
-simplifyRules nt =
-  exhaustive (narrowWith caseRule)
-  >=> repeated nt (\rs -> narrowWith (nonRecRule rs) rs)
-  -- >=> repeated nt (narrowWith lambdaRule) 
-  >=> dfaInstantiate
-  -- >=> try (narrowWith fixRule)
-  >=> repeated nt (\rs -> narrowWith (nonRecRule rs) rs)
-  where
-    narrowWith sel = narrowRules sel >=> usableRules >=> neededRules
-    caseRule nr = all (isCaseRule . narrowedWith) (narrowings nr)
-      where isCaseRule (headSymbol . R.lhs -> Just Cond {}) = True
-            isCaseRule _ = False
-    lambdaRule nr = all (islambdaRule . narrowedWith) (narrowings nr)
-      where islambdaRule (headSymbol . R.lhs -> Just Lambda {}) = True
-            islambdaRule _ = False
-    fixRule nr = all (isFixRule . narrowedWith) (narrowings nr)
-      where isFixRule (headSymbol . R.lhs -> Just Fix {}) = True
-            isFixRule _ = False
-            
-    nonRecRule rs nr = all (isNonRec . narrowedWith) (narrowings nr)
-      where isNonRec rl = not (any (R.isVariantOf rl) (UR.usableRules [R.rhs rl] rs)) -- FIX type of
-      
-simplify :: Maybe Int -> Problem -> Maybe Problem
-simplify repeats prob = do
-  rs <- simplifyRules numTimes (P.allRules (P.rules prob))
-  return prob { P.rules = P.RulesPair { P.strictRules = sort rs
-                                      , P.weakRules = []}
-              , P.variables = nub (RS.vars rs)
-              , P.symbols = nub (RS.funs rs) }
-  where
-    numTimes = maybe 15 (max 0) repeats
-
 
 
 

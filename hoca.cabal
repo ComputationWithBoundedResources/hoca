@@ -24,6 +24,8 @@ executable pcf2trs
         ansi-wl-pprint >= 0.6 && < 0.7,
         term-rewriting >= 0.1 && < 0.2,
         hoca == 0.1
+ extensions:
+        ViewPatterns
 
 library
     hs-source-dirs:
@@ -35,6 +37,7 @@ library
         Hoca.FP
         Hoca.ATRS
         Hoca.PCF2Atrs
+        Hoca.Transform
         Hoca.UsableRules
         Hoca.Narrowing
     other-modules:
