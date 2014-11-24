@@ -33,19 +33,29 @@ expressionFromArgs fname args = do
 
 simplify :: Problem -> Maybe Problem
 simplify =
-  exhaustive (narrow caseRules >=> try usableRules >=> try neededRules)
-  >=> dfaInstantiate hoHeadVariables
-  >=> exhaustive (narrow nonRecursiveRules >=> try usableRules >=> try neededRules)
+  exhaustive (narrowWith caseRules >=> traceProblem "case narrowing")
+  >=> exhaustive (rewriteWith lambdaRules  >=> traceProblem "lambda rewrite")
+  >=> try (dfaInstantiate hoHeadVariables >=> traceProblem "instantiation")
+  >=> exhaustive (narrowWith nonRecursiveRules >=> traceProblem "non-recursive narrowing")
   where
+
     hoHeadVariables (R.rhs -> T.Var (v, _ :~> _)) = [v]
     hoHeadVariables trl = ATRS.headVars (R.rhs (ATRS.unTypeRule trl)) -- TODO: change TypedRule
 
-    narrowedWith = map N.narrowedWith . N.narrowings
-    caseRules _ = all isCaseRule . narrowedWith where
-      isCaseRule (ATRS.headSymbol . R.lhs -> Just Cond {}) = True
-      isCaseRule _ = False
+    narrowWith p =
+      narrow (\ rs -> all (p rs) . map N.narrowedWith . N.narrowings)
+      >=> try usableRules >=> try neededRules
 
-    nonRecursiveRules rs = all (not . U.isRecursive rs) . narrowedWith
+    rewriteWith p =
+      rewrite (\ rs -> all (p rs) . map N.narrowedWith . N.narrowings)
+      >=> try usableRules >=> try neededRules
+
+    caseRules _ (ATRS.headSymbol . R.lhs -> Just Cond {}) = True
+    caseRules _ _ = False
+    lambdaRules _ (ATRS.headSymbol . R.lhs -> Just Lambda {}) = True
+    lambdaRules _ _ = False
+    
+    nonRecursiveRules rs = not . U.isRecursive rs
 
                            
 transform :: Bool -> FilePath -> [String] -> IO ()

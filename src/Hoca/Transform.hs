@@ -11,6 +11,7 @@ module Hoca.Transform (
   -- * Transformations
   , pcfToTrs
   , narrow
+  , rewrite
   , neededRules
   , usableRules
   , dfaInstantiate
@@ -114,6 +115,11 @@ narrow sensible = modifyRules narrowRules where
          Just ni -> Right [renameRule (N.narrowing n) | n <- N.narrowings ni]
 
 
+rewrite :: Alternative m => ([Rule Symbol Var] -> N.NarrowedRule (ASym Symbol) (Either Var Var) -> Bool) -> Problem -> m Problem
+rewrite sensible = narrow sensible' where
+  sensible' rs nr = all (\ nw -> R.lhs (N.narrowedRule nr) `T.isVariantOf` R.lhs (N.narrowing nw)) (N.narrowings nr)
+                    && sensible rs nr
+  
 usableRules :: (Alternative m) => Problem -> m Problem
 usableRules = modifyRules (\ rs -> pure (UR.usableRules [ t | t@(T.Fun (Sym Main) _) <- RS.lhss rs] rs))
 
