@@ -7,7 +7,7 @@ import           Text.Parsec
 import           Text.ParserCombinators.Parsec (CharParser)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Control.Applicative ((<$>), (<*>))
-import Control.Monad (void)
+import Control.Monad (void,foldM)
 
 
 type Var = String
@@ -15,23 +15,24 @@ type Symbol = String
 
 data Pos = Pos {sn :: String, ln :: Int, cn :: Int}
            deriving (Show, Eq, Ord)
+
 data Exp =
   Abs Pos Var Exp
   | Var Pos Var
   | Con Pos Symbol [Exp]
   | App Pos Exp Exp
   | Cond Pos Exp [(Symbol, [Var], Exp, Pos)]
-  | Let Pos Var [Var] Exp Exp
-  | LetRec Pos Var [Var] Exp Exp    
+  | Let Pos (Pos,Var,[Var],Exp) [(Pos,Var,[Var],Exp)] Exp
+  | LetRec Pos (Pos,Var,[Var],Exp) [(Pos,Var,[Var],Exp)] Exp
   deriving (Show)
 
-prettyLet :: (PP.Pretty a1, PP.Pretty a) => String -> String -> [String] -> a -> a1 -> PP.Doc
-prettyLet n v vs e1 e2 =
-    PP.text n PP.<+> PP.hsep (map PP.text (v:vs)) PP.<+> PP.text "=" PP.<+> PP.pretty e1
-    PP.<$> PP.text "in" PP.<+> PP.indent 0 (PP.pretty e2)
+prettyLet :: String -> (Pos, String, [String], Exp) -> [(Pos, String, [String], Exp)] -> Exp -> PP.Doc
+prettyLet n l ls e =
+  PP.vsep [ PP.text m PP.<+> PP.hsep (map PP.text (v:vs)) PP.<+> PP.text "=" PP.<+> PP.pretty ei
+          | (m,(_,v,vs,ei)) <- (n,l) : zip (repeat "and") ls]
+  PP.<$> PP.text "in" PP.<+> PP.indent 0 (PP.pretty e)
 
-
-prettyCon :: PP.Pretty a => a -> [PP.Doc] -> PP.Doc
+prettyCon :: Symbol -> [PP.Doc] -> PP.Doc
 prettyCon f ds = PP.pretty f PP.<> PP.encloseSep PP.lparen PP.rparen PP.comma ds
 
 instance PP.Pretty Exp where
@@ -40,14 +41,13 @@ instance PP.Pretty Exp where
   pretty (Con _ f as) = prettyCon f (map PP.pretty as)
     
   pretty (App _ e1 e2) = PP.parens (PP.pretty e1 PP.<+> PP.pretty e2)
-  -- pretty (Fix _ e) = PP.parens (PP.text "fix" PP.<+> PP.pretty e)
   pretty (Cond _ e cs) =
     PP.parens (PP.text "match" PP.<+> PP.pretty e PP.<+> PP.text "with"
                PP.<$> PP.vsep [ PP.text "|" PP.<+> prettyCon g (map PP.text vs)
                                 PP.<+> PP.text "->" PP.<+> PP.indent 2 (PP.pretty e')
                               | (g,vs,e',_) <- cs ])
-  pretty (Let _ v vs e1 e2) = prettyLet "let" v vs e1 e2
-  pretty (LetRec _ v vs e1 e2) = prettyLet "let rec" v vs e1 e2  
+  pretty (Let _ l ls e) = prettyLet "let" l ls e
+  pretty (LetRec _ l ls e) = prettyLet "let rec" l ls e
 
 sourcePos :: Exp -> Pos
 sourcePos (Abs l _ _) = l
@@ -55,15 +55,16 @@ sourcePos (Var l _) = l
 sourcePos (Con l _ _) = l
 sourcePos (App l  _ _) = l
 sourcePos (Cond l _ _) = l
-sourcePos (Let l _ _ _ _) = l
-sourcePos (LetRec l _ _ _ _) = l
+sourcePos (Let l _ _ _) = l
+sourcePos (LetRec l _ _ _) = l
 
 
 data ProgramPoint =
   LetBdy String [String] Exp
   | LetRecBdy String [String] Exp  
-  | LetArg String String Exp        
-  | LetIn String Exp
+  | LetArg String String Exp
+  | LetBoundVar String Exp            
+  | LetIn Exp
   | LambdaBdy Exp
   | LambdaVar String Exp
   | LApp Exp
@@ -82,23 +83,22 @@ toPCF = t [] []
     
     pushEnv env v = (v, 0::Int) : [(v',i+1) | (v',i) <- env]
 
-    toAbs mkBdyCtx mkVCtx = toAbs' []
-      where
-        toAbs' zs ctx env [] b = t (mkBdyCtx zs : ctx) env b
-        toAbs' zs ctx env (v:vs) b =
-          PCF.Abs (mkVCtx v : ctx) bdyCtx
-            <$> toAbs' (v : zs) bdyCtx (pushEnv env v) vs b
-            where bdyCtx = mkBdyCtx zs : ctx
+    toAbs mkBdyCtx mkVCtx = toAbs' [] where
+      toAbs' zs ctx env [] b = t (mkBdyCtx zs ++ ctx) env b
+      toAbs' zs ctx env (v:vs) b =
+        PCF.Abs (mkVCtx v ++ ctx) bdyCtx
+        <$> toAbs' (v : zs) bdyCtx (pushEnv env v) vs b
+        where bdyCtx = mkBdyCtx zs ++ ctx
 
     t ctx env (Var pos v) = do
       i <- case lookup v env of
             Just i -> Right i
             Nothing -> Left ("Variable " ++ show v ++ " at line " ++ show (ln pos)
-                             ++ ", column" ++ show (cn pos) ++ " not bound.")
+                             ++ ", column " ++ show (cn pos) ++ " not bound.")
       return (PCF.Var ctx i)
 
     t ctx env e@(Abs _ v f) =
-      toAbs (const (LambdaBdy e)) (const (LambdaVar v e)) ctx env [v] f
+      toAbs (const [LambdaBdy e]) (const [LambdaVar v e]) ctx env [v] f
           
     t ctx env e@(Con _ g es) =
       PCF.Con ctx (PCF.symbol g (length es))
@@ -111,18 +111,32 @@ toPCF = t [] []
                    <*> mapM tc cs
       where
         tc (g, vs, c, _) = do
-          c' <- toAbs (const (CaseBdy g e)) (\ v -> CaseVar v g e) ctx env vs c 
+          c' <- toAbs (const [CaseBdy g e]) (\ v -> [CaseVar v g e]) ctx env vs c 
           return (PCF.symbol g (length vs), c')
-        
-    -- let v vs = e1 in e2 == (\v . e2) (\ vs . e1)
-    t ctx env e@(Let _ v vs e1 e2) =
-      PCF.App ctx
-       <$> toAbs (const (LetIn v e)) (\ v' -> LetArg v v' e)  ctx env [v] e2 
-       <*> toAbs (\vs' -> LetBdy v vs' e) (\ v' -> LetArg v v' e) ctx env vs e1
-    t ctx env e@(LetRec _ v vs e1 e2) =
-      PCF.App ctx
-       <$> toAbs (const (LetIn v e)) (\ v' -> LetArg v v' e) ctx env [v] e2 
-       <*> (PCF.Fix <$> toAbs (\ vs' -> LetRecBdy v vs' e) (\ v' -> LetArg v v' e) ctx env (v:vs) e1)
+
+    t ctx env e@(Let _ d1 d2s e2) = tLet d1 d2s where
+      tLet (_,v,vs,e1) [] =
+        PCF.App ctx
+          <$> toAbs (const [LetIn e]) (\v' -> [LetBoundVar v' e]) ctx env [v] e2
+          <*> toAbs (\vs' -> [LetBdy v vs' e]) (\ v' -> [LetArg v v' e]) ctx env vs e1
+      tLet (_,v,vs,e1) (d:ds) =
+        PCF.App ctx
+          <$> tLet d ds
+          <*> toAbs (\vs' -> [LetBdy v vs' e]) (\ v' -> [LetArg v v' e]) ctx env vs e1
+
+    t ctx env e@(LetRec _ d1 d2s e2) = do
+      e2' <- toAbs (const [LetIn e]) (\ v' -> [LetBoundVar v' e]) ctx env fs e2
+      e1s <- sequence [toAbs (\ vs' -> [LetRecBdy f vs' e]) (\ v' -> [LetArg f v' e]) ctx env (fs++vsi) ei
+                      | (_,f,vsi,ei) <- ds]
+      return (foldl (\ e' i -> PCF.App ctx e' (PCF.Fix i e1s)) e2' [0..length ds - 1])
+        where 
+          ds = d1 : d2s
+          fs = [ f | (_,f,_,_)  <- ds]
+    -- -- letrec v vs = e1 in e2 == (\v . e2) (fix (\ v vs . e1))
+    -- t ctx env e@(LetRec _ v vs e1 e2) =
+    --   PCF.App ctx
+    --    <$> toAbs (const (LetIn v e)) (\ v' -> LetArg v v' e) ctx env [v] e2 
+    --    <*> (PCF.Fix <$> toAbs (\ vs' -> LetRecBdy v vs' e) (\ v' -> LetArg v v' e) ctx env (v:vs) e1)
       
 
 -- * parsing
@@ -131,7 +145,7 @@ type Parser = CharParser ()
 
 -- lexing
 reservedWords :: [String]
-reservedWords = words "let rec in = fun match with | ->"
+reservedWords = words "let rec in = fun match with | -> and"
 
 whiteSpace :: Parser String
 whiteSpace = many ((space <|> tab <|> newline) <?> "whitespace")
@@ -194,7 +208,7 @@ term = (lambdaExp <?> "lambda expression")
 
     constructorWith arg = do
       g <- try constructor
-      es <- try (parens (arg `sepBy` (symbol ","))) <|> return []
+      es <- try (parens (arg `sepBy` symbol ",")) <|> return []
       return (g,es)
       
     constrExp = do
@@ -205,13 +219,18 @@ term = (lambdaExp <?> "lambda expression")
       pos <- posP
       try (symbol "let")
       con <- try (symbol "rec" >> return LetRec) <|> return Let
-      (v:vs) <- many1 variable
-      symbol "="
-      e1 <- term
+      (l:ls) <- letBinding `sepBy1` symbol "and"
       symbol "in"
-      e2 <- term
-      return (con pos v vs e1 e2)
-
+      e <- term
+      return (con pos l ls e)
+      where
+        letBinding = do
+          pos <- posP
+          (v:vs) <- many1 variable
+          symbol "="
+          e <- term
+          return (pos, v, vs, e)
+          
     caseExp = do
       pos <- posP
       symbol "|"

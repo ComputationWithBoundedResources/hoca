@@ -72,7 +72,7 @@ modifyRules m prob = f <$> m strict
 
 traceProblem :: Applicative m => String -> Problem -> m Problem
 traceProblem s prob = tracePretty doc (pure prob) where
-  ln c = PP.text (take 80 (repeat c))
+  ln c = PP.text (replicate 80 c)
   doc =
     PP.text s
     PP.<$> ln '-'
@@ -158,38 +158,3 @@ dfaInstantiate abstractVars = modifyRules instantiateRules where
            norm (T.Var _) = True
            norm (atermM -> Just (_ :@ _)) = False
            norm li = all (isNothing . unify li) (RS.lhss rs)
-
-
--- simplifyRules :: (Strategy m) => Int -> [Rule Symbol Var] -> m [Rule Symbol Var]
--- simplifyRules nt = undefined
---   exhaustive (narrowWith caseRule)
---   >=> repeated nt (\rs -> narrowWith (nonRecRule rs) rs)
---   -- >=> repeated nt (narrowWith lambdaRule) 
---   >=> dfaInstantiate
---   -- >=> try (narrowWith fixRule)
---   >=> repeated nt (\rs -> narrowWith (nonRecRule rs) rs)
---   where
---     narrowWith sel = narrowRules sel >=> usableRules >=> neededRules
---     caseRule nr = all (isCaseRule . narrowedWith) (narrowings nr)
---       where isCaseRule (headSymbol . R.lhs -> Just Cond {}) = True
---             isCaseRule _ = False
---     lambdaRule nr = all (islambdaRule . narrowedWith) (narrowings nr)
---       where islambdaRule (headSymbol . R.lhs -> Just Lambda {}) = True
---             islambdaRule _ = False
---     fixRule nr = all (isFixRule . narrowedWith) (narrowings nr)
---       where isFixRule (headSymbol . R.lhs -> Just Fix {}) = True
---             isFixRule _ = False
-            
---     nonRecRule rs nr = all (isNonRec . narrowedWith) (narrowings nr)
---       where isNonRec rl = not (any (R.isVariantOf rl) (UR.usableRules [R.rhs rl] rs)) -- FIX type of
-
-
--- simplify :: Maybe Int -> Problem -> Maybe Problem
--- simplify repeats prob = do
---   rs <- simplifyRules numTimes (P.allRules (P.rules prob))
---   return prob { P.rules = P.RulesPair { P.strictRules = sort rs
---                                       , P.weakRules = []}
---               , P.variables = nub (RS.vars rs)
---               , P.symbols = nub (RS.funs rs) }
---   where
---     numTimes = maybe 15 (max 0) repeats

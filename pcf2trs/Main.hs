@@ -100,7 +100,7 @@ main = do
      putDocLn (pretty (fromJust (PCF.nf PCF.cbv e)))
    "--pcf" : fname : as -> do
      e <- expressionFromArgs fname as
-     putDocLn (pretty e)
+     putDocLn (pretty (fromJust (PCF.nf (PCF.ctxtClosure PCF.beta) e)))
    "--no-simp" : fname : as -> 
      transform False fname as
    fname : as ->

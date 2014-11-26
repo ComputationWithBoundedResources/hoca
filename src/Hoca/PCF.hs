@@ -48,7 +48,7 @@ data Exp l =
   | Abs l l (Exp l) 
   | App l (Exp l) (Exp l)
   | Cond l (Exp l) [(Symbol, Exp l)]
-  | Fix (Exp l)
+  | Fix Int [Exp l]
   deriving (Show, Eq, Ord)
 
 instance PP.Pretty Symbol where
@@ -68,8 +68,8 @@ instance PP.Pretty (Exp l) where
   pretty (Abs _ _ e) = PP.parens (PP.bold (PP.text "λ") PP.<> PP.text "." // PP.pretty e)
   pretty (App _ e1 e2) =
     PP.parens (PP.pretty e1 // PP.pretty e2)
-  pretty (Fix e) =
-    PP.parens (PP.bold (PP.text "fix") $$ PP.pretty e)
+  pretty (Fix i es) =
+    PP.parens (PP.bold (PP.text "fix_" PP.<> PP.int i) $$ PP.vcat [PP.parens (PP.pretty e) | e <- es] )
   pretty (Cond _ e cs) =
     PP.parens ((PP.bold (PP.text "case") PP.<+> PP.pretty e PP.<+> PP.bold (PP.text "of"))
                $$ PP.vsep [ PP.pretty g PP.<+> PP.text "->" PP.<+> PP.pretty e'
@@ -81,7 +81,7 @@ constructors (Abs _ _ e) = constructors e
 constructors (App _ e1 e2) = constructors e2 `Set.union` constructors e1
 constructors (Cond _ e cs) = foldl f (constructors e) cs
   where f fs (g,ei) = Set.insert g (constructors ei `Set.union` fs)
-constructors (Fix e) = constructors e
+constructors (Fix _ es) = Set.unions (map constructors es)
 constructors _ = Set.empty
 
 
@@ -112,7 +112,9 @@ match e f = go 0 e f IntMap.empty where
       (cs',ct') = (srt cs, srt ct)
     guard (map fst cs' == map fst ct')    
     go k s t sub >>= composeM (zipWith (go k) (map snd cs') (map snd ct'))
-  go k (Fix s) (Fix t) sub = go k s t sub
+  go k (Fix i ss) (Fix j ts) sub = do
+    guard (i == j)
+    composeM (zipWith (go k) ss ts) sub
   go k (Abs _ _ s) (Abs _ _ t) sub = go (k+1) s t sub
   go _ _ _ _ = Nothing
   
@@ -122,7 +124,7 @@ match e f = go 0 e f IntMap.empty where
   nonVarCapture k (App _ s1 s2) = nonVarCapture k s1 && nonVarCapture k s2
   nonVarCapture _ Bot = True
   nonVarCapture k (Cond _ s cs) = nonVarCapture k s && all (nonVarCapture k . snd) cs
-  nonVarCapture k (Fix s) = nonVarCapture k s
+  nonVarCapture k (Fix _ ss) = all (nonVarCapture k) ss
 
 applySubst :: Exp l -> Subst l -> Exp l
 applySubst = IntMap.foldWithKey subst
@@ -146,7 +148,7 @@ shift' _ _ Bot = Bot
 shift' c d (Abs lv la e) = Abs lv la (shift' (c+1) d e)
 shift' c d (App l e1 e2) = App l (shift' c d e1) (shift' c d e2)
 shift' c d (Cond l e cs) = Cond l (shift' c d e) [(g, shift' c d e') | (g,e') <- cs]
-shift' c d (Fix e) = Fix (shift' c d e)
+shift' c d (Fix i es) = Fix i [shift' c d e | e <- es]
       
 -- | @subst j e1 e2 == e2[j <- e1]@
 subst :: Int -> Exp l -> Exp l -> Exp l
@@ -158,7 +160,7 @@ subst _ _ Bot = Bot
 subst j e (Abs lv le f) = Abs lv le (subst (j+1) (shift 1 e) f)
 subst j e (App l f1 f2) = App l (subst j e f1) (subst j e f2)
 subst j e (Cond l f cs) = Cond l (subst j e f) [(g, subst j e e') | (g,e') <- cs]
-subst j e (Fix f) = Fix (subst j e f)
+subst j e (Fix i es) = Fix i [subst j e ei | ei <- es]
 
 -- * steps
 
@@ -178,6 +180,9 @@ apply :: Strategy m => Exp l -> Exp l -> m (Exp l)
 apply (Abs  _ _ e) f = return (shift (-1) (subst 0 (shift 1 f) e))
 apply _ _ = empty
 
+applyL :: Strategy m => Exp l -> [Exp l] -> m (Exp l)
+applyL = foldM apply
+
 beta :: Strategy m => Exp l -> m (Exp l)
 beta (App _ e f) = e `apply` f
 beta _ = empty
@@ -193,8 +198,9 @@ cond _ = empty
 
 -- fix(\e.f) --> f{(\z.fix(\e.f) z) / e}
 fixCBV :: Strategy m => Exp l -> m (Exp l)
-fixCBV (App l f@(Fix e) a) =
-  App l <$> e `apply` f <*> return a
+fixCBV (App l (Fix i fs) a)
+  | 0 <= i && i < length fs =
+      App l <$> (fs !! i) `applyL` [Fix j fs | j <- [0..length fs - 1]] <*> return a
 fixCBV _ = empty
 
 -- * combinators 
@@ -227,7 +233,7 @@ ctxtClosure stp e = ctxt e <|> stp e
           es' <- oneOf (ctxtClosure stp) es
           return (Cond l f (zip gs es'))
     ctxt (Abs lv le f) = Abs lv le <$> ctxtClosure stp f
-    ctxt (Fix f) = Fix <$> ctxtClosure stp f
+    ctxt (Fix i fs) = Fix i <$> oneOf (ctxtClosure stp) fs
     ctxt _ = empty
     
 

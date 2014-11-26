@@ -97,7 +97,7 @@ label expr = State.evalState (labelM expr) []
                <*> labelM e1
                <*> mapM (\ (g,eg) -> (,) g <$> labelM eg) cs
     labelM e@(PCF.Abs _ _ e1) = PCF.Abs <$> unnamed <*> name e <*> labelM e1
-    labelM (PCF.Fix e) = PCF.Fix <$> labelM e
+    labelM (PCF.Fix i es) = PCF.Fix i <$> mapM labelM es
 
     unnamed = maybeFresh (Name [])
 
@@ -115,7 +115,7 @@ label expr = State.evalState (labelM expr) []
       where
         fromCtx (FP.LetBdy fn vs _: _) = [LString v | v <- vs ++ [fn]]
         fromCtx (FP.LetRecBdy fn vs _: _) = [LString v | v <- take (length vs - 1) vs ++ [fn]]
-        fromCtx (FP.LetIn fn _ : ctx') = LString fn : fromCtx ctx'
+        -- fromCtx (FP.LetIn fn _ : ctx') = LString fn : fromCtx ctx'
         fromCtx _ = [LString "anonymous"]
     
     name _ = unnamed
@@ -179,13 +179,14 @@ freeVars PCF.Bot = return Set.empty
 freeVars (PCF.Cond _ e cs) = do
   vse <- freeVars e
   foldM (\ vs (_,eg) -> Set.union vs <$> freeVars eg) vse cs
-freeVars (PCF.Fix f) = freeVars f
+freeVars (PCF.Fix _ fs) =
+  foldM (\ vs f -> Set.union vs <$> freeVars f) Set.empty fs
 
 toTRS :: PCF.Exp FP.Context -> [Rule Symbol Var]
 toTRS = snd . eval . mainM . label . betaNormalise
   where
     betaNormalise :: PCF.Exp FP.Context -> PCF.Exp FP.Context
-    betaNormalise = fromJust . PCF.nf PCF.beta
+    betaNormalise = fromJust . PCF.nf (PCF.ctxtClosure PCF.beta)
     cvars = sort . Set.toList
     
     mainM (PCF.Abs _ _ f) = void (withVar (mainM f))
@@ -218,17 +219,23 @@ toTRS = snd . eval . mainM . label . betaNormalise
         caseBdy (n+1) (PCF.Abs _ _ fg) = caseBdy n fg
         caseBdy _ _ = error "case expression with invalid body"
 
-    toTRSM e@(PCF.Fix f@(PCF.Abs _ lf _)) = do 
-      visited <- elem e <$> get
-      vs <- freeVars e
-      let te = fun (Fix lf) (cvars vs)
-      unless visited $ do
-        modify (e :)
-        (v,tf) <- withVar (toTRSM (fromJust (f `PCF.apply` e)))
-        tell [ app te v --> app tf v ]
-      return te
+    toTRSM e@(PCF.Fix i fs)
+      | 0 <= i && i < length fs
+        && all isApp fs = do
+          visited <- elem e <$> get
+          vs <- freeVars e
+          let te = fun (Fix lf) (cvars vs)
+          unless visited $ do
+            modify (e :)
+            (v,tf) <- withVar (toTRSM (fromJust (foldM PCF.apply f [PCF.Fix j fs | j <- [0..length fs - 1]])))
+            tell [ app te v --> app tf v ]
+          return te
+      where
+        isApp (PCF.Abs {}) = True
+        isApp _ = False
+        f@(PCF.Abs _ lf _) = fs!!i
       
-    toTRSM (PCF.Fix _) =
+    toTRSM (PCF.Fix _ _) =
       error "non-lambda abstraction given to fixpoint combinator"
 
 
