@@ -34,7 +34,8 @@ expressionFromArgs fname args = do
 simplify :: Problem -> Maybe Problem
 simplify =
   exhaustive (narrowWith caseRules >=> traceProblem "case narrowing")
-  >=> exhaustive (rewriteWith lambdaRules  >=> traceProblem "lambda rewrite")
+  >=> exhaustive (rewriteWith lambdaRules >=> traceProblem "lambda rewrite")
+  >=> exhaustive (rewriteWith fixRules >=> traceProblem "fix rewrite")  
   >=> try (dfaInstantiate hoHeadVariables >=> traceProblem "instantiation")
   >=> exhaustive (narrowWith nonRecursiveRules >=> traceProblem "non-recursive narrowing")
   where
@@ -54,6 +55,8 @@ simplify =
     caseRules _ _ = False
     lambdaRules _ (ATRS.headSymbol . R.lhs -> Just Lambda {}) = True
     lambdaRules _ _ = False
+    fixRules _ (ATRS.headSymbol . R.lhs -> Just Fix {}) = True
+    fixRules _ _ = False
     
     nonRecursiveRules rs = not . U.isRecursive rs
 

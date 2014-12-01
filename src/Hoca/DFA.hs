@@ -135,13 +135,16 @@ refinements prog initial =
   \ rl@(R.Rule lhs rhs) refineP ->
    case L.lookup rl prog' of
     Nothing -> []
-    Just i -> [R.Rule (s `apply` lhs) (s `apply` rhs) | s <- substs] 
+    Just i
+      | ruleReachable -> [R.Rule (s `apply` lhs) (s `apply` rhs) | s <- substs]
+      | otherwise -> []
       where
         apply s t = fromJust (S.gApply s t)
-        substs = map toSubst (foldl (\ l v -> [ (v,p):s | s <- l, p <- patterns v]) [[]] (L.nub (R.vars rl)))
-        patterns v
-          | refineP v = L.nub (map toTerm (reducts tg (varSymbol v i)))
-          | otherwise = [T.Var ()]
+        substs = map toSubst (foldl (\ l v -> [ (v,p):s | s <- l, p <- patterns v]) [[]] (L.nub (R.vars rl))) where 
+          patterns v
+            | refineP v = L.nub (map toTerm (reducts tg (varSymbol v i)))
+            | otherwise = [T.Var ()]
+        ruleReachable = any (== Fun (R i) []) (RS.lhss tg)
   where
     prog' = zip prog [1..] 
     

@@ -3,7 +3,9 @@ let rec flip x =
   | E -> E
   | Z(x') -> O(flip x')
   | O(x') -> Z(flip x')
-in fun w -> flip w
+;;
+  
+flip w
 
 
     

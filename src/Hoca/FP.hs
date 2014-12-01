@@ -144,23 +144,27 @@ toPCF expr = runReaderT (pcf (close expr)) ([],[])
         caseBdy g c zs []      = withContext [CaseBdy g zs e] (pcf c)
         caseBdy g c zs (v:vs') = withContext [CaseBdy g zs e] (lambda v (caseBdy g c (v:zs) vs'))
         
-    pcf e@(Let _ d1 d2s e2) = letExps d1 d2s where
-      letExps (_,v,vs,e1) [] =
-        PCF.App <$> context
-          <*> withContext [LetIn e] (lambda v (pcf e2)) 
-          <*> letExp e v vs e1
-      letExps (_,v,vs,e1) (d:ds) =
-        PCF.App <$> context
-          <*> letExps d ds
-          <*> letExp e v vs e1
-
-    pcf e@(LetRec _ d1 d2s e2) = do
+    pcf e@(Let _ d1 ds e2) = do
       e2' <- foldr lambda (withContext [LetIn e] (pcf e2)) fs -- \ f1..fn -> [e2]
-      e1s <- sequence [ letRecExp fi vsi ei | (_,fi,vsi,ei) <- ds] -- [.. \ f1..fn v1..vm -> [ei] ..]
-      return (fromJust (PCF.applyL e2' [ PCF.Fix i e1s | i <- [0..length ds - 1] ]))
+      es <- sequence [ letExp e fi vsi ei | (_,fi,vsi,ei) <- d1:ds ]
+      return (fromJust (PCF.applyL e2' es))
+      where fs = [ f | (_,f,_,_)  <- d1 : ds]
+      -- letExps d1 d2s where
+      -- letExps (_,v,vs,e1) [] =
+      --   PCF.App <$> context
+      --     <*> withContext [LetIn e] (lambda v (pcf e2)) 
+      --     <*> letExp e v vs e1
+      -- letExps (_,v,vs,e1) (d:ds) =
+      --   PCF.App <$> context
+      --     <*> letExps d ds
+      --     <*> letExp e v vs e1
+
+    pcf e@(LetRec _ d1 ds e2) = do
+      e2' <- foldr lambda (withContext [LetIn e] (pcf e2)) fs -- \ f1..fn -> [e2]
+      es <- sequence [ letRecExp fi vsi ei | (_,fi,vsi,ei) <- d1 : ds] -- [.. \ f1..fn v1..vm -> [ei] ..]
+      return (fromJust (PCF.applyL e2' [ PCF.Fix i es | i <- [0..length ds] ]))
       where
-        ds = d1 : d2s
-        fs = [ f | (_,f,_,_)  <- ds]
+        fs = [ f | (_,f,_,_)  <- d1 : ds]
         letRecExp f vs b = letRecBdy [] fs where
           letRecBdy zs []       = withContext [LetRecBdy f zs e] (letExp e f vs b)
           letRecBdy zs (fi:fs') = withContext [LetRecBdy f zs e] (lambda fi (letRecBdy (fi:zs) fs'))
