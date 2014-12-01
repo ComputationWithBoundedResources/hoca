@@ -55,4 +55,5 @@ library
         FlexibleInstances, 
         GeneralizedNewtypeDeriving, 
         TypeOperators,
-        ViewPatterns
+        ViewPatterns,
+        TupleSections

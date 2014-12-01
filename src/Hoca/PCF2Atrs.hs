@@ -54,7 +54,7 @@ instance PP.Pretty Symbol where
   pretty (Con g) = PP.text (PCF.sname g)
   pretty (Lambda l) = PP.pretty l
   pretty (Cond l) = PP.pretty l
-  pretty (Fix l) = PP.pretty l
+  pretty (Fix l) = PP.text "rec" PP.<> PP.brackets (PP.pretty l)
   pretty Bot = PP.text "_|_"      
   pretty Main = PP.text "main"
               
@@ -96,29 +96,29 @@ label expr = State.evalState (labelM expr) []
       PCF.Cond <$> name e
                <*> labelM e1
                <*> mapM (\ (g,eg) -> (,) g <$> labelM eg) cs
-    labelM e@(PCF.Abs _ _ e1) = PCF.Abs <$> unnamed <*> name e <*> labelM e1
+    labelM e@(PCF.Abs v _ e1) = PCF.Abs v <$> name e <*> labelM e1
     labelM (PCF.Fix i es) = PCF.Fix i <$> mapM labelM es
 
-    unnamed = maybeFresh (Name [])
-
-    surroundingLet [] = Nothing
-    surroundingLet (FP.LetBdy fn _ _ : _) = Just fn
-    surroundingLet (FP.LetRecBdy fn _ _ : _) = Just fn    
-    surroundingLet (_ : ctx) = surroundingLet ctx
-    
-    name (PCF.Cond ctx _ _) =
+    withSurroundingLet ctx n =
       case surroundingLet ctx of
-       Nothing -> maybeFresh (Name [LString "cond"])
-       Just l -> maybeFresh (Name [LString "cond", LString l])
-
-    name (PCF.Abs _ ctx _) = maybeFresh (Name (fromCtx ctx))
+       Nothing -> maybeFresh (Name [n])
+       Just l -> maybeFresh (Name [n, LString l])
+       where
+         surroundingLet [] = Nothing
+         surroundingLet (FP.LetBdy fn _ _ : _) = Just fn
+         surroundingLet (FP.LetRecBdy fn _ _ : _) = Just fn    
+         surroundingLet (_ : ctx') = surroundingLet ctx'
+       
+    name (PCF.Cond ctx _ _) = withSurroundingLet ctx (LString "cond")
+    name (PCF.Abs _ ctx _) = fromCtx ctx
       where
-        fromCtx (FP.LetBdy fn vs _: _) = [LString v | v <- vs ++ [fn]]
-        fromCtx (FP.LetRecBdy fn vs _: _) = [LString v | v <- take (length vs - 1) vs ++ [fn]]
-        -- fromCtx (FP.LetIn fn _ : ctx') = LString fn : fromCtx ctx'
-        fromCtx _ = [LString "anonymous"]
+        fromCtx (FP.LetBdy fn vs _: _) = maybeFresh (Name [LString v | v <- vs ++ [fn]])
+        fromCtx (FP.LetRecBdy fn vs _: _) = maybeFresh (Name [LInt (length vs), LString fn])
+--        fromCtx (FP.LetIn fn _ : ctx') = LString fn : fromCtx ctx'
+        fromCtx (FP.LambdaBdy _ : ctx') = withSurroundingLet ctx' (LString "anonymous")
+        fromCtx ctx' = withSurroundingLet ctx' (LInt 0)
     
-    name _ = unnamed
+    name _ = maybeFresh (Name [])
     
     maybeFresh :: Name -> State.State [Name] Name
     maybeFresh (Name []) = maybeFresh (Name [LInt 1])
@@ -183,10 +183,10 @@ freeVars (PCF.Fix _ fs) =
   foldM (\ vs f -> Set.union vs <$> freeVars f) Set.empty fs
 
 toTRS :: PCF.Exp FP.Context -> [Rule Symbol Var]
-toTRS = snd . eval . mainM . label . betaNormalise
+toTRS = snd . eval . mainM . label
   where
-    betaNormalise :: PCF.Exp FP.Context -> PCF.Exp FP.Context
-    betaNormalise = fromJust . PCF.nf (PCF.ctxtClosure PCF.beta)
+    -- betaNormalise :: PCF.Exp FP.Context -> PCF.Exp FP.Context
+    -- betaNormalise = fromJust . PCF.nf (PCF.ctxtClosure PCF.beta)
     cvars = sort . Set.toList
     
     mainM (PCF.Abs _ _ f) = void (withVar (mainM f))

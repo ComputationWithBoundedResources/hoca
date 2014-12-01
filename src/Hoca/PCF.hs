@@ -16,6 +16,7 @@ module Hoca.PCF
   , beta
   , cond
   , apply
+  , applyL
   , fixCBV
   , nf
   , cbv
@@ -45,7 +46,7 @@ data Exp l =
   Var l Variable
   | Con l Symbol [Exp l]
   | Bot 
-  | Abs l l (Exp l) 
+  | Abs (Maybe String) l (Exp l) 
   | App l (Exp l) (Exp l)
   | Cond l (Exp l) [(Symbol, Exp l)]
   | Fix Int [Exp l]
@@ -65,7 +66,9 @@ instance PP.Pretty (Exp l) where
   pretty (Con _ f as) =
     PP.pretty f PP.<> PP.tupled [PP.pretty ai | ai <- as]
   pretty Bot = PP.bold (PP.text "_|_")
-  pretty (Abs _ _ e) = PP.parens (PP.bold (PP.text "λ") PP.<> PP.text "." // PP.pretty e)
+  pretty (Abs n _ e) = PP.parens (PP.bold (PP.text "λ" PP.<> pp n) PP.<> PP.text "." // PP.pretty e)
+    where pp (Just name) = PP.text name
+          pp Nothing = PP.empty
   pretty (App _ e1 e2) =
     PP.parens (PP.pretty e1 // PP.pretty e2)
   pretty (Fix i es) =

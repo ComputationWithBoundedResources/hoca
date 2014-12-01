@@ -7,7 +7,11 @@ import           Text.Parsec
 import           Text.ParserCombinators.Parsec (CharParser)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Control.Applicative ((<$>), (<*>))
-import Control.Monad (void,foldM)
+import Control.Monad.Reader (runReaderT, ask, local)
+import Control.Monad.Reader (lift)
+import Control.Monad.Error (throwError)
+import Control.Monad (forM,foldM, void)
+import Data.Maybe (fromJust)
 
 
 type Var = String
@@ -60,83 +64,86 @@ sourcePos (LetRec l _ _ _) = l
 
 
 data ProgramPoint =
-  LetBdy String [String] Exp
-  | LetRecBdy String [String] Exp  
-  | LetArg String String Exp
-  | LetBoundVar String Exp            
+  LetBdy Symbol [Symbol] Exp
+  | LetRecBdy Symbol [Symbol] Exp  
   | LetIn Exp
   | LambdaBdy Exp
-  | LambdaVar String Exp
+  | LambdaVar Symbol Exp
   | LApp Exp
   | RApp Exp
   | CaseGuard Exp
-  | CaseBdy Symbol Exp
-  | CaseVar String Symbol Exp    
+  | CaseBdy Symbol [Symbol] Exp
   | ConstructorArg Int Exp
     deriving (Show)
              
 type Context = [ProgramPoint]
            
 toPCF :: Exp -> Either String (PCF.Exp Context)
-toPCF = t [] []
+toPCF expr = runReaderT (pcf expr) ([],[])
   where
-    
-    pushEnv env v = (v, 0::Int) : [(v',i+1) | (v',i) <- env]
 
-    toAbs mkBdyCtx mkVCtx = toAbs' [] where
-      toAbs' zs ctx env [] b = t (mkBdyCtx zs ++ ctx) env b
-      toAbs' zs ctx env (v:vs) b =
-        PCF.Abs (mkVCtx v ++ ctx) bdyCtx
-        <$> toAbs' (v : zs) bdyCtx (pushEnv env v) vs b
-        where bdyCtx = mkBdyCtx zs ++ ctx
+    environment = fst <$> ask
+    context = snd <$> ask
 
-    t ctx env (Var pos v) = do
-      i <- case lookup v env of
-            Just i -> Right i
-            Nothing -> Left ("Variable " ++ show v ++ " at line " ++ show (ln pos)
-                             ++ ", column " ++ show (cn pos) ++ " not bound.")
-      return (PCF.Var ctx i)
+    withVar v = local (\ (env,ctx) -> (newEnv env, ctx)) where
+      newEnv env = (v, 0::Int) : [(v',i+1) | (v',i) <- env]
+    withContext ctx = local (\ (env,ctx') -> (env, ctx ++ ctx'))
 
-    t ctx env e@(Abs _ v f) =
-      toAbs (const [LambdaBdy e]) (const [LambdaVar v e]) ctx env [v] f
-          
-    t ctx env e@(Con _ g es) =
-      PCF.Con ctx (PCF.symbol g (length es))
-       <$> mapM ( \ (i,ei) -> t (ConstructorArg i e: ctx) env ei) (zip [1..] es)
+    lambda v m = PCF.Abs (Just v) <$> context <*> withVar v m
+
+    letExp e v vs f = letBdy [] vs where
+      letBdy zs []       = withContext [LetBdy v zs e] (pcf f)
+      letBdy zs (v':vs') = withContext [LetBdy v zs e] (lambda v' (letBdy (v':zs) vs'))
+
+    pcf e@(Abs _ v f) = lambda v (withContext [LambdaBdy e] (pcf f))
+
+    pcf (Var pos v) = do
+      mv <- lookup v <$> environment
+      case mv of
+       Just i -> PCF.Var <$> context <*> return i
+       Nothing -> throwError ("Variable " ++ show v ++ " at line " ++ show (ln pos)
+                              ++ ", column " ++ show (cn pos) ++ " not bound.")
       
-    t ctx env e@(App _ e1 e2) =
-      PCF.App ctx <$> t (LApp e : ctx) env e1 <*> t (RApp e : ctx) env e2
-    t ctx env e@(Cond _ gexp cs) = 
-      PCF.Cond ctx <$> t (CaseGuard e:ctx) env gexp
-                   <*> mapM tc cs
+    pcf e@(Con _ g es) =
+      PCF.Con <$> context <*> return g'
+       <*> sequence [withContext [ConstructorArg i e] (pcf ei)
+                    | (i,ei) <- zip [1..] es]
+      where g' = PCF.symbol g (length es)
+            
+    pcf e@(App _ e1 e2) =
+      PCF.App <$> context
+       <*> withContext [LApp e] (pcf e1)
+       <*> withContext [RApp e] (pcf e2)
+       
+    pcf e@(Cond _ gexp cs) = 
+      PCF.Cond <$> context
+       <*> withContext [CaseGuard e] (pcf gexp)
+       <*> sequence [ (PCF.symbol g (length vs),) <$> caseBdy g c [] vs
+                    | (g, vs, c, _) <- cs ]
       where
-        tc (g, vs, c, _) = do
-          c' <- toAbs (const [CaseBdy g e]) (\ v -> [CaseVar v g e]) ctx env vs c 
-          return (PCF.symbol g (length vs), c')
+        caseBdy g c zs []      = withContext [CaseBdy g zs e] (pcf c)
+        caseBdy g c zs (v:vs') = withContext [CaseBdy g zs e] (lambda v (caseBdy g c (v:zs) vs'))
+        
+    pcf e@(Let _ d1 d2s e2) = letExps d1 d2s where
+      letExps (_,v,vs,e1) [] =
+        PCF.App <$> context
+          <*> withContext [LetIn e] (lambda v (pcf e2)) 
+          <*> letExp e v vs e1
+      letExps (_,v,vs,e1) (d:ds) =
+        PCF.App <$> context
+          <*> letExps d ds
+          <*> letExp e v vs e1
 
-    t ctx env e@(Let _ d1 d2s e2) = tLet d1 d2s where
-      tLet (_,v,vs,e1) [] =
-        PCF.App ctx
-          <$> toAbs (const [LetIn e]) (\v' -> [LetBoundVar v' e]) ctx env [v] e2
-          <*> toAbs (\vs' -> [LetBdy v vs' e]) (\ v' -> [LetArg v v' e]) ctx env vs e1
-      tLet (_,v,vs,e1) (d:ds) =
-        PCF.App ctx
-          <$> tLet d ds
-          <*> toAbs (\vs' -> [LetBdy v vs' e]) (\ v' -> [LetArg v v' e]) ctx env vs e1
-
-    t ctx env e@(LetRec _ d1 d2s e2) = do
-      e2' <- toAbs (const [LetIn e]) (\ v' -> [LetBoundVar v' e]) ctx env fs e2
-      e1s <- sequence [toAbs (\ vs' -> [LetRecBdy f vs' e]) (\ v' -> [LetArg f v' e]) ctx env (fs++vsi) ei
-                      | (_,f,vsi,ei) <- ds]
-      return (foldl (\ e' i -> PCF.App ctx e' (PCF.Fix i e1s)) e2' [0..length ds - 1])
-        where 
-          ds = d1 : d2s
-          fs = [ f | (_,f,_,_)  <- ds]
-    -- -- letrec v vs = e1 in e2 == (\v . e2) (fix (\ v vs . e1))
-    -- t ctx env e@(LetRec _ v vs e1 e2) =
-    --   PCF.App ctx
-    --    <$> toAbs (const (LetIn v e)) (\ v' -> LetArg v v' e) ctx env [v] e2 
-    --    <*> (PCF.Fix <$> toAbs (\ vs' -> LetRecBdy v vs' e) (\ v' -> LetArg v v' e) ctx env (v:vs) e1)
+    pcf e@(LetRec _ d1 d2s e2) = do
+      e2' <- foldr lambda (withContext [LetIn e] (pcf e2)) fs -- \ f1..fn -> [e2]
+      e1s <- sequence [ letRecExp fi vsi ei | (_,fi,vsi,ei) <- ds] -- [.. \ f1..fn v1..vm -> [ei] ..]
+      return (fromJust (PCF.applyL e2' [ PCF.Fix i e1s | i <- [0..length ds - 1] ]))
+      where
+        ds = d1 : d2s
+        fs = [ f | (_,f,_,_)  <- ds]
+        letRecExp f vs b = letRecBdy [] fs where
+          letRecBdy zs []       = withContext [LetRecBdy f zs e] (letExp e f vs b)
+          letRecBdy zs (fi:fs') = withContext [LetRecBdy f zs e] (lambda fi (letRecBdy (fi:zs) fs'))
       
 
 -- * parsing
@@ -145,7 +152,7 @@ type Parser = CharParser ()
 
 -- lexing
 reservedWords :: [String]
-reservedWords = words "let rec in = fun match with | -> and"
+reservedWords = words "let rec in = fun match with | -> and ;;"
 
 whiteSpace :: Parser String
 whiteSpace = many ((space <|> tab <|> newline) <?> "whitespace")
@@ -220,7 +227,7 @@ term = (lambdaExp <?> "lambda expression")
       try (symbol "let")
       con <- try (symbol "rec" >> return LetRec) <|> return Let
       (l:ls) <- letBinding `sepBy1` symbol "and"
-      symbol "in"
+      try (symbol "in") <|> symbol ";;" -- hack
       e <- term
       return (con pos l ls e)
       where
