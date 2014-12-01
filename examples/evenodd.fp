@@ -6,4 +6,4 @@ and odd x =
   match x with
   | 0 -> False
   | S(x') -> even x'
-in fun x -> even x
+in even x

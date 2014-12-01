@@ -8,10 +8,10 @@ import           Text.ParserCombinators.Parsec (CharParser)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Control.Applicative ((<$>), (<*>))
 import Control.Monad.Reader (runReaderT, ask, local)
-import Control.Monad.Reader (lift)
 import Control.Monad.Error (throwError)
-import Control.Monad (forM,foldM, void)
+import Control.Monad (void)
 import Data.Maybe (fromJust)
+import qualified Data.Set as Set
 
 
 type Var = String
@@ -68,7 +68,6 @@ data ProgramPoint =
   | LetRecBdy Symbol [Symbol] Exp  
   | LetIn Exp
   | LambdaBdy Exp
-  | LambdaVar Symbol Exp
   | LApp Exp
   | RApp Exp
   | CaseGuard Exp
@@ -77,11 +76,32 @@ data ProgramPoint =
     deriving (Show)
              
 type Context = [ProgramPoint]
-           
+
+freeVars :: Exp -> Set.Set Var
+freeVars (Abs _ v e) = Set.delete v (freeVars e)
+freeVars (Var _ v) = Set.insert v Set.empty
+freeVars (App _ e1 e2) = freeVars e1 `Set.union` freeVars e2
+freeVars (Con _ _ es) = Set.unions [ freeVars e | e <- es]
+freeVars (Cond _ g cs) =
+  Set.unions (freeVars g
+              : [ freeVars e Set.\\ Set.fromList vs
+                | (_,vs,e, _) <- cs ])
+freeVars (Let _ d ds e) =
+  Set.unions (freeVars e Set.\\ fs : [ freeVars ef Set.\\ Set.fromList vs | (_,_,vs,ef) <- d:ds ])
+  where
+    fs = Set.fromList [f | (_,f,_,_) <- d:ds]
+freeVars (LetRec _ d ds e) =
+  Set.unions (freeVars e : [ freeVars ef Set.\\ Set.fromList vs | (_,_,vs,ef) <- d:ds ])
+  Set.\\ fs
+  where
+    fs = Set.fromList [f | (_,f,_,_) <- d:ds]
+
 toPCF :: Exp -> Either String (PCF.Exp Context)
-toPCF expr = runReaderT (pcf expr) ([],[])
+toPCF expr = runReaderT (pcf (close expr)) ([],[])
   where
 
+    close e = foldr (Abs (Pos "toPCF" 0 0)) e (Set.toList (freeVars e))
+      
     environment = fst <$> ask
     context = snd <$> ask
 
