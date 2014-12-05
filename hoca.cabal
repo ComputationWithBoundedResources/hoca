@@ -56,4 +56,5 @@ library
         GeneralizedNewtypeDeriving, 
         TypeOperators,
         ViewPatterns,
+        PatternSynonyms,
         TupleSections

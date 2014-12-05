@@ -41,7 +41,7 @@ import qualified Hoca.DFA as DFA
 import qualified Hoca.FP as FP
 import qualified Hoca.Narrowing as N
 import           Hoca.PCF (Strategy(..), Exp)
-import           Hoca.PCF2Atrs (Symbol (..), Problem, Var, toProblem)
+import           Hoca.PCF2Atrs (Symbol (..), Problem, Var, toProblem, prettyProblem)
 import qualified Hoca.UsableRules as UR
 import           Hoca.Utils (rsFromList, rsToList, tracePretty)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
@@ -76,7 +76,7 @@ traceProblem s prob = tracePretty doc (pure prob) where
   doc =
     PP.text s
     PP.<$> ln '-'
-    PP.<$> PP.indent 2 (PP.pretty prob)
+    PP.<$> PP.indent 2 (prettyProblem prob)
     PP.<$> ln '='
     PP.<$> PP.text ""
 

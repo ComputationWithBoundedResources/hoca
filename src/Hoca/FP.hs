@@ -28,7 +28,7 @@ data Exp =
   | Cond Pos Exp [(Symbol, [Var], Exp, Pos)]
   | Let Pos (Pos,Var,[Var],Exp) [(Pos,Var,[Var],Exp)] Exp
   | LetRec Pos (Pos,Var,[Var],Exp) [(Pos,Var,[Var],Exp)] Exp
-  deriving (Show)
+  deriving (Show, Eq, Ord)
 
 prettyLet :: String -> (Pos, String, [String], Exp) -> [(Pos, String, [String], Exp)] -> Exp -> PP.Doc
 prettyLet n l ls e =
@@ -73,7 +73,7 @@ data ProgramPoint =
   | CaseGuard Exp
   | CaseBdy Symbol [Symbol] Exp
   | ConstructorArg Int Exp
-    deriving (Show)
+    deriving (Show, Eq, Ord)
              
 type Context = [ProgramPoint]
 

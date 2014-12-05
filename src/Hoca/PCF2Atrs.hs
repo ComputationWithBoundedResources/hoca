@@ -21,10 +21,12 @@ import qualified Data.Rewriting.Rule as R
 import qualified Data.Rewriting.Rules as RS
 import qualified Data.Rewriting.Term as T
 import qualified Data.Set as Set
+import qualified Data.Map as Map
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import           Hoca.ATRS
 import qualified Hoca.PCF as PCF
 import qualified Hoca.FP as FP
+import Hoca.Utils (tracePretty)
 
 data Lbl = LString String
          | LInt Int
@@ -86,7 +88,7 @@ toProblem e = P.Problem {
     trs = toTRS e
 
 label :: PCF.Exp FP.Context -> PCF.Exp Name
-label expr = State.evalState (labelM expr) []
+label expr = State.evalState (labelM expr) (Map.empty,[])
   where
     labelM e@(PCF.Var _ v) = PCF.Var <$> name e <*> return v
     labelM e@(PCF.Con _ g es) = PCF.Con <$> name e <*> return g <*> mapM labelM es
@@ -101,31 +103,39 @@ label expr = State.evalState (labelM expr) []
 
     withSurroundingLet ctx n =
       case surroundingLet ctx of
-       Nothing -> maybeFresh (Name [n])
+       Nothing -> maybeFresh (Name [n, LString "main"])
        Just l -> maybeFresh (Name [n, LString l])
        where
          surroundingLet [] = Nothing
          surroundingLet (FP.LetBdy fn _ _ : _) = Just fn
          surroundingLet (FP.LetRecBdy fn _ _ : _) = Just fn    
          surroundingLet (_ : ctx') = surroundingLet ctx'
-       
-    name (PCF.Cond ctx _ _) = withSurroundingLet ctx (LString "cond")
-    name (PCF.Abs _ ctx _) = fromCtx ctx
-      where
+
+    name e = do
+      m <- fst <$> State.get
+      case Map.lookup e m of
+       Just l -> return l
+       Nothing -> do
+         l <- name' e
+         State.modify (\ (_,seen) -> (Map.insert e l m, seen))
+         return l
+         
+      where 
+        name' (PCF.Cond ctx _ _) = withSurroundingLet ctx (LString "cond")
+        name' (PCF.Abs _ ctx _) = fromCtx ctx
+        name' _ = maybeFresh (Name [])
         fromCtx (FP.LetBdy fn vs _: _) = maybeFresh (Name [LString v | v <- vs ++ [fn]])
         fromCtx (FP.LetRecBdy fn vs _: _) = maybeFresh (Name [LInt (length vs), LString fn])
 --        fromCtx (FP.LetIn fn _ : ctx') = LString fn : fromCtx ctx'
         fromCtx (FP.LambdaBdy _ : ctx') = withSurroundingLet ctx' (LString "anonymous")
         fromCtx ctx' = withSurroundingLet ctx' (LInt 0)
     
-    name _ = maybeFresh (Name [])
-    
-    maybeFresh :: Name -> State.State [Name] Name
+    maybeFresh :: Name -> State.State (Map.Map (PCF.Exp FP.Context) Name, [Name]) Name
     maybeFresh (Name []) = maybeFresh (Name [LInt 1])
     maybeFresh l = do 
-      seen <- State.get
+      seen <- snd <$> State.get
       let v = head (dropWhile (`elem` seen) (iterate inc l))
-      State.put (v:seen)
+      State.modify (\ (es,_) -> (es,v:seen))
       return v
         where 
           inc (Name (LInt i : ls)) = Name (LInt (i+1) : ls)
@@ -133,11 +143,11 @@ label expr = State.evalState (labelM expr) []
 
 -- transformation ----------------------------------------------------------------------
       
-newtype TM a = TM { execute :: RWS [Int] [Rule Symbol Var] [PCF.Exp Name] a }
+newtype TM a = TM { execute :: RWS [Int] [Rule Symbol Var] [Name] a }
              deriving (Applicative, Functor, Monad
                       , MonadReader [Int]
                       , MonadWriter [Rule Symbol Var]
-                      , MonadState [PCF.Exp Name])
+                      , MonadState [Name])
 
 eval :: TM a -> (a, [Rule Symbol Var])
 eval m = evalRWS (execute m) [] []
@@ -180,13 +190,11 @@ freeVars (PCF.Cond _ e cs) = do
   vse <- freeVars e
   foldM (\ vs (_,eg) -> Set.union vs <$> freeVars eg) vse cs
 freeVars (PCF.Fix _ fs) =
-  foldM (\ vs f -> Set.union vs <$> freeVars f) Set.empty fs
+  foldM (\ vs fi -> Set.union vs <$> freeVars fi) Set.empty fs
 
 toTRS :: PCF.Exp FP.Context -> [Rule Symbol Var]
 toTRS = snd . eval . mainM . label
   where
-    -- betaNormalise :: PCF.Exp FP.Context -> PCF.Exp FP.Context
-    -- betaNormalise = fromJust . PCF.nf (PCF.ctxtClosure PCF.beta)
     cvars = sort . Set.toList
     
     mainM (PCF.Abs _ _ f) = void (withVar (mainM f))
@@ -222,12 +230,13 @@ toTRS = snd . eval . mainM . label
     toTRSM e@(PCF.Fix i fs)
       | 0 <= i && i < length fs
         && all isApp fs = do
-          visited <- elem e <$> get
+          visited <- elem lf <$> get
           vs <- freeVars e
           let te = fun (Fix lf) (cvars vs)
           unless visited $ do
-            modify (e :)
-            (v,tf) <- withVar (toTRSM (fromJust (foldM PCF.apply f [PCF.Fix j fs | j <- [0..length fs - 1]])))
+            modify (lf :)
+            let v = T.Var (maximum (0 : [1 + j | T.Var j <- Set.toList vs] ))
+            tf <- toTRSM (fromJust (foldM PCF.apply f [PCF.Fix j fs | j <- [0..length fs - 1]]))
             tell [ app te v --> app tf v ]
           return te
       where

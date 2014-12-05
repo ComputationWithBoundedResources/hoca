@@ -34,15 +34,16 @@ expressionFromArgs fname args = do
 simplify :: Problem -> Maybe Problem
 simplify =
   exhaustive (narrowWith caseRules >=> traceProblem "case narrowing")
-  >=> exhaustive (rewriteWith lambdaRules >=> traceProblem "lambda rewrite")
+  -- >=> exhaustive (rewriteWith lambdaRules >=> traceProblem "lambda rewrite")
   >=> exhaustive (rewriteWith fixRules >=> traceProblem "fix rewrite")  
-  >=> try (dfaInstantiate hoHeadVariables >=> traceProblem "instantiation")
+  >=> try (dfaInstantiate allVars >=> traceProblem "instantiation")
   >=> exhaustive (narrowWith nonRecursiveRules >=> traceProblem "non-recursive narrowing")
   where
 
     hoHeadVariables (R.rhs -> T.Var (v, _ :~> _)) = [v]
     hoHeadVariables trl = ATRS.headVars (R.rhs (ATRS.unTypeRule trl)) -- TODO: change TypedRule
-
+    allVars = map fst . R.vars
+    
     narrowWith p =
       narrow (\ rs -> all (p rs) . map N.narrowedWith . N.narrowings)
       >=> try usableRules >=> try neededRules

@@ -2,7 +2,6 @@ module Hoca.DFA
        ( TGSym (..)
        , TGTerm
        , startSymbol
-       , varSymbol
        , auxSymbol
        , fun
        , TGRule
@@ -15,7 +14,7 @@ import Data.Rewriting.Term (Term (..))
 import qualified Data.Rewriting.Rule as R
 import qualified Data.Rewriting.Rules as RS
 import qualified Data.Rewriting.Context as C
-import Hoca.Utils (contexts, prod, runVarSupply, fresh)
+import Hoca.Utils (contexts, prod, runVarSupply, fresh, tracePretty', tracePretty)
 import qualified Data.Set as S
 import qualified Data.Map as M
 import qualified Data.List as L
@@ -32,10 +31,16 @@ data TGSym f v x = F f
                  | R Int
                  deriving (Ord, Eq, Show)
 
+pattern Data x = Fun (X x) []
+pattern Substitution v i = Fun (V v i) []
+pattern Result i = Fun (R i) []
+pattern Term f ts = Fun (F f) ts
+
+
 instance (PP.Pretty f, PP.Pretty v, PP.Pretty x) => PP.Pretty (TGSym f v x) where
   pretty (F s) = PP.pretty s
   pretty (X s) = PP.text "X" PP.<> PP.braces (PP.pretty s)
-  pretty (V s i) = PP.text "V" PP.<> PP.braces (PP.pretty s PP.<> PP.text "_" PP.<> PP.int i) 
+  pretty (V s i) = PP.text "V" PP.<> PP.braces (PP.text "x" PP.<> PP.pretty s PP.<> PP.text "_" PP.<> PP.int i) 
   pretty (R i) = PP.text "R" PP.<> PP.braces (PP.int i)
   
 type TGTerm f v x = Term (TGSym f v x) ()
@@ -43,45 +48,31 @@ type TGRule f v x = R.Rule (TGSym f v x) ()
 
 type TG f v x = [TGRule f v x]
 
-
 (-->) :: Term f v -> Term f v -> R.Rule f v
 (-->) = R.Rule
 
-constant :: f -> R.Term f v
-constant f = Fun f []
+-- constant :: f -> R.Term f v
+-- constant f = Fun f []
 
 startSymbol :: TGTerm f v x
-startSymbol = constant (R 0)
-
-varSymbol :: v -> Int -> TGTerm f v x
-varSymbol v i = constant (V v i)
+startSymbol = Result 0
 
 auxSymbol :: x -> TGTerm f v x
-auxSymbol = constant . X 
+auxSymbol = Data
 
 fun :: f -> [TGTerm f v x] -> TGTerm f v x
 fun f = Fun (F f)
 
 
 lift :: Int -> Term f v -> TGTerm f v x 
-lift i (Var v) = constant (V v i)
-lift i (Fun f ts) = Fun (F f) (map (lift i) ts)
+lift i (Var v) = Substitution v i
+lift i (Fun f ts) = Term f (map (lift i) ts)
 
-
-minimalMatch :: (Eq f, Eq v, Eq x) => TG f v x -> Term f v -> TGTerm f v x -> [TGTerm f v x]
-minimalMatch = minMatch []
-  where
-    minMatch _ _ (Var _) t  = [t]
-    minMatch visited tg (Fun f ps) t@(Fun (F g) ts)
-      | t `elem` visited = []
-      | f == g = map (Fun (F g)) (prod [ minMatch [] tg p' t' | (p',t') <- zip ps ts])
-      | otherwise = []
-    minMatch visited tg p t
-      | t `elem` visited = []
-      | otherwise  = 
-          concatMap (minMatch (t:visited) tg p) [ rhs | R.Rule lhs rhs <- tg, lhs == t]
-
-
+unlift :: TGTerm f v x -> Term f ()
+unlift (Term f ts) = Fun f (map unlift ts)
+unlift _ = Var ()
+    
+-- TODO
 epsilonNormalise :: (Eq v, Eq f, Eq x) => TG f v x -> TG f v x
 epsilonNormalise tg = norm ers [] ners
   where
@@ -102,35 +93,59 @@ epsilonNormalise tg = norm ers [] ners
     rew (R.Rule lhs rhs) rs = [R.Rule lhs rhs' | rhs' <- rhss, rhs /= rhs']
       where rhss = map RS.result (RS.rootRewrite rs rhs)
 
-    
-complete :: (Eq x, Eq f, Eq v, Ord x, Ord f, Ord v) => [(R.Rule f v, Int)] -> TG f v x -> TG f v x
-complete prog = epsilonNormalise . S.toList . iter . S.fromList
+-- minimalMatch :: (Ord v, Eq f, Eq v, Eq x, PP.Pretty x, PP.Pretty f, PP.Pretty v) => [(R.Rule f v, Int)] -> TG f v x -> Term f v -> TGTerm f v x -> [TGTerm f v x]
+minimalMatch tg t1 t2 = let mm = minMatch [] t1 t2 in mm
+  where
+    minMatch _ (Var _) t  = [t]
+    minMatch visited (Fun f ps) t@(Term g ts)
+      | t `elem` visited = []
+      | f == g = map (Term g) (prod [ minMatch [] p' t' | (p',t') <- zip ps ts])
+      | otherwise = []
+    minMatch visited p t
+      | t `elem` visited = []
+      | otherwise  = 
+          concatMap (minMatch (t:visited) p) [ rhs | R.Rule lhs rhs <- tg, lhs == t]
+
+
+
+complete :: (Eq x, Eq f, Eq v, Ord x, Ord f, Ord v,PP.Pretty x, PP.Pretty f, PP.Pretty v) => [(R.Rule f v, Int)] -> TG f v x -> TG f v x
+complete prog = epsilonNormalise . S.toList . iter . S.fromList . tracePretty' 
   where
     iter tg
       | tg' `S.isSubsetOf` tg  = tg
-      | otherwise = iter tg'
+      | otherwise = tracePretty (S.toList (tg' S.\\ tg)) (iter tg')
       where
         tg' = S.fromList (step tg)
         
-    step (S.toList -> tg) = concatMap (\ (R.Rule lhs rhs) -> concatMap (ext lhs tg) (contexts rhs)) tg
-        
-    ext lhs tg (ctxt,st) = 
-      foldl (++) tg
-        [ [ lhs --> (ctxt `C.apply` r), r --> lift i t ]
-          ++ concat [varRules i p m | m <- ms]
-        | (R.Rule p t,i) <- prog
-        , let r = constant (R i)
-        , let ms = minimalMatch tg p st
-        , not (null ms)
-        ]
+    step (S.toList -> tg) = tg ++ concatMap (\ (R.Rule lhs rhs) -> concatMap (ext lhs) (contexts (annotateMatches tg rhs))) tg
 
-    varRules i (Var x) m = [v --> m | let v = varSymbol x i,  v /= m]
-    varRules i (T.Fun _ ps) (T.Fun _ ms) =
+    ext lhs (ctxt, st) =
+      concat [
+        [ lhs --> dropAnnotations (ctxt `C.apply` Fun (R i,[]) [])
+        , Result i --> lift i t ]
+        ++ concat [varRules i p m | m <- ms]
+        | (R.Rule p t, i ,ms) <- minimalMatches st ]
+      
+
+    minimalMatches (Fun (_,a) _) = a
+    minimalMatches _ = []
+    dropAnnotations = T.map fst id
+    annotateMatches _  (Var v) = Var v
+    annotateMatches tg t@(Fun f ts) = Fun (f,a) ts' where
+      ts' = map (annotateMatches tg) ts
+      a = case f of
+        (F _) | normalised -> [ (R.Rule l r, i, ms) | (R.Rule l r,i) <- prog, let ms = minimalMatch tg l t, not (null ms)]
+        _ -> []
+      normalised = all (null . minimalMatches) (concatMap T.subterms ts')
+    
+    varRules i (Var x) m = [ v --> m | let v = Substitution x i,  v /= m]
+    varRules i (Fun _ ps) (Fun _ ms) =
       concat [varRules i p m | (p,m) <- zip ps ms]
+      
     varRules _ _ _ = error "DFA.varRules: pattern _ (Fun _ _) (Var _) impossible"
         
 
-refinements :: (Ord f, Ord v, Ord x) => [R.Rule f v] -> TG f v x -> R.Rule f v -> (v -> Bool) ->  [R.Rule f Int]
+--refinements :: (Ord f, Ord v, Ord x) => [R.Rule f v] -> TG f v x -> R.Rule f v -> (v -> Bool) ->  [R.Rule f Int]
 refinements prog initial =
   \ rl@(R.Rule lhs rhs) refineP ->
    case L.lookup rl prog' of
@@ -142,23 +157,21 @@ refinements prog initial =
         apply s t = fromJust (S.gApply s t)
         substs = map toSubst (foldl (\ l v -> [ (v,p):s | s <- l, p <- patterns v]) [[]] (L.nub (R.vars rl))) where 
           patterns v
-            | refineP v = L.nub (map toTerm (reducts tg (varSymbol v i)))
+            | refineP v = L.nub (map unlift (reducts tg (Substitution v i)))
             | otherwise = [T.Var ()]
-        ruleReachable = any (== Fun (R i) []) (RS.lhss tg)
+        ruleReachable = any (== Result i) (RS.lhss tg)
   where
-    prog' = zip prog [1..] 
+    prog' = tracePretty' (zip prog [1..] )
     
     tg = complete prog' initial
 
-    toTerm (Fun (F f) ts) = Fun f (map toTerm ts)
-    toTerm _ = Var ()
-    
     reducts rs s = if null rhss then [s] else rhss
       where rhss = [rhs | R.Rule lhs rhs <- rs, lhs == s]
 
     toSubst = ST.fromMap . M.fromList . runVarSupply . mapM (\ (v,p) -> (,) v <$> ren p)
-      where ren (T.Fun f ts) = T.Fun f <$> mapM ren ts
-            ren _            = T.Var <$> fresh
+      where
+        ren (T.Fun f ts) = T.Fun f <$> mapM ren ts
+        ren _            = T.Var <$> fresh
 
 
         
