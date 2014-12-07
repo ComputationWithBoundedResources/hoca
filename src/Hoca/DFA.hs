@@ -65,6 +65,21 @@ type TG f v x = M.Map (TGSym f v x) [TGTerm f v x]
 productions :: (Ord f, Ord v, Ord x) => TG f v x -> TGSym f v x -> [TGTerm f v x]
 productions tg lhs = fromMaybe [] (M.lookup lhs tg)
 
+
+productions' :: (Ord f, Ord v, Ord x) => TG f v x -> TGSym f v x -> [TGTerm f v x]
+productions' tg lhs = walk [] [lhs] where
+  walk vis [] = []
+  walk vis (n:ns)
+    | n `elem` vis = walk vis ns
+    | otherwise = ts ++ walk (n:vis) ([ n' | Fun n' _ <- ns'] ++ ns) where
+        (ns',ts) = L.partition isTerminal (productions tg n)
+  isTerminal Term{} = False
+  isTerminal _ = True
+  --       concatMap walk' (productions tg n)
+  -- walk' t@(Term f _) = [t]
+  -- walk' (Fun m _) = walk' (n:vis) m 
+                      
+
 insert :: (Ord f, Ord v, Ord x) => TGRule f v x -> TG f v x -> TG f v x
 insert (Rule lhs rhs) = M.alter ins lhs where
   ins Nothing = Just [rhs]
@@ -99,28 +114,6 @@ liftTerm i (Fun f ts) = Term f (map (liftTerm i) ts)
 unlift :: TGTerm f v x -> Term f ()
 unlift (Term f ts) = Fun f (map unlift ts)
 unlift _ = Var ()
-    
--- TODO
-epsilonNormalise :: (Eq v, Eq f, Eq x, Ord v, Ord f, Ord x) => TG f v x -> TG f v x
-epsilonNormalise tg = fromRules (norm ers [] ners)
-  where
-    (ers,ners) = L.partition epsilonRule (rules tg)
-    epsilonRule rl@(Rule _ rhs) = 
-      case T.root rhs of
-       Right X{} -> True
-       Right V{} -> True
-       Right R{} -> True
-       _ -> False
-       
-    norm [] _ rs = rs
-    norm (e@(Rule lhs rhs):es) seen rs
-      | terminal lhs == rhs = norm es seen rs
-      | e `elem` seen = norm es seen rs
-      | otherwise = norm (rew e es ++ es) (e:seen) (rew e rs ++ rs)
-
-    rew (Rule lhs rhs) rs = [Rule lhs rhs' | Rule lhs' rhs' <- rs
-                                           , terminal lhs' == rhs'
-                                           , terminal lhs /= rhs']
 
 newtype Match f v x = Match [(TGSym f v x,TGTerm f v x)] deriving Show
 data Matches f v x =
@@ -131,19 +124,18 @@ data Matches f v x =
 minimalMatches :: (Ord x, Ord v, Ord f) => TG f v x -> TGTerm f v x -> (R.Rule f v, Int) -> Matches f v x
 minimalMatches tg s (rl@(R.Rule lhs _), i) =
      Matches { matchedRule = (rl, i)
-             , matches = map Match (minMatches [] lhs s)}
+             , matches = map Match (minMatches lhs s)}
   where
-    minMatches _ (Var v) u = return [(V v i, u)]
-    minMatches _ (Fun f ls) (Term g vs)
+    minMatches (Var v) u = return [(V v i, u)]
+    minMatches (Fun f ls) (Term g vs)
       | f /= g    = mzero
-      | otherwise = concat <$> sequence [minMatches [] li vi | (li,vi) <- zip ls vs]
-    minMatches visited t u@(Fun f _)
-      | u `elem` visited = mzero
-      | otherwise        = msum [ minMatches (u:visited) t r | r <- productions tg f]
-    minMatches _ _ _ = mzero
+      | otherwise = concat <$> sequence [minMatches li vi | (li,vi) <- zip ls vs]
+    minMatches t u@(Fun f _)
+      = msum [ minMatches t r | r <- productions' tg f]
+    minMatches _ _ = mzero
       
-complete :: (Ord x, Ord f, Ord v) => [(R.Rule f v, Int)] -> TG f v x -> TG f v x
-complete prog = epsilonNormalise . exec (fixM makeClosure) where
+-- complete :: (Ord x, Ord f, Ord v) => [(R.Rule f v, Int)] -> TG f v x -> TG f v x
+complete prog = exec (fixM makeClosure) where
 
   exec m = execState (execStateT (execStateT m S.empty) True)
   setModified = lift . modify . const
@@ -156,6 +148,7 @@ complete prog = epsilonNormalise . exec (fixM makeClosure) where
       | otherwise = do
           isElt <- member rl <$> lift (lift get)
           unless isElt $ do
+            tracePretty (lhs,"->",rhs) (return ())
             lift (lift (modify (insert rl)))
             setModified True
 
@@ -185,9 +178,6 @@ complete prog = epsilonNormalise . exec (fixM makeClosure) where
         when argNormalised (mapM_ closeWithMatch ms)
         
       closeSubterm _ _ = return ()
-
-
-
 
   -- hasRedex s == all terms represented by s are reducible
   reducible s = withMemoR reducible1 s
@@ -221,7 +211,7 @@ andM :: Monad m => [m Bool] -> m Bool
 andM [] = return True
 andM (mb:ms) = do {b <- mb; if b then andM ms else return False}
       
-refinements :: (Ord f, Ord v, Ord x) => [R.Rule f v] -> TG f v x -> R.Rule f v -> (v -> Bool) ->  [R.Rule f Int]
+-- refinements :: (Ord f, Ord v, Ord x) => [R.Rule f v] -> TG f v x -> R.Rule f v -> (v -> Bool) ->  [R.Rule f Int]
 refinements prog initial = 
   \ rl@(R.Rule lhs rhs) refineP ->
    case L.lookup rl prog' of
@@ -239,10 +229,10 @@ refinements prog initial =
   where
     prog' = zip prog [1..]
     
-    tg = complete prog' initial
+    tg = let tg' = complete prog' initial in tracePretty (M.toList tg') tg'
 
     reducts s =
-      case productions tg s of 
+      case productions' tg s of 
        [] -> [Fun s []]
        rhss -> rhss
       -- if null rhss then [s] else rhss

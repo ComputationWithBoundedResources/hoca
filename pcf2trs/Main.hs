@@ -36,7 +36,7 @@ simplify =
   exhaustive (narrowWith caseRules >=> traceProblem "case narrowing")
   -- >=> exhaustive (rewriteWith lambdaRules >=> traceProblem "lambda rewrite")
   >=> exhaustive (rewriteWith fixRules >=> traceProblem "fix rewrite")  
-  >=> try (dfaInstantiate allVars >=> traceProblem "instantiation")
+  >=> try (dfaInstantiate hoHeadVariables >=> traceProblem "instantiation")
   >=> exhaustive (narrowWith nonRecursiveRules >=> traceProblem "non-recursive narrowing")
   where
 
