@@ -140,12 +140,12 @@ dfaInstantiate abstractVars = modifyRules instantiateRules where
     case inferTypes rs of
      Left _ -> empty
      Right (sig, ers) -> pure (concatMap refinements ers) where     
-         initialDFA = startRules ++ constructorRules
-         startRules =
-           [ R.Rule DFA.startSymbol (DFA.fun (Sym Main) [DFA.auxSymbol t | t <- inputTypes td])
+         initialDFA = DFA.fromRules (startRules ++ constructorRules)
+         startRules = 
+           [ DFA.Rule DFA.startSymbol (DFA.fun (Sym Main) [DFA.terminal (DFA.auxSymbol t) | t <- inputTypes td])
            | (Main, td) <- Map.toList sig]
          constructorRules = 
-           [ R.Rule (DFA.auxSymbol (outputType td)) (DFA.fun (Sym c) [DFA.auxSymbol t | t <- inputTypes td])
+           [ DFA.Rule (DFA.auxSymbol (outputType td)) (DFA.fun (Sym c) [DFA.terminal (DFA.auxSymbol t) | t <- inputTypes td])
            | (c@Con{}, td) <- Map.toList sig ]
            
          mkRefinements = DFA.refinements rs initialDFA
