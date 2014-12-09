@@ -37,6 +37,7 @@ import qualified Data.Rewriting.Rules as RS
 import           Data.Rewriting.Substitution (unify)
 import qualified Data.Rewriting.Term as T
 import           Hoca.ATRS
+import qualified Hoca.TreeGrammar as TG
 import qualified Hoca.DFA as DFA
 import qualified Hoca.FP as FP
 import qualified Hoca.Narrowing as N
@@ -140,12 +141,12 @@ dfaInstantiate abstractVars = modifyRules instantiateRules where
     case inferTypes rs of
      Left _ -> empty
      Right (sig, ers) -> pure (concatMap refinements ers) where     
-         initialDFA = DFA.fromRules (startRules ++ constructorRules)
+         initialDFA = TG.fromList (startRules ++ constructorRules)
          startRules = 
-           [ DFA.Rule DFA.startSymbol (DFA.fun (Sym Main) [DFA.terminal (DFA.auxSymbol t) | t <- inputTypes td])
+           [ TG.Production DFA.startNonTerminal (TG.Terminal (Sym Main) [TG.NonTerminal (DFA.auxNonTerminal t) | t <- inputTypes td])
            | (Main, td) <- Map.toList sig]
          constructorRules = 
-           [ DFA.Rule (DFA.auxSymbol (outputType td)) (DFA.fun (Sym c) [DFA.terminal (DFA.auxSymbol t) | t <- inputTypes td])
+           [ TG.Production (DFA.auxNonTerminal (outputType td)) (TG.Terminal (Sym c) [TG.NonTerminal (DFA.auxNonTerminal t) | t <- inputTypes td])
            | (c@Con{}, td) <- Map.toList sig ]
            
          mkRefinements = DFA.refinements rs initialDFA

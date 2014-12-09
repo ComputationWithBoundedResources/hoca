@@ -40,6 +40,7 @@ library
         Hoca.Transform
         Hoca.UsableRules
         Hoca.Narrowing
+        Hoca.TreeGrammar
     other-modules:
     build-depends:
         containers >= 0.3 && < 0.6,
