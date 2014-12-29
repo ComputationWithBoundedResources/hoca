@@ -1,11 +1,15 @@
-module Hoca.DFA
-       where
+module Hoca.DFA (
+  NonTerminal (..)
+  , DFAProduction
+  , DFAGrammar
+  , startNonTerminal
+  , auxNonTerminal
+  , refinements
+  ) where
 
 import qualified Data.Rewriting.Term as T
 import qualified Data.Rewriting.Rule as R
-import qualified Data.Rewriting.Rules as RS
-import qualified Data.Rewriting.Context as C
-import Hoca.Utils (prod, runVarSupply, fresh, tracePretty', tracePretty)
+import Hoca.Utils (runVarSupply, fresh, andM, orM)
 import Hoca.TreeGrammar
 import qualified Data.Set as S
 import qualified Data.Map as M
@@ -16,20 +20,14 @@ import qualified Data.Rewriting.Substitution.Type as ST
 import qualified Data.Rewriting.Substitution as S
 import Control.Applicative ((<$>))
 import Data.Maybe (fromJust)
-import Control.Monad (MonadPlus (..), msum)
-import Control.Monad.State.Lazy (execState, execStateT, get, modify)
-import Control.Monad (when)
+import Control.Monad (MonadPlus (..), msum, when, unless)
 import Control.Monad.Trans (lift)
-import Control.Monad (unless)
-import Control.Applicative ((<*>))
-import Control.Monad (forM)
-import Data.Maybe (fromMaybe)
-
+import Control.Monad.State.Lazy (execState, execStateT, get, modify)
 
 data NonTerminal v x = X x | V v Int | R Int deriving (Ord, Eq, Show)
 
 type DFAProduction f v x = Production f (NonTerminal v x)
-type DFAGrammer f v x = Grammar f (NonTerminal v x)
+type DFAGrammar f v x = Grammar f (NonTerminal v x)
 
 instance (PP.Pretty x, PP.Pretty v) => PP.Pretty (NonTerminal x v) where
   pretty (X s) = PP.text "X" PP.<> PP.braces (PP.pretty s)
@@ -49,21 +47,22 @@ liftTerm i (T.Fun f ts) = Terminal f (map (liftTerm i) ts)
 -- TODO
 unliftTerm :: Term f (NonTerminal v x) -> T.Term f ()
 unliftTerm (Terminal f ts) = T.Fun f (map unliftTerm ts)
-unliftTerm _ = T.Var ()
+unliftTerm _ = T.Var ()               
+
 
 type Ctxt t n = Term t n -> Term t n
+
 contexts :: Term t n -> [(Ctxt t n, Term t n)]
 contexts = walk id
   where
     walk c n@NonTerminal{} = [(c,n)]
     walk c t@(Terminal f ts) =
       (c, t) : concatMap (\ (ls,ti,rs) ->
-                           walk (\ ti -> c(Terminal f (ls ++ [ti] ++ rs))) ti)
+                           walk (\ t' -> c(Terminal f (ls ++ [t'] ++ rs))) ti)
                  (parts [] ts)
 
     parts _ [] = []
     parts ls (t:rs) = (ls,t,rs) : parts (ls ++ [t]) rs
-               
 
 newtype Match f v x = Match [DFAProduction f v x] deriving Show
 data Matches f v x =
@@ -71,7 +70,7 @@ data Matches f v x =
           , matches :: [Match f v x] }
   deriving Show
 
-minimalMatches :: (Ord x, Ord v, Ord f) => DFAGrammer f v x -> Term f (NonTerminal v x) -> (R.Rule f v, Int) -> Matches f v x
+minimalMatches :: (Ord x, Ord v, Ord f) => DFAGrammar f v x -> Term f (NonTerminal v x) -> (R.Rule f v, Int) -> Matches f v x
 minimalMatches tg s (rl@(R.Rule lhs _), i) =
      Matches { matchedRule = (rl, i)
              , matches = map Match (minMatches lhs s)}
@@ -82,8 +81,11 @@ minimalMatches tg s (rl@(R.Rule lhs _), i) =
       | otherwise = concat <$> sequence [minMatches li vi | (li,vi) <- zip ls vs]
     minMatches t (NonTerminal n)
       = msum [ minMatches t r | r <- produces' tg n]
-    minMatches _ _ = mzero
 
+extensionOf :: (Ord v, Ord f, Ord x)
+               => DFAGrammar f v x -> [(R.Rule f v, Int)] -> NonTerminal v x
+               -> (Ctxt f (NonTerminal v x), Term f (NonTerminal v x))
+               -> [Production f (NonTerminal v x)]
 extensionOf tg prog lhs (ctx,t) =
   concatMap mkExts (map (minimalMatches tg t) prog) where
   mkExts match
@@ -94,7 +96,7 @@ extensionOf tg prog lhs (ctx,t) =
         : [ p | Match m <- matches match, p <- m ]
     where (rl,i) = matchedRule match
 
--- complete :: (Ord x, Ord f, Ord v) => [(R.Rule f v, Int)] -> TG f v x -> TG f v x
+complete :: (Ord f, Ord x, Ord v) => [(R.Rule f v, Int)] -> DFAGrammar f v x -> DFAGrammar f v x
 complete prog = exec (fixM makeClosure) where
 
   exec m = execState (execStateT (execStateT m S.empty) True)
@@ -147,17 +149,7 @@ complete prog = exec (fixM makeClosure) where
         unless r (modify (S.insert t))
         return r
 
-      
-  
-orM :: Monad m => [m Bool] -> m Bool
-orM [] = return False
-orM (mb:ms) = do {b <- mb; if b then return b else orM ms}
-      
-andM :: Monad m => [m Bool] -> m Bool
-andM [] = return True
-andM (mb:ms) = do {b <- mb; if b then andM ms else return False}
-      
--- refinements :: (Ord f, Ord v, Ord x) => [R.Rule f v] -> TG f v x -> R.Rule f v -> (v -> Bool) ->  [R.Rule f Int]
+refinements :: (Ord v, Ord f, Ord x) => [R.Rule f v] -> DFAGrammar f v x -> R.Rule f v -> (v -> Bool) -> [R.Rule f Int]
 refinements prog initial = 
   \ rl@(R.Rule lhs rhs) refineP ->
    case L.lookup rl prog' of
@@ -173,16 +165,14 @@ refinements prog initial =
             | otherwise = [T.Var ()]
         ruleReachable = not (null (produces' tg (R i)))
   where
-    prog' = tracePretty' (zip prog [1..])
+    prog' = zip prog [1..]
     
-    tg = let tg' = complete prog' initial in tracePretty' tg'
+    tg = complete prog' initial
 
     reducts s =
       case produces' tg s of 
        [] -> [NonTerminal s]
        rhss -> rhss
-      -- if null rhss then [s] else rhss
-      -- where rhss = [rhs | R.Rule lhs rhs <- rs, lhs == s]
 
     toSubst = ST.fromMap . M.fromList . runVarSupply . mapM (\ (v,p) -> (,) v <$> ren p)
       where

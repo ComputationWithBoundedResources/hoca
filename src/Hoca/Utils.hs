@@ -10,6 +10,19 @@ import Control.Monad.State (MonadState,State,StateT,evalState,evalStateT,get,mod
 import Data.Monoid (Monoid(..))
 import qualified Data.Rewriting.Rule as R
 
+
+orM :: Monad m => [m Bool] -> m Bool
+orM [] = return False
+orM (mb:ms) = do {b <- mb; if b then return b else orM ms}
+      
+andM :: Monad m => [m Bool] -> m Bool
+andM [] = return True
+andM (mb:ms) = do {b <- mb; if b then andM ms else return False}
+
+prod :: [[a]] -> [[a]]
+prod [] = [[]]
+prod (as:ass) = [ ai:asi | ai <- as, asi <- prod ass ]
+
 -- | @(C,s) `elem` contexts t@ if and only if @t = C[s]@.
 contexts :: T.Term f v -> [(C.Ctxt f v, T.Term f v)]
 contexts = walk id
@@ -20,12 +33,6 @@ contexts = walk id
 
     parts _ [] = []
     parts ls (t:rs) = (ls,t,rs) : parts (ls ++ [t]) rs
-
-
-prod :: [[a]] -> [[a]]
-prod [] = [[]]
-prod (as:ass) = [ ai:asi | ai <- as, asi <- prod ass ]
-
 
 fresh :: MonadState Int m => m Int
 fresh = modify succ >> get
