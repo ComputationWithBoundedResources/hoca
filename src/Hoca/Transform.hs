@@ -4,6 +4,7 @@ module Hoca.Transform (
   -- * Combinators
   try
   , (>=>)
+  , (<=>)
   , repeated
   , exhaustive
   , modifyRules
@@ -51,6 +52,9 @@ import qualified Text.PrettyPrint.ANSI.Leijen as PP
 -- combinators
 try :: (Strategy m) => (a -> m a) -> a -> m a
 try m a = m a <||> return a
+
+(<=>) :: (Strategy m) => (a -> m b) -> (a -> m b) -> a -> m b
+(<=>) f1 f2 a = f1 a <||> f2 a
 
 repeated :: (Strategy m) => Int -> (a -> m a) -> a -> m a
 repeated n m

@@ -37,7 +37,8 @@ simplify =
   -- >=> exhaustive (rewriteWith lambdaRules >=> traceProblem "lambda rewrite")
   >=> exhaustive (rewriteWith fixRules >=> traceProblem "fix rewrite")  
   >=> try (dfaInstantiate hoHeadVariables >=> traceProblem "instantiation")
-  >=> exhaustive (narrowWith nonRecursiveRules >=> traceProblem "non-recursive narrowing")
+  >=> exhaustive ((narrowWith nonRecursiveRules <=> narrowWith caseRules)
+                  >=> traceProblem "non-recursive/case narrowing")
   where
 
     hoHeadVariables (R.rhs -> T.Var (v, _ :~> _)) = [v]
