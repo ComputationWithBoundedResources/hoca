@@ -149,15 +149,6 @@ toPCF expr = runReaderT (pcf (close expr)) ([],[])
       es <- sequence [ letExp e fi vsi ei | (_,fi,vsi,ei) <- d1:ds ]
       return (fromJust (PCF.applyL e2' es))
       where fs = [ f | (_,f,_,_)  <- d1 : ds]
-      -- letExps d1 d2s where
-      -- letExps (_,v,vs,e1) [] =
-      --   PCF.App <$> context
-      --     <*> withContext [LetIn e] (lambda v (pcf e2)) 
-      --     <*> letExp e v vs e1
-      -- letExps (_,v,vs,e1) (d:ds) =
-      --   PCF.App <$> context
-      --     <*> letExps d ds
-      --     <*> letExp e v vs e1
 
     pcf e@(LetRec _ d1 ds e2) = do
       e2' <- foldr lambda (withContext [LetIn e] (pcf e2)) fs -- \ f1..fn -> [e2]
@@ -181,8 +172,14 @@ reservedWords = words "let rec in = fun match with | -> and ;;"
 whiteSpace :: Parser String
 whiteSpace = many ((space <|> tab <|> newline) <?> "whitespace")
 
+whiteSpace1 :: Parser String
+whiteSpace1 = many1 ((space <|> tab <|> newline) <?> "whitespace")
+
+comment :: Parser String
+comment = (string "(*" >> manyTill anyChar (try (string "*)"))) <?> "comment"
+
 lexeme :: Parser a -> Parser a
-lexeme p = do { x <- p; _ <- whiteSpace; return x }
+lexeme p = do { x <- p; _ <- many (try comment <|> whiteSpace1); return x }
 
 symbol :: String -> Parser ()
 symbol name = void (lexeme (string name) <?> "keyword '" ++ name ++ "'")
@@ -204,7 +201,7 @@ constructor :: Parser String
 constructor = identifier ((:) <$> (try upper <|> digit) <*> ident') <?> "constructor"
 
 parens :: Parser a -> Parser a
-parens = between (symbol "(") (symbol ")")
+parens = between (char '(' >> notFollowedBy (char '*')) (lexeme (char ')'))
 
 -- parsing
 
@@ -222,6 +219,7 @@ term = (lambdaExp <?> "lambda expression")
        <|> (condExp <?> "match expression")               
        <|> (appExp <?> "application")
   where
+    
     appExp = do
       (_,e):es <-
         many1 ((try (withPos var) <?> "variable")
@@ -285,4 +283,4 @@ expFromString source input =
   case runParser p () source input of
    Left e -> Left (show e)
    Right r -> Right r
-  where p = do {_ <- whiteSpace; t <- term; eof; return t }
+  where p = do {_ <- many (try comment <|> whiteSpace1); t <- term; eof; return t }
