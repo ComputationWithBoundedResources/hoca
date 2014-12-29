@@ -23,17 +23,14 @@ module Hoca.PCF
   , ctxtClosure
   ) where
 
-import           Control.Applicative ((<$>), Alternative(..))
+import           Control.Applicative ((<$>), (<*>), Alternative(..))
 import qualified Data.Set as Set
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
-import Control.Monad (foldM)
 import qualified Data.IntMap as IntMap
 import Data.Maybe (isJust)
-import Control.Monad ((>=>))
+import Control.Monad (foldM,guard,(>=>))
 import Data.Function (on)
 import Data.List (sortBy)
-import Control.Monad (guard)
-import Control.Applicative ((<*>))
 
 data Symbol = Symbol { sname :: String, sarity :: Int } deriving (Show, Eq, Ord)
 
@@ -53,7 +50,7 @@ data Exp l =
   deriving (Show, Eq, Ord)
 
 instance PP.Pretty Symbol where
-  pretty = PP.bold . PP.text . sname
+  pretty = PP.text . sname
 
 ($$) :: PP.Doc -> PP.Doc -> PP.Doc
 pa $$ pb = PP.align (pa PP.<$> PP.indent 1 pb)
@@ -94,7 +91,7 @@ match :: (Show l, Eq l) => Exp l -> Exp l -> Maybe (Subst l)
 match e f = go 0 e f IntMap.empty where
   go k (Var _ i) t sub
     | i >= k = -- free variable
-        let t' = (shift' (-k) (-k) t)
+        let t' = shift' (-k) (-k) t
         in case IntMap.lookup (i-k) sub of
             Nothing | nonVarCapture k t -> Just (IntMap.insert (i-k) t' sub)
             Just s | s == t' -> Just sub
@@ -195,7 +192,7 @@ cond :: Strategy m => Exp l -> m (Exp l)
 cond (Cond _ (Con _ g es) cs) =
   case lookup g cs of
    Nothing -> return Bot
-   Just eg -> foldM (\ e ei -> e `apply` ei) eg es
+   Just eg -> foldM apply eg es
 cond _ = empty
 
 

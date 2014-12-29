@@ -26,7 +26,6 @@ import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import           Hoca.ATRS
 import qualified Hoca.PCF as PCF
 import qualified Hoca.FP as FP
-import Hoca.Utils (tracePretty)
 
 data Lbl = LString String
          | LInt Int
