@@ -11,11 +11,13 @@ module Hoca.ATRS
        , aterm
        , app
        , fun
+       , args
        , var
          -- * operations
        , headSymbol
        , headVars
        , funsDL
+       , funs         
          -- * Typing
        , Type (..)
        , TypeDecl (..)
@@ -91,6 +93,13 @@ headVars (T.Fun _ ts) = concatMap headVars ts
 
 funsDL :: Term f v -> [f] -> [f]
 funsDL t l = [f | (Sym f) <- T.funsDL t (map Sym l)]
+
+funs :: Term f v -> [f]
+funs t = funsDL t []
+
+args :: Term f v -> [Term f v]
+args (atermM -> Just (t1 :@ t2)) = args t1 ++ [t2]
+args _ = []
 
 -- typing
 
@@ -177,14 +186,14 @@ unTypeRule  = mapRule unType
 unTypeRules :: [TypedRule f v] -> [Rule f v]
 unTypeRules = map unTypeRule
 
-inferTypes :: (Ord v, Ord f, Eq v) => [Rule f v] -> Either String (Signature f, [(TypedRule f v,Env v)])
+inferTypes :: (Ord v, Ord f, Eq v) => [(Int, Rule f v)] -> Either String (Signature f, [(Int, (TypedRule f v,Env v))])
 inferTypes rs = do
   (es,up) <- evalTInferM (mapM typeRuleM rs)
   assign <- ST.toMap <$> solveUP up
   return $ flip State.evalState (Map.empty, 0::Int) $ do
         sig <- mkSignature assign
         envs <- mapM (mkEnv assign) es
-        return (sig,[ (mapRule (fromJust . withType env sig) rl, env) | (rl,env) <- zip rs envs ])
+        return (sig, [ (i,(mapRule (fromJust . withType env sig) rl, env)) | ((i,rl),env) <- zip rs envs ])
   where
     freshM = modify succ >> (TFresh <$> get)
     freshVar = T.Var <$> freshM
@@ -204,7 +213,7 @@ inferTypes rs = do
       mapM_ (\(i,ti) -> e |- (ti, inTypeVar f i)) (zip [0..] ts)
     _ |- _ = throwError "non-applicative term trs given"  
 
-    typeRuleM (R.Rule lhs rhs) = do
+    typeRuleM (_,(R.Rule lhs rhs)) = do
       let vs = nub (T.vars lhs)
       e <- foldM (\e v -> Map.insert v <$> freshM <*> return e) Map.empty vs
       tl <- freshVar
@@ -252,5 +261,5 @@ inferTypes rs = do
                 return (Map.insert f (TypeDecl ins out) sig))       
       Map.empty fs
       where 
-        fs = nub [ (f,ar) | (Sym f,ar) <- RS.funs (map (mapRule T.withArity) rs)]
+        fs = nub [ (f,ar) | (Sym f,ar) <- RS.funs (map (mapRule T.withArity . snd) rs)]
 

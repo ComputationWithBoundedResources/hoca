@@ -25,6 +25,8 @@ data Exp =
   | Var Pos Var
   | Con Pos Symbol [Exp]
   | App Pos Exp Exp
+  | Lazy Pos Exp
+  | Force Pos Exp    
   | Cond Pos Exp [(Symbol, [Var], Exp, Pos)]
   | Let Pos (Pos,Var,[Var],Exp) [(Pos,Var,[Var],Exp)] Exp
   | LetRec Pos (Pos,Var,[Var],Exp) [(Pos,Var,[Var],Exp)] Exp
@@ -45,6 +47,8 @@ instance PP.Pretty Exp where
   pretty (Con _ f as) = prettyCon f (map PP.pretty as)
     
   pretty (App _ e1 e2) = PP.parens (PP.pretty e1 PP.<+> PP.pretty e2)
+  pretty (Lazy _ e) = PP.text "lazy" PP.<+> PP.parens (PP.pretty e)
+  pretty (Force _ e) = PP.text "force" PP.<+> PP.parens (PP.pretty e)    
   pretty (Cond _ e cs) =
     PP.parens (PP.text "match" PP.<+> PP.pretty e PP.<+> PP.text "with"
                PP.<$> PP.vsep [ PP.text "|" PP.<+> prettyCon g (map PP.text vs)
@@ -55,6 +59,8 @@ instance PP.Pretty Exp where
 
 sourcePos :: Exp -> Pos
 sourcePos (Abs l _ _) = l
+sourcePos (Lazy l _) = l
+sourcePos (Force l _) = l
 sourcePos (Var l _) = l
 sourcePos (Con l _ _) = l
 sourcePos (App l  _ _) = l
@@ -67,6 +73,8 @@ data ProgramPoint =
   LetBdy Symbol [Symbol] Exp
   | LetRecBdy Symbol [Symbol] Exp  
   | LetIn Exp
+  | LazyBdy Exp
+  | ForceBdy Exp        
   | LambdaBdy Exp
   | LApp Exp
   | RApp Exp
@@ -80,6 +88,8 @@ type Context = [ProgramPoint]
 freeVars :: Exp -> Set.Set Var
 freeVars (Abs _ v e) = Set.delete v (freeVars e)
 freeVars (Var _ v) = Set.insert v Set.empty
+freeVars (Lazy _ e) = freeVars e
+freeVars (Force _ e) = freeVars e
 freeVars (App _ e1 e2) = freeVars e1 `Set.union` freeVars e2
 freeVars (Con _ _ es) = Set.unions [ freeVars e | e <- es]
 freeVars (Cond _ g cs) =
@@ -110,6 +120,7 @@ toPCF expr = runReaderT (pcf (close expr)) ([],[])
     withContext ctx = local (\ (env,ctx') -> (env, ctx ++ ctx'))
 
     lambda v m = PCF.Abs (Just v) <$> context <*> withVar v m
+    anonymous m = PCF.Abs Nothing <$> context <*> withVar "" m    
 
     letExp e v vs f = letBdy [] vs where
       letBdy zs []       = withContext [LetBdy v zs e] (pcf f)
@@ -134,7 +145,15 @@ toPCF expr = runReaderT (pcf (close expr)) ([],[])
       PCF.App <$> context
        <*> withContext [LApp e] (pcf e1)
        <*> withContext [RApp e] (pcf e2)
-       
+
+    pcf e@(Lazy _ f) =
+      anonymous (withContext [LazyBdy e] (pcf f))
+
+    pcf e@(Force _ f) =
+      PCF.App <$> context
+       <*> withContext [ForceBdy e] (pcf f)
+       <*> (return PCF.Bot)
+
     pcf e@(Cond _ gexp cs) = 
       PCF.Cond <$> context
        <*> withContext [CaseGuard e] (pcf gexp)
@@ -167,7 +186,7 @@ type Parser = CharParser ()
 
 -- lexing
 reservedWords :: [String]
-reservedWords = words "let rec in = fun match with | -> and ;;"
+reservedWords = words "let rec in = fun match with | -> and ;; lazy force"
 
 whiteSpace :: Parser String
 whiteSpace = many ((space <|> tab <|> newline) <?> "whitespace")
@@ -215,6 +234,8 @@ withPos p = (,) <$> posP <*> p
   
 term :: Parser Exp
 term = (lambdaExp <?> "lambda expression")
+       <|> (lazyExp <?> "lazy expression")
+       <|> (forceExp <?> "forced expression")       
        <|> (letExp <?> "let expression")
        <|> (condExp <?> "match expression")               
        <|> (appExp <?> "application")
@@ -235,6 +256,18 @@ term = (lambdaExp <?> "lambda expression")
       e <- term
       return (foldr (Abs pos) e vs)
 
+    lazyExp = do
+      pos <- posP
+      try (symbol "lazy")
+      e <- term
+      return (Lazy pos e)
+
+    forceExp = do
+      pos <- posP
+      try (symbol "force")
+      e <- term
+      return (Force pos e)
+      
     constructorWith arg = do
       g <- try constructor
       es <- try (parens (arg `sepBy` symbol ",")) <|> return []

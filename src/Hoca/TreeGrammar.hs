@@ -11,6 +11,7 @@ module Hoca.TreeGrammar (
   , member
   , produces
   , produces'
+  , nonTerminals
   ) where
 
 import qualified Data.Map as M
@@ -28,6 +29,12 @@ newtype Grammar t n = G { toMap :: M.Map n [Term t n] }
 data Production t n = Production n (Term t n)
                       deriving (Show)
 
+nonTerminalsDL :: Term t n -> [n] -> [n]
+nonTerminalsDL (NonTerminal n) = (:) n
+nonTerminalsDL (Terminal _ ts) = foldl (\ f ti -> f . nonTerminalsDL ti) id ts
+
+nonTerminals :: Term t n -> [n]
+nonTerminals t = nonTerminalsDL t []
 
 instance (PP.Pretty t, PP.Pretty n) => PP.Pretty (Term t n) where
     pretty (NonTerminal n) = PP.pretty n
@@ -59,13 +66,13 @@ produces' tg lhs = walk [] [lhs] where
 
 
 insert :: Ord n => Production t n -> Grammar t n -> Grammar t n
-insert (Production lhs (NonTerminal rhs)) g | lhs == rhs = g
+-- insert (Production lhs (NonTerminal rhs)) g | lhs == rhs = g
 insert (Production lhs rhs) (G m) = G (M.alter ins lhs m) where
   ins Nothing = Just [rhs]
   ins (Just rhss) = Just (rhs:rhss)
 
 member :: (Ord n, Eq t) => Production t n -> Grammar t n -> Bool
-member (Production lhs (NonTerminal rhs)) | lhs == rhs = const True
+-- member (Production lhs (NonTerminal rhs)) | lhs == rhs = const True
 member (Production lhs rhs) = maybe False (rhs `elem`) . M.lookup lhs . toMap
 
 toList :: Grammar t n -> [Production t n]

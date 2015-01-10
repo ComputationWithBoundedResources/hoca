@@ -72,6 +72,9 @@ rsFromList rs = RS (foldl (insertInto R.isInstanceOf) [] rs)
 rsToList :: RS f v -> [R.Rule f v]
 rsToList (RS l) = l
 
+nubRules :: (Eq f, Ord v) => [R.Rule f v] -> [R.Rule f v]
+nubRules = rsToList . rsFromList
+
 -- termset, implicitly closed under instances
 
 newtype TS f v = TS [T.Term f v]
@@ -85,3 +88,11 @@ tsFromList ts = TS (foldl (insertInto T.isInstanceOf) [] ts)
 
 tsToList :: TS f v -> [T.Term f v]
 tsToList (TS l) = l
+
+putDocLn :: PP.Pretty e => e -> IO ()
+putDocLn e = putStrLn (render (PP.pretty e) "")
+  where render = PP.displayS . PP.renderSmart 1.0 80
+
+writeDocFile :: PP.Pretty e => FilePath -> e -> IO ()
+writeDocFile fn e = writeFile fn (render (PP.pretty e) "")
+  where render = PP.displayS . PP.renderSmart 1.0 80

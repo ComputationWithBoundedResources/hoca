@@ -30,7 +30,7 @@ import qualified Data.IntMap as IntMap
 import Data.Maybe (isJust)
 import Control.Monad (foldM,guard,(>=>))
 import Data.Function (on)
-import Data.List (sortBy)
+import Data.List (sortBy, intersperse)
 
 data Symbol = Symbol { sname :: String, sarity :: Int } deriving (Show, Eq, Ord)
 
@@ -69,7 +69,7 @@ instance PP.Pretty (Exp l) where
   pretty (App _ e1 e2) =
     PP.parens (PP.pretty e1 // PP.pretty e2)
   pretty (Fix i es) =
-    PP.parens (PP.bold (PP.text "fix_" PP.<> PP.int i) $$ PP.vcat [PP.parens (PP.pretty e) | e <- es] )
+    PP.parens (PP.bold (PP.text "fix_" PP.<> PP.int i) $$ PP.brackets (PP.vcat (intersperse (PP.text ",") [ (PP.pretty e) | e <- es])))
   pretty (Cond _ e cs) =
     PP.parens ((PP.bold (PP.text "case") PP.<+> PP.pretty e PP.<+> PP.bold (PP.text "of"))
                $$ PP.vsep [ PP.pretty g PP.<+> PP.text "->" PP.<+> PP.pretty e'

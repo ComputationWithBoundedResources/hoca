@@ -9,7 +9,7 @@ module Hoca.DFA (
 
 import qualified Data.Rewriting.Term as T
 import qualified Data.Rewriting.Rule as R
-import Hoca.Utils (runVarSupply, fresh, andM, orM)
+import Hoca.Utils (runVarSupply, fresh, andM, orM, tracePretty, tracePretty')
 import Hoca.TreeGrammar
 import qualified Data.Set as S
 import qualified Data.Map as M
@@ -44,7 +44,6 @@ liftTerm :: Int -> T.Term f v -> Term f (NonTerminal v x)
 liftTerm i (T.Var v) = NonTerminal (V v i)
 liftTerm i (T.Fun f ts) = Terminal f (map (liftTerm i) ts)
 
--- TODO
 unliftTerm :: Term f (NonTerminal v x) -> T.Term f ()
 unliftTerm (Terminal f ts) = T.Fun f (map unliftTerm ts)
 unliftTerm _ = T.Var ()               
@@ -70,8 +69,8 @@ data Matches f v x =
           , matches :: [Match f v x] }
   deriving Show
 
-minimalMatches :: (Ord x, Ord v, Ord f) => DFAGrammar f v x -> Term f (NonTerminal v x) -> (R.Rule f v, Int) -> Matches f v x
-minimalMatches tg s (rl@(R.Rule lhs _), i) =
+minimalMatches :: (Ord x, Ord v, Ord f) => DFAGrammar f v x -> Term f (NonTerminal v x) -> (Int,R.Rule f v) -> Matches f v x
+minimalMatches tg s (i, rl@(R.Rule lhs _)) =
      Matches { matchedRule = (rl, i)
              , matches = map Match (minMatches lhs s)}
   where
@@ -83,7 +82,7 @@ minimalMatches tg s (rl@(R.Rule lhs _), i) =
       = msum [ minMatches t r | r <- produces' tg n]
 
 extensionOf :: (Ord v, Ord f, Ord x)
-               => DFAGrammar f v x -> [(R.Rule f v, Int)] -> NonTerminal v x
+               => DFAGrammar f v x -> [(Int,R.Rule f v)] -> NonTerminal v x
                -> (Ctxt f (NonTerminal v x), Term f (NonTerminal v x))
                -> [Production f (NonTerminal v x)]
 extensionOf tg prog lhs (ctx,t) =
@@ -96,7 +95,7 @@ extensionOf tg prog lhs (ctx,t) =
         : [ p | Match m <- matches match, p <- m ]
     where (rl,i) = matchedRule match
 
-complete :: (Ord f, Ord x, Ord v) => [(R.Rule f v, Int)] -> DFAGrammar f v x -> DFAGrammar f v x
+complete :: (Ord f, Ord x, Ord v) => [(Int, R.Rule f v)] -> DFAGrammar f v x -> DFAGrammar f v x
 complete prog = exec (fixM makeClosure) where
 
   exec m = execState (execStateT (execStateT m S.empty) True)
@@ -105,12 +104,11 @@ complete prog = exec (fixM makeClosure) where
   currentTG = lift (lift get)
 
   addProductions = mapM_ insertTG where
-    insertTG p
-      | otherwise = do
-          isElt <- member p <$> currentTG
-          unless isElt $ do
-            lift (lift (modify (insert p)))
-            setModified True
+    insertTG p = do
+      isElt <- member p <$> currentTG
+      unless isElt $ do
+        lift (lift (modify (insert p)))
+        setModified True
 
   fixM op = do
     setModified False
@@ -149,26 +147,21 @@ complete prog = exec (fixM makeClosure) where
         unless r (modify (S.insert t))
         return r
 
-refinements :: (Ord v, Ord f, Ord x) => [R.Rule f v] -> DFAGrammar f v x -> R.Rule f v -> (v -> Bool) -> [R.Rule f Int]
+refinements :: (PP.Pretty x, PP.Pretty v, PP.Pretty f, Ord v, Ord f, Ord x) => [(Int, R.Rule f v)] -> DFAGrammar f v x -> Int -> (v -> Bool) -> ([R.Rule f Int], [Int])
 refinements prog initial = 
-  \ rl@(R.Rule lhs rhs) refineP ->
-   case L.lookup rl prog' of
-    Nothing -> []
-    Just i
-      | ruleReachable -> [R.Rule (s `apply` lhs) (s `apply` rhs) | s <- substs]
-      | otherwise -> []
+  \ i refineP ->
+   case L.lookup i prog of
+    Nothing -> ([],[])
+    Just rl@(R.Rule lhs rhs) -> ([R.Rule (s `apply` lhs) (s `apply` rhs) | s <- substs]
+                                , [j | (R j) <- reachableRules (R i) ])
       where
         apply s t = fromJust (S.gApply s t)
         substs = map toSubst (foldl (\ l v -> [ (v,p):s | s <- l, p <- patterns v]) [[]] (L.nub (R.vars rl))) where 
           patterns v
             | refineP v = L.nub (map unliftTerm (reducts (V v i)))
             | otherwise = [T.Var ()]
-        ruleReachable = not (null (produces' tg (R i)))
   where
-    prog' = zip prog [1..]
-    
-    tg = complete prog' initial
-
+    tg = tracePretty' (complete prog initial)
     reducts s =
       case produces' tg s of 
        [] -> [NonTerminal s]
@@ -179,7 +172,14 @@ refinements prog initial =
         ren (T.Fun f ts) = T.Fun f <$> mapM ren ts
         ren _            = T.Var <$> fresh
 
-
-        
+    reachableRules = concatMap nonTerminals . produces tg
+      -- succs r where -- walk [] (succs r) where
+      -- succs = concatMap nonTerminals . produces tg
+      -- walk _ [] = []
+      -- walk vis (n@R{}:ns) = n : walk (n:vis) ns
+      -- walk vis (n:ns)
+      --   | n `elem` vis = walk vis ns
+      --   | otherwise = succs n ++ walk (n:vis) (ms ++ ns) where
+      --       ms = succs n
 
 

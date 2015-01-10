@@ -7,7 +7,6 @@ module Hoca.Transform (
   , (<=>)
   , repeated
   , exhaustive
-  , modifyRules
   , traceProblem
   -- * Transformations
   , pcfToTrs
@@ -21,32 +20,34 @@ module Hoca.Transform (
   , Var
   , Rule
   , Problem
-  , Type (..)
+  , ATRS.Type
 )
        where
 
-import           Control.Applicative ((<$>), Applicative, Alternative, empty, pure)
+import           Control.Applicative (Applicative, Alternative, empty, pure)
 import           Control.Monad.RWS
-import           Data.Either (partitionEithers)
 import           Data.List (nub)
 import qualified Data.Map as Map
 import           Data.Maybe (listToMaybe, fromJust, isNothing)
 import qualified Data.MultiSet as MS
-import qualified Data.Rewriting.Problem as P
 import qualified Data.Rewriting.Rule as R
 import qualified Data.Rewriting.Rules as RS
 import           Data.Rewriting.Substitution (unify)
 import qualified Data.Rewriting.Term as T
-import           Hoca.ATRS
+import qualified Hoca.ATRS as ATRS
 import qualified Hoca.TreeGrammar as TG
 import qualified Hoca.DFA as DFA
 import qualified Hoca.FP as FP
 import qualified Hoca.Narrowing as N
 import           Hoca.PCF (Strategy(..), Exp)
-import           Hoca.PCF2Atrs (Symbol (..), Problem, Var, toProblem, prettyProblem)
+import qualified Hoca.PCF2Atrs as PCF2Atrs
+import           Hoca.Problem (Symbol (..), Problem, Var, Rule)
+import qualified Hoca.Problem as Problem
 import qualified Hoca.UsableRules as UR
-import           Hoca.Utils (rsFromList, rsToList, tracePretty)
+import           Hoca.Utils (tracePretty)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
+import Data.List (delete)
+import Data.Maybe (fromMaybe)
 
 
 -- combinators
@@ -65,23 +66,13 @@ exhaustive :: Strategy m => (a -> m a) -> a -> m a
 exhaustive rel = try (rel >=> exhaustive rel) 
 
 
-modifyRules :: Applicative m => ([Rule Symbol Var] -> m [Rule Symbol Var]) -> Problem -> m Problem
-modifyRules m prob = f <$> m strict
-  where
-    f rs = prob { P.rules = P.RulesPair { P.strictRules = rs', P.weakRules = []}
-               , P.variables = nub (RS.vars rs')
-               , P.symbols = nub (RS.funs rs') }
-      where rs' = rsToList (rsFromList rs)
-    rp = P.rules prob
-    strict = P.strictRules rp
-
 traceProblem :: Applicative m => String -> Problem -> m Problem
 traceProblem s prob = tracePretty doc (pure prob) where
   ln c = PP.text (replicate 80 c)
   doc =
     PP.text s
     PP.<$> ln '-'
-    PP.<$> PP.indent 2 (prettyProblem prob)
+    PP.<$> PP.indent 2 (PP.pretty prob)
     PP.<$> ln '='
     PP.<$> PP.text ""
 
@@ -89,77 +80,80 @@ traceProblem s prob = tracePretty doc (pure prob) where
 -- Transformations
 
 pcfToTrs :: Applicative m => Exp FP.Context -> m Problem
-pcfToTrs = pure . toProblem
+pcfToTrs = pure . PCF2Atrs.toProblem
 
-narrow :: Alternative m => ([Rule Symbol Var] -> N.NarrowedRule (ASym Symbol) (Either Var Var) -> Bool) -> Problem -> m Problem
-narrow sensible = modifyRules narrowRules where
-  narrowRules rules =
-    case partitionEithers (map narrowRule rules) of
-     (_,[]) -> empty
-     (untransformed,transformed) -> pure (untransformed ++ concat transformed)
-    where
-      sound nr =
-        all (redexPreserving . N.narrowedWith) (N.narrowings nr)
-        || argumentNormalised (N.narrowSubterm nr)
+narrow :: (Alternative m, Monad m) => (Problem -> N.NarrowedRule (ATRS.ASym Symbol) Var Var -> Bool) -> Problem -> m Problem
+narrow sensible p = Problem.replaceRulesM narrowRule p where
+  sound nr =
+    all (redexPreserving . N.narrowedWith) (N.narrowings nr)
+    || argumentNormalised (N.narrowSubterm nr)
          
-      redexPreserving rl = varsMS (R.lhs rl) `MS.isSubsetOf` varsMS (R.rhs rl) where
-        varsMS = MS.fromList . T.vars
+  redexPreserving rl = varsMS (R.lhs rl) `MS.isSubsetOf` varsMS (R.rhs rl) where
+    varsMS = MS.fromList . T.vars
            
-      argumentNormalised (T.Fun _ ts) = null (UR.usableRules ts rules)
-      argumentNormalised _ = True
+  argumentNormalised (T.Fun _ ts) = null (UR.usableRules ts rules)
+  argumentNormalised _ = True
         
-      renameRule rl = R.rename f rl where
-        f = either (\ v -> fromJust (lookup v lvs)) id
-        lhs = R.lhs rl
-        lvs = foldl insrt [(v,v) | Right v <- T.vars lhs] [v | Left v <- T.vars lhs]
-        insrt vs v = (v, head (dropWhile (`elem` map snd vs) [v..])):vs
-      
-      narrowRule rl = 
-        case listToMaybe [ ni | ni <- N.narrow rl rules, sound ni, sensible rules ni ] of
-         Nothing -> Left rl
-         Just ni -> Right [renameRule (N.narrowing n) | n <- N.narrowings ni]
+  renameRule rl = R.rename f rl where
+    f = either (\ v -> fromJust (lookup v lvs)) id
+    lhs = R.lhs rl
+    lvs = foldl insrt [(v,v) | Right v <- T.vars lhs] [v | Left v <- T.vars lhs]
+    insrt vs v = (v, head (dropWhile (`elem` map snd vs) [v..])):vs
+                 
+  narrowRule _ rl ss = 
+    case listToMaybe [ ni | ni <- N.narrow rl rules, sound ni, sensible p ni ] of
+     Nothing -> empty
+     Just ni -> return [(renameRule (N.narrowing n)
+                         , ss ++ Problem.calleeIdxs p nidx )
+                       | n <- N.narrowings ni
+                       , let nidx = fromMaybe (error "narrow rule id not found") (Problem.indexOf p (N.narrowedWith n))
+                       ]
+  rules = Problem.rules p
 
-
-rewrite :: Alternative m => ([Rule Symbol Var] -> N.NarrowedRule (ASym Symbol) (Either Var Var) -> Bool) -> Problem -> m Problem
+rewrite :: (Alternative m, Monad m) => (Problem -> N.NarrowedRule (ATRS.ASym Symbol) Var Var -> Bool) -> Problem -> m Problem
 rewrite sensible = narrow sensible' where
   sensible' rs nr = all (\ nw -> R.lhs (N.narrowedRule nr) `T.isVariantOf` R.lhs (N.narrowing nw)) (N.narrowings nr)
                     && sensible rs nr
   
-usableRules :: (Alternative m) => Problem -> m Problem
-usableRules = modifyRules (\ rs -> pure (UR.usableRules [ t | t@(T.Fun (Sym Main) _) <- RS.lhss rs] rs))
-
-neededRules :: (Alternative m) => Problem -> m Problem
-neededRules = modifyRules nr
+usableRules :: (Applicative m) => Problem -> m Problem
+usableRules p = pure (Problem.removeUnusedRules (Problem.withEdges edgeP p))
   where
-    nr rs = pure (filter needed rs) where 
-        needed rl =
-          case headSymbol (R.lhs rl) of
-           Just (l@Lambda {}) -> l `elem` createdFuns
-           Just (l@Fix {}) -> l `elem` createdFuns           
-           _ -> True
-        createdFuns = foldr funsDL [] (RS.rhss rs)
+    rs = Problem.rules p
+    r1 `edgeP` r2 = maybe False (elem r2) (lookup r1 ss)
+    ss = [(r,UR.calls (R.rhs r) rs) | r <- rs ]
 
-dfaInstantiate :: Alternative m => (TypedRule Symbol Var -> [Var]) -> Problem -> m Problem
-dfaInstantiate abstractVars = modifyRules instantiateRules where
-  instantiateRules rs =
-    case inferTypes rs of
-     Left _ -> empty
-     Right (sig, ers) -> pure (concatMap refinements ers) where     
+neededRules :: (Monad m, Alternative m) => Problem -> m Problem
+neededRules p = Problem.replaceRulesM (\ _ rl _ -> if needed rl then empty else pure []) p where
+  needed rl =
+    case ATRS.headSymbol (R.lhs rl) of
+     Just (l@Lambda {}) -> l `elem` createdFuns
+     Just (l@Fix {}) -> l `elem` createdFuns           
+     _ -> True
+  createdFuns = foldr ATRS.funsDL [] (RS.rhss (Problem.rules p))
+
+dfaInstantiate :: (Monad m, Alternative m) => ((ATRS.TypedRule Symbol Var, ATRS.Env Var) -> [Var]) -> Problem -> m Problem
+dfaInstantiate abstractVars prob = 
+  case ATRS.inferTypes rs of
+   Left _ -> empty
+   Right (sig,ers) -> Problem.replaceRulesM replace prob where
+         replace i _ _
+           | null vs = empty
+           | otherwise = pure [(rl,succs) | rl <- rs', argumentNormalised rl] where
+               (rs',succs) = mkRefinements i (`elem` vs)
+               vs = maybe [] (nub . abstractVars) (lookup i ers)
+     -- Problem.replaceRulesIdx instantiate (Problem.withSignature sig (Problem.withEdgesIdx edgeP prob)) where
          initialDFA = TG.fromList (startRules ++ constructorRules)
          startRules = 
-           [ TG.Production DFA.startNonTerminal (TG.Terminal (Sym Main) [TG.NonTerminal (DFA.auxNonTerminal t) | t <- inputTypes td])
+           [ TG.Production DFA.startNonTerminal (TG.Terminal (ATRS.Sym Main) [TG.NonTerminal (DFA.auxNonTerminal t) | t <- ATRS.inputTypes td])
            | (Main, td) <- Map.toList sig]
          constructorRules = 
-           [ TG.Production (DFA.auxNonTerminal (outputType td)) (TG.Terminal (Sym c) [TG.NonTerminal (DFA.auxNonTerminal t) | t <- inputTypes td])
+           [ TG.Production (DFA.auxNonTerminal (ATRS.outputType td)) (TG.Terminal (ATRS.Sym c) [TG.NonTerminal (DFA.auxNonTerminal t) | t <- ATRS.inputTypes td])
            | (c@Con{}, td) <- Map.toList sig ]
            
          mkRefinements = DFA.refinements rs initialDFA
 
-         refinements (trl,_) = filter argumentNormalised (mkRefinements rl (`elem` abstractedVars)) where
-           rl = unTypeRule trl
-           abstractedVars = nub (abstractVars trl)
-      
          argumentNormalised rl = all norm (T.properSubterms (R.lhs rl)) where
            norm (T.Var _) = True
-           norm (atermM -> Just (_ :@ _)) = False
-           norm li = all (isNothing . unify li) (RS.lhss rs)
+           norm (ATRS.atermM -> Just (_ ATRS.:@ _)) = False
+           norm li = all (isNothing . unify li) (RS.lhss (map snd rs))
+  where rs = Problem.rulesEnum prob

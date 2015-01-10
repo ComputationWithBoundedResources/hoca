@@ -26,12 +26,15 @@ executable pcf2trs
         hoca == 0.1
  extensions:
         ViewPatterns
+ ghc-options:       
+   -threaded -Wall -O2 -fno-warn-orphans -fno-spec-constr-count -rtsopts -with-rtsopts=-N
 
 library
     hs-source-dirs:
         src
     exposed-modules:
         Hoca.Utils
+        Hoca.Problem
         Hoca.DFA
         Hoca.PCF
         Hoca.FP

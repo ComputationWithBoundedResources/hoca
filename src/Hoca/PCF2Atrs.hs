@@ -6,85 +6,31 @@ module Hoca.PCF2Atrs (
   , Term
   , Rule
   , Problem
-  , signature
   , toProblem
-  , prettyProblem
   ) where
 
 import           Control.Applicative ((<$>),(<*>), Applicative)
 import           Control.Monad.RWS
 import qualified Control.Monad.State.Lazy as State
-import           Data.List (sort, nub)
+import           Data.List (sort)
 import           Data.Maybe (fromJust)
-import qualified Data.Rewriting.Problem as P
 import qualified Data.Rewriting.Rule as R
-import qualified Data.Rewriting.Rules as RS
 import qualified Data.Rewriting.Term as T
 import qualified Data.Set as Set
 import qualified Data.Map as Map
-import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import           Hoca.ATRS
+import           Hoca.Utils (nubRules)
 import qualified Hoca.PCF as PCF
 import qualified Hoca.FP as FP
+import Hoca.Problem (Problem(..), Name(..), Symbol (..), Lbl(..), Var)
+import qualified Hoca.Problem as Problem
 
-data Lbl = LString String
-         | LInt Int
-         deriving (Show, Eq, Ord)
-                  
-newtype Name = Name [Lbl] deriving (Show, Eq, Ord)
-
-instance PP.Pretty Lbl where
-  pretty (LInt i) = PP.int i
-  pretty (LString i) = PP.text i
-
-data Symbol =
-  Con PCF.Symbol
-  | Lambda Name
-  | Bot
-  | Cond Name
-  | Fix Name
-  | Main
-  deriving (Show, Eq, Ord)
-
-instance PP.Pretty Name where
-  pretty (Name []) = PP.empty
-  pretty (Name [l]) = PP.pretty l
-  pretty (Name (l:ls)) = PP.pretty (Name ls) PP.<> PP.text "_" PP.<> PP.pretty l
-
-instance PP.Pretty Symbol where
-  pretty (Con g) = PP.text (PCF.sname g)
-  pretty (Lambda l) = PP.pretty l
-  pretty (Cond l) = PP.pretty l
-  pretty (Fix l) = PP.text "rec" PP.<> PP.brackets (PP.pretty l)
-  pretty Bot = PP.text "_|_"      
-  pretty Main = PP.text "main"
-              
-type Var = Int
-type Problem = P.Problem (ASym Symbol) Var
 
 (-->) :: T.Term f v -> T.Term f v -> R.Rule f v
 (-->) = R.Rule
 
-prettyProblem :: Problem -> PP.Doc
-prettyProblem = P.prettyWST PP.pretty ppVar
-    where
-      ppVar i = PP.text "x" PP.<> PP.int i
-
-signature :: Problem -> Either String (Signature Symbol)
-signature = (fst <$>) . inferTypes . P.allRules . P.rules
-  
-
 toProblem :: PCF.Exp FP.Context -> Problem
-toProblem e = P.Problem {
-  P.startTerms = P.BasicTerms
-  , P.strategy = P.Innermost
-  , P.theory = Nothing
-  , P.rules = P.RulesPair { P.strictRules = trs, P.weakRules = [] }
-  , P.variables = nub (RS.vars trs)
-  , P.symbols = nub (RS.funs trs)
-  , P.comment = Nothing }
-  where
-    trs = toTRS e
+toProblem e = Problem.fromRules (toTRS e)
 
 label :: PCF.Exp FP.Context -> PCF.Exp Name
 label expr = State.evalState (labelM expr) (Map.empty,[])
@@ -192,22 +138,24 @@ freeVars (PCF.Fix _ fs) =
   foldM (\ vs fi -> Set.union vs <$> freeVars fi) Set.empty fs
 
 toTRS :: PCF.Exp FP.Context -> [Rule Symbol Var]
-toTRS = snd . eval . mainM . label
+toTRS = nubRules . snd . eval . mainM . label
   where
     cvars = sort . Set.toList
+    
+    record = tell
     
     mainM (PCF.Abs _ _ f) = void (withVar (mainM f))
     mainM e = do
       t <- toTRSM e
       vs <- variables
-      tell [fun Main vs --> t ]
+      record [fun Main vs --> t ]
 
     toTRSM (PCF.Var _ i) = variable i
     toTRSM e@(PCF.Abs _ la f) = do
       (v,tf) <- withVar (toTRSM f)
       vs <- freeVars e
       let te = fun (Lambda la) (cvars vs)
-      tell [ app te v --> tf ]
+      record [ app te v --> tf ]
       return te
     toTRSM (PCF.App _ e1 e2) = app <$> toTRSM e1 <*> toTRSM e2
     toTRSM (PCF.Con _ g es) = fun (Con g) <$> mapM toTRSM es
@@ -219,7 +167,7 @@ toTRS = snd . eval . mainM . label
       forM_ cs $ \ (g,eg) -> do
         let ar = PCF.sarity g
         (vsg,tg) <- withVars ar (toTRSM (caseBdy ar eg))
-        tell [cond (fun (Con g) vsg) --> tg]
+        record [cond (fun (Con g) vsg) --> tg]
       cond <$> toTRSM f
       where
         caseBdy 0 fg = fg
@@ -236,7 +184,7 @@ toTRS = snd . eval . mainM . label
             modify (lf :)
             let v = T.Var (maximum (0 : [1 + j | T.Var j <- Set.toList vs] ))
             tf <- toTRSM (fromJust (foldM PCF.apply f [PCF.Fix j fs | j <- [0..length fs - 1]]))
-            tell [ app te v --> app tf v ]
+            record [ app te v --> app tf v ]
           return te
       where
         isApp (PCF.Abs {}) = True
