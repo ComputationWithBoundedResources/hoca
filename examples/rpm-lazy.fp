@@ -20,11 +20,11 @@ and snd p = match p with | P(a,b) -> b
   
 let rec rpm t m =
   match t with
-  | Tip(x) -> lazy P((lazy Tip(force m)), (lazy x))
-  | Fork(t1,t2) ->
+  | Leaf(x) -> lazy P((lazy Leaf(force m)), (lazy x))
+  | Node(t1,t2) ->
      let p1 = force (rpm t1 m)
      and p2 = force (rpm t2 m)
-     in lazy P((lazy Fork(force (fst p1), force (fst p2))), 
+     in lazy P((lazy Node(force (fst p1), force (fst p2))), 
 	       (lazy (min (force (snd p1)) (force (snd p2)))))
 ;;
 

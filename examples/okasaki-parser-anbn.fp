@@ -1309,10 +1309,10 @@ let rec pas p =
 	match ma with
 	| Some(a) -> pas (bind' (char B) p)
 	| None -> return p)
-;;       
-		     
-let parser = promote (pas eos);;
+;;
 
-  
+
+let parser = promote (promote eos);;
+
   runParser parser input
 		 
