@@ -1,5 +1,7 @@
 #!/usr/local/bin/runhaskell
 module Main where
+import Prelude hiding ((&&),(||), not)
+import qualified Prelude as Prelude
 import           Control.Applicative ((<$>))
 import           Control.Monad (foldM)
 import qualified Hoca.FP as FP
@@ -7,18 +9,39 @@ import qualified Hoca.PCF as PCF
 import qualified Hoca.Narrowing as N
 import qualified Hoca.Problem as Problem
 import qualified Hoca.ATRS as ATRS
-import           Hoca.Utils (putDocLn, writeDocFile)
+import           Hoca.Utils (putDocLn, writeDocFile, render)
 import           Hoca.Transform
 import           System.Environment (getArgs)
 import           System.IO (hPutStrLn, stderr)
 import GHC.IO (unsafePerformIO)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
-import Control.Monad (liftM)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Data.Maybe (fromJust)
 import qualified Data.Rewriting.Rule as R
 import qualified Data.Rewriting.Term as T
 import System.Exit (exitSuccess,exitFailure)
+
+type Problem = Problem.Problem Problem.Symbol Int
+type Rule = ATRS.Rule Problem.Symbol Int
+
+
+class Boolean a where
+  (&&) :: a -> a -> a
+  (||) :: a -> a -> a  
+  not :: a -> a
+  
+infixr 3 &&
+infixr 2 ||
+
+instance Boolean Bool where
+  (&&) = (Prelude.&&)
+  (||) = (Prelude.||)
+  not = Prelude.not
+
+instance Boolean b => Boolean (a -> b) where
+  f && g = \ a -> (f a && g a)
+  f || g = \ a -> (f a || g a)  
+  not f = \ a -> not (f a)
 
 expressionFromArgs :: FilePath -> [String] -> IO (PCF.Exp FP.Context)
 expressionFromArgs fname args = do
@@ -33,57 +56,74 @@ expressionFromArgs fname args = do
         fun (zip [(1::Int)..] args)
     fromString src str = FP.expFromString src str >>= FP.toPCF
 
-
-dfa :: PCF.Strategy m => Problem -> m Problem
-dfa = dfaInstantiate hoHeadVariables
+cfa :: PCF.Strategy m => Problem -> m Problem
+cfa = dfaInstantiate hoHeadVariables
   where
     hoHeadVariables (trl,_) =
       case R.rhs trl of
        T.Var (v, _ ATRS.:~> _) -> [v]
        _ -> ATRS.headVars (R.rhs (ATRS.unTypeRule trl))
-    allVars = map fst . R.vars
 
+dfa :: PCF.Strategy m => Problem -> m Problem
+dfa = dfaInstantiate (R.vars . ATRS.unTypeRule . fst)       
+--    allVars = map fst . R.vars
 
-narrowWith :: PCF.Strategy m => (Problem -> Rule -> Bool) -> Problem -> m Problem
-narrowWith f =
-  narrow (\ p -> all (f p) . map N.narrowedWith . N.narrowings)
-  >=> try usableRules >=> try neededRules
-
-rewriteWith :: PCF.Strategy m => (Problem -> Rule -> Bool) -> Problem -> m Problem
-rewriteWith p =
-  rewrite (\ rs -> all (p rs) . map N.narrowedWith . N.narrowings)
-  >=> try usableRules >=> try neededRules
-
-anyRules, caseRules,lambdaRules,fixRules,nonRecursiveRules :: Problem -> Rule -> Bool
-caseRules _ rl =
-  case ATRS.headSymbol (R.lhs rl) of
-   Just Cond {} -> True
+anyRule, caseRule, lambdaRule, fixRule, recursiveRule :: Problem -> Rule -> Bool
+caseRule _ rl =
+  case Problem.unlabeled <$> ATRS.headSymbol (R.lhs rl) of
+   Just Problem.Cond {} -> True
    _ -> False
-lambdaRules _ rl = 
-  case ATRS.headSymbol (R.lhs rl) of
-   Just Lambda {} -> True
+lambdaRule _ rl = 
+  case Problem.unlabeled <$> ATRS.headSymbol (R.lhs rl) of
+   Just Problem.Lambda {} -> True
    _ -> False
-fixRules _ rl = 
-  case ATRS.headSymbol (R.lhs rl) of
-   Just Fix {} -> True
+fixRule _ rl = 
+  case Problem.unlabeled <$> ATRS.headSymbol (R.lhs rl) of
+   Just Problem.Fix {} -> True
    _ -> False
-anyRules _ _ = True  
-nonRecursiveRules p = not . Problem.isRecursive p
---inlining p rl = 
+anyRule _ _ = True  
+recursiveRule p = Problem.isRecursive p
 
-simplify :: Problem -> Maybe Problem
+definingRule :: String -> Problem -> Rule -> Bool
+definingRule name _ rl =
+  case ATRS.headSymbol (R.lhs rl) of
+   Just f -> render f == name
+   _ -> False
+
+-- nonRecursiveNarrowing :: Problem -> N.NarrowedRule (ATRS.ASym Problem.Symbol) Int Int -> Bool
+-- nonRecursiveNarrowing _ n = 
+
+withRule :: (Problem -> Rule -> Bool) -> Problem -> N.NarrowedRule (ATRS.ASym Problem.Symbol) Int Int -> Bool
+withRule p rs = all (p rs) . map N.narrowedWith . N.narrowings
+
+onRule :: (Problem -> Rule -> Bool) -> Problem -> N.NarrowedRule (ATRS.ASym Problem.Symbol) Int Int -> Bool
+onRule p rs = p rs . N.narrowedRule
+
+n1 :: PCF.Strategy m => Problem -> m Problem
+n1 = exhaustive ((narrow (withRule caseRule) >=> traceProblem "case narrowing")
+                 <=> (rewrite (withRule lambdaRule) >=> traceProblem "lambda rewrite"))
+     >=> exhaustive (rewrite (withRule fixRule) >=> traceProblem "fix rewrite")
+     >=> try usableRules >=> try neededRules          
+     >=> exhaustive (narrow (withRule (not recursiveRule)) >=> traceProblem "non-recursive narrowing")
+     >=> try usableRules >=> try neededRules
+
+nonRecursive :: N.NarrowedRule (ATRS.ASym Problem.Symbol) Int Int -> Bool
+nonRecursive = undefined
+
+  
+simplify :: PCF.Strategy m => Problem -> m Problem
 simplify =
   traceProblem "initial"
-  >=> try usableRules >=> try neededRules >=> traceProblem "usable"
-  >=> exhaustive (narrowWith caseRules >=> traceProblem "case narrowing")
-  >=> exhaustive (rewriteWith lambdaRules >=> traceProblem "lambda rewrite")
-  >=> exhaustive (rewriteWith fixRules >=> traceProblem "fix rewrite")
-  >=> try (dfa >=> traceProblem "instantiation")
-  -- >=> exhaustive (narrowConst >=> traceProblem "constant narrowing")
-  -- >=> exhaustive (narrowWith (\ _ _ ->  True))
-  >=> exhaustive ((narrowWith caseRules >=> traceProblem "case narrowing")
-                  -- <=> (narrowConst >=> traceProblem "constant narrowing")
-                   <=> (narrowWith nonRecursiveRules >=> traceProblem "non-recursive narrowing"))
+  >=> try (cfa >=> traceProblem "CFA")
+  >=> exhaustive ((narrow (withRule caseRule) >=> traceProblem "case narrowing")
+                  <=> (rewrite (withRule lambdaRule) >=> traceProblem "lambda rewrite"))
+  >=> exhaustive (rewrite (withRule fixRule) >=> traceProblem "fix rewrite")
+  >=> try usableRules >=> try neededRules          
+  >=> exhaustive (narrow (withRule (not recursiveRule)) >=> traceProblem "non-recursive narrowing")
+  >=> try usableRules >=> try neededRules
+  >=> try (uncurryRules >=> try usableRules >=> try neededRules >=> traceProblem "uncurried")
+  >=> exhaustive (narrow (withRule (not recursiveRule)) >=> traceProblem "non-recursive narrowing")
+  >=> try usableRules >=> try neededRules  
 
 narrowConst :: PCF.Strategy m => Problem -> m Problem
 narrowConst =
@@ -102,7 +142,7 @@ narrowConst =
       --        | T.Fun g rs <- T.subterms r, f == g ]
 
     isConstantTerm t = T.isGround t && all isConstructor (ATRS.funs t) where 
-      isConstructor Con{} = True
+      isConstructor Problem.Con{} = True
       isConstructor _ = False
 
     size = T.fold (const (1::Int)) (const (succ . sum))
@@ -158,13 +198,24 @@ load' fn = do
 load :: FilePath -> IO ()
 load fn = load' fn >> printState
 
-withProblem :: (Problem -> IO a) -> IO a
-withProblem f = do
+withProblemM :: (Problem -> IO a) -> IO a
+withProblemM f = do
   ST mp <- getState
   maybe (error "no problem loaded") f mp
 
+withProblem :: (Problem -> a) -> IO a
+withProblem f = withProblemM (return . f)
+
+select :: (Problem -> Rule -> Bool) -> IO [Rule]
+select f = withProblemM sel where
+  sel p  = do
+    let rs = [ e | e@(_,rl) <- Problem.rulesEnum p, f p rl]
+    putDocLn (Problem.restrictIdx (map fst rs) p)
+    putDocLn PP.empty
+    return (map snd rs)
+
 save :: FilePath -> IO ()
-save fn = withProblem (writeDocFile fn . Problem.prettyWST)
+save fn = withProblemM (writeDocFile fn . Problem.prettyWST)
 
 state :: IO ()
 state = printState             

@@ -14,13 +14,8 @@ module Hoca.Transform (
   , rewrite
   , neededRules
   , usableRules
+  , uncurryRules
   , dfaInstantiate
-  -- * Re-exported Datatypes
-  , Symbol (..)
-  , Var
-  , Rule
-  , Problem
-  , ATRS.Type
 )
        where
 
@@ -39,15 +34,16 @@ import qualified Hoca.TreeGrammar as TG
 import qualified Hoca.DFA as DFA
 import qualified Hoca.FP as FP
 import qualified Hoca.Narrowing as N
+import qualified Hoca.Uncurry as UC
 import           Hoca.PCF (Strategy(..), Exp)
 import qualified Hoca.PCF2Atrs as PCF2Atrs
-import           Hoca.Problem (Symbol (..), Problem, Var, Rule)
+import           Hoca.Problem (Symbol (..), Problem)
 import qualified Hoca.Problem as Problem
 import qualified Hoca.UsableRules as UR
 import           Hoca.Utils (tracePretty)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
-import Data.List (delete)
 import Data.Maybe (fromMaybe)
+import Control.Applicative ((<$>))
 
 
 -- combinators
@@ -66,7 +62,7 @@ exhaustive :: Strategy m => (a -> m a) -> a -> m a
 exhaustive rel = try (rel >=> exhaustive rel) 
 
 
-traceProblem :: Applicative m => String -> Problem -> m Problem
+traceProblem :: (PP.Pretty (Problem f v), Applicative m) => String -> Problem f v -> m (Problem f v)
 traceProblem s prob = tracePretty doc (pure prob) where
   ln c = PP.text (replicate 80 c)
   doc =
@@ -79,10 +75,10 @@ traceProblem s prob = tracePretty doc (pure prob) where
 
 -- Transformations
 
-pcfToTrs :: Applicative m => Exp FP.Context -> m Problem
+pcfToTrs :: Applicative m => Exp FP.Context -> m (Problem Symbol Int)
 pcfToTrs = pure . PCF2Atrs.toProblem
 
-narrow :: (Alternative m, Monad m) => (Problem -> N.NarrowedRule (ATRS.ASym Symbol) Var Var -> Bool) -> Problem -> m Problem
+narrow :: (Eq f, Ord v, Enum v, Alternative m, Monad m) => (Problem f v -> N.NarrowedRule (ATRS.ASym f) v v -> Bool) -> Problem f v -> m (Problem f v)
 narrow sensible p = Problem.replaceRulesM narrowRule p where
   sound nr =
     all (redexPreserving . N.narrowedWith) (N.narrowings nr)
@@ -110,19 +106,22 @@ narrow sensible p = Problem.replaceRulesM narrowRule p where
                        ]
   rules = Problem.rules p
 
-rewrite :: (Alternative m, Monad m) => (Problem -> N.NarrowedRule (ATRS.ASym Symbol) Var Var -> Bool) -> Problem -> m Problem
+rewrite :: (Eq f, Ord v, Enum v, Alternative m, Monad m) => (Problem f v -> N.NarrowedRule (ATRS.ASym f) v v -> Bool) -> Problem f v -> m (Problem f v)
 rewrite sensible = narrow sensible' where
   sensible' rs nr = all (\ nw -> R.lhs (N.narrowedRule nr) `T.isVariantOf` R.lhs (N.narrowing nw)) (N.narrowings nr)
                     && sensible rs nr
   
-usableRules :: (Applicative m) => Problem -> m Problem
-usableRules p = pure (Problem.removeUnusedRules (Problem.withEdges edgeP p))
+usableRules :: (Ord v, Alternative m) => Problem Symbol v -> m (Problem Symbol v)
+usableRules p
+  | Problem.size p' < Problem.size p = pure p'
+  | otherwise = empty
   where
+    p' = Problem.removeUnusedRules (Problem.withEdges edgeP p)
     rs = Problem.rules p
     r1 `edgeP` r2 = maybe False (elem r2) (lookup r1 ss)
     ss = [(r,UR.calls (R.rhs r) rs) | r <- rs ]
 
-neededRules :: (Monad m, Alternative m) => Problem -> m Problem
+neededRules :: (Monad m, Alternative m) => Problem Symbol v -> m (Problem Symbol v)
 neededRules p = Problem.replaceRulesM (\ _ rl _ -> if needed rl then empty else pure []) p where
   needed rl =
     case ATRS.headSymbol (R.lhs rl) of
@@ -131,7 +130,8 @@ neededRules p = Problem.replaceRulesM (\ _ rl _ -> if needed rl then empty else 
      _ -> True
   createdFuns = foldr ATRS.funsDL [] (RS.rhss (Problem.rules p))
 
-dfaInstantiate :: (Monad m, Alternative m) => ((ATRS.TypedRule Symbol Var, ATRS.Env Var) -> [Var]) -> Problem -> m Problem
+-- TODO: extend to labeled main symbols!
+dfaInstantiate :: (Monad m, Alternative m) => ((ATRS.TypedRule Symbol Int, ATRS.Env Int) -> [Int]) -> Problem Symbol Int -> m (Problem Symbol Int)
 dfaInstantiate abstractVars prob = 
   case ATRS.inferTypes rs of
    Left _ -> empty
@@ -157,3 +157,6 @@ dfaInstantiate abstractVars prob =
            norm (ATRS.atermM -> Just (_ ATRS.:@ _)) = False
            norm li = all (isNothing . unify li) (RS.lhss (map snd rs))
   where rs = Problem.rulesEnum prob
+
+uncurryRules :: (Monad m, Alternative m) => Problem Symbol Int -> m (Problem Symbol Int)
+uncurryRules p = Problem.fromRules <$> UC.uncurried (Problem.rules p)

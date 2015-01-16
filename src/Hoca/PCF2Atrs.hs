@@ -18,13 +18,18 @@ import qualified Data.Rewriting.Rule as R
 import qualified Data.Rewriting.Term as T
 import qualified Data.Set as Set
 import qualified Data.Map as Map
-import           Hoca.ATRS
+import qualified Hoca.ATRS as ATRS
 import           Hoca.Utils (nubRules)
 import qualified Hoca.PCF as PCF
 import qualified Hoca.FP as FP
-import Hoca.Problem (Problem(..), Name(..), Symbol (..), Lbl(..), Var)
+import Hoca.Problem (Name(..), Symbol (..), Lbl(..))
 import qualified Hoca.Problem as Problem
 
+
+type Var = Int
+type Rule = ATRS.Rule Symbol Var
+type Term = ATRS.Term Symbol Var
+type Problem = Problem.Problem Symbol Var
 
 (-->) :: T.Term f v -> T.Term f v -> R.Rule f v
 (-->) = R.Rule
@@ -88,14 +93,14 @@ label expr = State.evalState (labelM expr) (Map.empty,[])
 
 -- transformation ----------------------------------------------------------------------
       
-newtype TM a = TM { execute :: RWS [Int] [Rule Symbol Var] [Name] a }
+newtype TM a = TM { execute :: RWS [Int] [Rule] ([Name],Int) a }
              deriving (Applicative, Functor, Monad
                       , MonadReader [Int]
-                      , MonadWriter [Rule Symbol Var]
-                      , MonadState [Name])
+                      , MonadWriter [Rule]
+                      , MonadState ([Name],Int))
 
-eval :: TM a -> (a, [Rule Symbol Var])
-eval m = evalRWS (execute m) [] []
+eval :: TM a -> (a, [Rule])
+eval m = evalRWS (execute m) [] ([],0)
 
 freshVars :: TM [Int]
 freshVars = fv <$> ask
@@ -103,27 +108,33 @@ freshVars = fv <$> ask
     fv [] = [0..]
     fv (v:_) = [v+1..]
 
-withVar :: TM r -> TM (Term Symbol Var, r)
+withVar :: TM r -> TM (Term, r)
 withVar m = do
   v <- head <$> freshVars
   r <- local (\vs' -> v : vs') m
   return (T.Var v, r)
 
-withVars :: Int -> TM r -> TM ([Term Symbol Var], r)
+withVars :: Int -> TM r -> TM ([Term], r)
 withVars n m = do
   vs <- take n <$> freshVars
   r <- local (\vs' -> reverse vs ++ vs') m
   return (map T.Var vs, r)
-  
-variable :: Int -> TM (Term Symbol Var)
+
+variable :: Int -> TM Term
 variable i = do
   vs <- ask
   return (T.Var (vs!!i))
 
-variables :: TM [Term Symbol Var]
+freshInt :: TM Int
+freshInt = do
+  (ns,i) <- State.get
+  State.put (ns,i+1)
+  return i
+
+variables :: TM [Term]
 variables = reverse <$> map T.Var <$> ask
 
-freeVars :: PCF.Exp a -> TM (Set.Set (Term Symbol Var))
+freeVars :: PCF.Exp a -> TM (Set.Set Term)
 freeVars (PCF.Var _ i) = Set.singleton <$> variable i
 freeVars (PCF.Abs _ _ f) = uncurry Set.delete <$> withVar (freeVars f)
 freeVars (PCF.App _ e1 e2) =
@@ -137,7 +148,7 @@ freeVars (PCF.Cond _ e cs) = do
 freeVars (PCF.Fix _ fs) =
   foldM (\ vs fi -> Set.union vs <$> freeVars fi) Set.empty fs
 
-toTRS :: PCF.Exp FP.Context -> [Rule Symbol Var]
+toTRS :: PCF.Exp FP.Context -> [Rule]
 toTRS = nubRules . snd . eval . mainM . label
   where
     cvars = sort . Set.toList
@@ -148,26 +159,28 @@ toTRS = nubRules . snd . eval . mainM . label
     mainM e = do
       t <- toTRSM e
       vs <- variables
-      record [fun Main vs --> t ]
+      record [ATRS.fun Main vs --> t ]
 
     toTRSM (PCF.Var _ i) = variable i
     toTRSM e@(PCF.Abs _ la f) = do
       (v,tf) <- withVar (toTRSM f)
       vs <- freeVars e
-      let te = fun (Lambda la) (cvars vs)
-      record [ app te v --> tf ]
+      let te = ATRS.fun (Lambda la) (cvars vs)
+      record [ ATRS.app te v --> tf ]
       return te
-    toTRSM (PCF.App _ e1 e2) = app <$> toTRSM e1 <*> toTRSM e2
-    toTRSM (PCF.Con _ g es) = fun (Con g) <$> mapM toTRSM es
-    toTRSM PCF.Bot = return (fun Bot [])
+    toTRSM (PCF.App _ e1 e2) = ATRS.app <$> toTRSM e1 <*> toTRSM e2
+    toTRSM (PCF.Con _ g es) = ATRS.fun (Con g) <$> mapM toTRSM es
+    toTRSM PCF.Bot = do
+      i <- freshInt
+      return (ATRS.fun (Bot i) [])
     
     toTRSM (PCF.Cond l f cs) = do
       vs <- foldM (\ vs' (_,eg) -> Set.union vs' <$> freeVars eg) Set.empty cs
-      let cond t = fun (Cond l) (t : cvars vs)
+      let cond t = ATRS.fun (Cond l) (t : cvars vs)
       forM_ cs $ \ (g,eg) -> do
         let ar = PCF.sarity g
         (vsg,tg) <- withVars ar (toTRSM (caseBdy ar eg))
-        record [cond (fun (Con g) vsg) --> tg]
+        record [cond (ATRS.fun (Con g) vsg) --> tg]
       cond <$> toTRSM f
       where
         caseBdy 0 fg = fg
@@ -177,14 +190,14 @@ toTRS = nubRules . snd . eval . mainM . label
     toTRSM e@(PCF.Fix i fs)
       | 0 <= i && i < length fs
         && all isApp fs = do
-          visited <- elem lf <$> get
+          visited <- elem lf <$> fst <$> get
           vs <- freeVars e
-          let te = fun (Fix lf) (cvars vs)
+          let te = ATRS.fun (Fix lf) (cvars vs)
           unless visited $ do
-            modify (lf :)
+            modify (\ (lfs, j) -> (lf : lfs, j))
             let v = T.Var (maximum (0 : [1 + j | T.Var j <- Set.toList vs] ))
             tf <- toTRSM (fromJust (foldM PCF.apply f [PCF.Fix j fs | j <- [0..length fs - 1]]))
-            record [ app te v --> app tf v ]
+            record [ ATRS.app te v --> ATRS.app tf v ]
           return te
       where
         isApp (PCF.Abs {}) = True

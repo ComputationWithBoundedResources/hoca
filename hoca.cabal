@@ -42,6 +42,7 @@ library
         Hoca.PCF2Atrs
         Hoca.Transform
         Hoca.UsableRules
+        Hoca.Uncurry
         Hoca.Narrowing
         Hoca.TreeGrammar
     other-modules:

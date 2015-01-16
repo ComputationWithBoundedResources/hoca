@@ -12,6 +12,7 @@ module Hoca.ATRS
        , app
        , fun
        , args
+       , function
        , var
          -- * operations
        , headSymbol
@@ -96,6 +97,12 @@ funsDL t l = [f | (Sym f) <- T.funsDL t (map Sym l)]
 
 funs :: Term f v -> [f]
 funs t = funsDL t []
+
+function :: Term f v -> Maybe (Term f v)
+function (atermM -> Just (t1 :@ _)) = function t1
+function (atermM -> Just (Var v)) = Just (T.Var v)
+function (atermM -> Just (Fun f ts)) = Just (T.Fun (Sym f) ts)
+function _ = Nothing
 
 args :: Term f v -> [Term f v]
 args (atermM -> Just (t1 :@ t2)) = args t1 ++ [t2]
