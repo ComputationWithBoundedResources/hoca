@@ -1209,6 +1209,8 @@ let fail = lazy (fun sc fc ts n -> fc n) ;;
 (* bind : 'a parser -> ('a -> 'b parser) -> 'b parser *)
 let bind p f = lazy (fun sc -> (force p) (fun x -> (force (f x)) sc));;
 
+let bind2 p f = lazy (fun sc -> (force p) (fun x -> (force (f x)) sc));;
+  
 
 (* alt : 'a parser -> 'a parser -> 'a parser *)
 let alt p q  =
@@ -1312,7 +1314,7 @@ let rec pas p =
 ;;
 
 
-let parser = promote (promote eos);;
+let parser = promote (pas eos);;
 
   runParser parser input
 		 
