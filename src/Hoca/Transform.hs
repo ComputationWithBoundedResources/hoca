@@ -141,7 +141,6 @@ dfaInstantiate abstractVars prob =
            | otherwise = pure [(rl,succs) | rl <- rs', argumentNormalised rl] where
                (rs',succs) = mkRefinements i (`elem` vs)
                vs = maybe [] (nub . abstractVars) (lookup i ers)
-     -- Problem.replaceRulesIdx instantiate (Problem.withSignature sig (Problem.withEdgesIdx edgeP prob)) where
          initialDFA = TG.fromList (startRules ++ constructorRules)
          startRules = 
            [ TG.Production DFA.startNonTerminal (TG.Terminal (ATRS.Sym Main) [TG.NonTerminal (DFA.auxNonTerminal t) | t <- ATRS.inputTypes td])
