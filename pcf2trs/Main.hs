@@ -90,9 +90,6 @@ definingRule name _ rl =
    Just f -> render f == name
    _ -> False
 
--- nonRecursiveNarrowing :: Problem -> N.NarrowedRule (ATRS.ASym Problem.Symbol) Int Int -> Bool
--- nonRecursiveNarrowing _ n = 
-
 withRule :: (Problem -> Rule -> Bool) -> Problem -> N.NarrowedRule (ATRS.ASym Problem.Symbol) Int Int -> Bool
 withRule p rs = all (p rs) . map N.narrowedWith . N.narrowings
 
@@ -107,10 +104,7 @@ n1 = exhaustive ((narrow (withRule caseRule) >=> traceProblem "case narrowing")
      >=> exhaustive (narrow (withRule (not recursiveRule)) >=> traceProblem "non-recursive narrowing")
      >=> try usableRules >=> try neededRules
 
-nonRecursive :: N.NarrowedRule (ATRS.ASym Problem.Symbol) Int Int -> Bool
-nonRecursive = undefined
 
-  
 simplify :: PCF.Strategy m => Problem -> m Problem
 simplify =
   traceProblem "initial"
@@ -125,27 +119,27 @@ simplify =
   >=> exhaustive (narrow (withRule (not recursiveRule)) >=> traceProblem "non-recursive narrowing")
   >=> try usableRules >=> try neededRules  
 
-narrowConst :: PCF.Strategy m => Problem -> m Problem
-narrowConst =
-  narrow (\ _ ns -> all (decreasingConst (N.narrowSubterm ns) . N.narrowing) (N.narrowings ns))
-  >=> try usableRules >=> try neededRules
-  where
-    decreasingConst t (R.Rule _ r) =
-      T.isGround t
-      || (not (null as) && all (any (\ (li,ri) -> isConstantTerm li && isConstantTerm ri && size li > size ri)) as)
-      where
-        as = [ zip (ATRS.args t) (ATRS.args ri)
-             | ri <- T.subterms r, ATRS.headSymbol t == ATRS.headSymbol ri ]
-    -- decreasingConst t@(T.Fun f ts) (R.Rule l r) = T.isGround t 
-      -- null as || all (any (\ (li,ri) -> isConstantTerm li && isConstantTerm ri && size li > size ri)) as where
-      --   as = [ zip ts rs
-      --        | T.Fun g rs <- T.subterms r, f == g ]
+-- narrowConst :: PCF.Strategy m => Problem -> m Problem
+-- narrowConst =
+--   narrow (\ _ ns -> all (decreasingConst (N.narrowSubterm ns) . N.narrowing) (N.narrowings ns))
+--   >=> try usableRules >=> try neededRules
+--   where
+--     decreasingConst t (R.Rule _ r) =
+--       T.isGround t
+--       || (not (null as) && all (any (\ (li,ri) -> isConstantTerm li && isConstantTerm ri && size li > size ri)) as)
+--       where
+--         as = [ zip (ATRS.args t) (ATRS.args ri)
+--              | ri <- T.subterms r, ATRS.headSymbol t == ATRS.headSymbol ri ]
+--     -- decreasingConst t@(T.Fun f ts) (R.Rule l r) = T.isGround t 
+--       -- null as || all (any (\ (li,ri) -> isConstantTerm li && isConstantTerm ri && size li > size ri)) as where
+--       --   as = [ zip ts rs
+--       --        | T.Fun g rs <- T.subterms r, f == g ]
 
-    isConstantTerm t = T.isGround t && all isConstructor (ATRS.funs t) where 
-      isConstructor Problem.Con{} = True
-      isConstructor _ = False
+--     isConstantTerm t = T.isGround t && all isConstructor (ATRS.funs t) where 
+--       isConstructor Problem.Con{} = True
+--       isConstructor _ = False
 
-    size = T.fold (const (1::Int)) (const (succ . sum))
+--     size = T.fold (const (1::Int)) (const (succ . sum))
 --     -- T.Var {} `embeds` _ = False
 --     -- s@(T.Fun f ss) `embeds` t@(T.Fun g ts) =
 --     --   t `elem` (T.properSubterms s)
