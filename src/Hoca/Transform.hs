@@ -78,7 +78,7 @@ traceProblem s prob = tracePretty doc (pure prob) where
 pcfToTrs :: Applicative m => Exp FP.Context -> m (Problem Symbol Int)
 pcfToTrs = pure . PCF2Atrs.toProblem
 
-narrow :: (Eq f, Ord v, Enum v, Alternative m, Monad m) => (Problem f v -> N.NarrowedRule (ATRS.ASym f) v v -> Bool) -> Problem f v -> m (Problem f v)
+narrow :: (Ord f, Ord v, Enum v, Alternative m, Monad m) => (Problem f v -> N.NarrowedRule (ATRS.ASym f) v v -> Bool) -> Problem f v -> m (Problem f v)
 narrow sensible p = Problem.replaceRulesM narrowRule p where
   sound nr =
     all (redexPreserving . N.narrowedWith) (N.narrowings nr)
@@ -106,7 +106,7 @@ narrow sensible p = Problem.replaceRulesM narrowRule p where
                        ]
   rules = Problem.rules p
 
-rewrite :: (Eq f, Ord v, Enum v, Alternative m, Monad m) => (Problem f v -> N.NarrowedRule (ATRS.ASym f) v v -> Bool) -> Problem f v -> m (Problem f v)
+rewrite :: (Ord f, Ord v, Enum v, Alternative m, Monad m) => (Problem f v -> N.NarrowedRule (ATRS.ASym f) v v -> Bool) -> Problem f v -> m (Problem f v)
 rewrite sensible = narrow sensible' where
   sensible' rs nr = all (\ nw -> R.lhs (N.narrowedRule nr) `T.isVariantOf` R.lhs (N.narrowing nw)) (N.narrowings nr)
                     && sensible rs nr
@@ -121,7 +121,7 @@ usableRules p
     r1 `edgeP` r2 = maybe False (elem r2) (lookup r1 ss)
     ss = [(r,UR.calls (R.rhs r) rs) | r <- rs ]
 
-neededRules :: (Monad m, Alternative m) => Problem Symbol v -> m (Problem Symbol v)
+neededRules :: (Monad m, Alternative m, Ord v) => Problem Symbol v -> m (Problem Symbol v)
 neededRules p = Problem.replaceRulesM (\ _ rl _ -> if needed rl then empty else pure []) p where
   needed rl =
     case ATRS.headSymbol (R.lhs rl) of

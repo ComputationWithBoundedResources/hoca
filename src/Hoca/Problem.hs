@@ -116,7 +116,18 @@ fromRules rs =
 withSignature :: ATRS.Signature f -> Problem f v -> Problem f v
 withSignature sig p = p {pSig = Just sig}
 
-replaceRulesM :: (Monad m, Alternative m) => (Int -> ATRS.Rule f v -> [Int] -> m [(ATRS.Rule f v, [Int])]) -> Problem f v -> m (Problem f v)
+removeInstances :: (Ord f, Ord v) => Problem f v -> Problem f v
+removeInstances p = p { pRules = foldl removeInstance (pRules p) insts } where
+  insts = [ (i,j) | (i,ri) <- rs, (j,rj) <- rs
+                  , i /= j, ri `R.isInstanceOf` rj
+                  , i < j || not (rj `R.isInstanceOf` ri) ]
+    where rs = rulesEnum p
+  removeInstance m (i,j) = IMap.map relink (IMap.delete i m) where
+    relink (rl,ss)
+      | ISet.member i ss = (rl,ISet.insert j (ISet.delete i ss))
+      | otherwise = (rl,ss)
+
+replaceRulesM :: (Monad m, Alternative m, Ord f, Ord v) => (Int -> ATRS.Rule f v -> [Int] -> m [(ATRS.Rule f v, [Int])]) -> Problem f v -> m (Problem f v)
 replaceRulesM m p = runVarSupplyT (mapM f (IMap.toList (pRules p))) >>= toProblem 
   where
     f (i,(r,ISet.toList -> ss)) = do
@@ -128,8 +139,9 @@ replaceRulesM m p = runVarSupplyT (mapM f (IMap.toList (pRules p))) >>= toProble
        Just rs -> do
          ids <- mapM (const fresh) rs
          return (True, (i, [ (j,r',ss') | (j,(r',ss')) <- zip ids rs ]))
+
     toProblem l
-      | any fst l = pure (p { pRules = foldl ins IMap.empty (concatMap snd l') })
+      | any fst l = pure (removeInstances p { pRules = foldl ins IMap.empty (concatMap snd l') })
       | otherwise = empty
       where
         l' = map snd l
@@ -140,10 +152,11 @@ replaceRulesM m p = runVarSupplyT (mapM f (IMap.toList (pRules p))) >>= toProble
            Nothing -> ISet.empty
            Just ers -> ISet.fromList [ j | (j,_,_) <- ers]
 
-replaceRules :: (Monad m, Alternative m) => (ATRS.Rule f v -> m [(ATRS.Rule f v, [Int])]) -> Problem f v -> m (Problem f v)
+
+replaceRules :: (Monad m, Alternative m, Ord f, Ord v) => (ATRS.Rule f v -> m [(ATRS.Rule f v, [Int])]) -> Problem f v -> m (Problem f v)
 replaceRules f = replaceRulesM (const (return . f))
 
-replaceRulesIdx :: (Monad m, Alternative m) => (Int -> m [(ATRS.Rule f v, [Int])]) -> Problem f v -> m (Problem f v)
+replaceRulesIdx :: (Monad m, Alternative m, Ord f, Ord v) => (Int -> m [(ATRS.Rule f v, [Int])]) -> Problem f v -> m (Problem f v)
 replaceRulesIdx f = replaceRulesM m where
   m i _ = return (f i)
 
