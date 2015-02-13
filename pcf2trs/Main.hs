@@ -202,16 +202,16 @@ n2 = narrow (complexityPreserving && (sizeNonIncreasing && not branching
 
 simplify :: PCF.Strategy m => Problem -> m Problem
 simplify =
-  traceProblem "initial"
-  >=> try (cfa >=> traceProblem "CFA")
-  >=> exhaustive ((narrow (withRule caseRule) >=> traceProblem "case narrowing")
-                  <=> (rewrite (withRule lambdaRule) >=> traceProblem "lambda rewrite"))
-  >=> exhaustive (rewrite (withRule fixRule) >=> traceProblem "fix rewrite")
+  traced "initial"
+  >=> try (cfa >=> traced "CFA")
+  >=> exhaustive ((narrow (withRule caseRule) >=> traced "case narrowing")
+                  <=> (rewrite (withRule lambdaRule) >=> traced "lambda rewrite"))
+  >=> exhaustive (rewrite (withRule fixRule) >=> traced "fix rewrite")
   >=> try usableRules >=> try neededRules          
-  >=> exhaustive (narrow (withRule (not recursiveRule)) >=> traceProblem "non-recursive narrowing")
+  >=> exhaustive (narrow (withRule (not recursiveRule)) >=> traced "non-recursive narrowing")
   >=> try usableRules >=> try neededRules
-  >=> try (uncurryRules >=> try usableRules >=> try neededRules >=> traceProblem "uncurried")
-  >=> exhaustive (narrow (withRule (not recursiveRule)) >=> traceProblem "non-recursive narrowing")
+  >=> try (uncurryRules >=> try usableRules >=> try neededRules >=> traced "uncurried")
+  >=> exhaustive (narrow (withRule (not recursiveRule)) >=> traced "non-recursive narrowing")
   >=> try usableRules >=> try neededRules  
 
 -- narrowConst :: PCF.Strategy m => Problem -> m Problem

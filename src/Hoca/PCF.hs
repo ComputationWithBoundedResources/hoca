@@ -25,6 +25,7 @@ module Hoca.PCF
 
 import           Control.Applicative ((<$>), (<*>), Alternative(..))
 import qualified Data.Set as Set
+import Hoca.Strategy
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import qualified Data.IntMap as IntMap
 import Data.Maybe (isJust)
@@ -163,18 +164,6 @@ subst j e (Cond l f cs) = Cond l (subst j e f) [(g, subst j e e') | (g,e') <- cs
 subst j e (Fix i es) = Fix i [subst j e ei | ei <- es]
 
 -- * steps
-
-class (Alternative m, Monad m) => Strategy m where
-  -- | left biased choice
-  (<||>) :: m a -> m a -> m a 
-
-instance Strategy Maybe where
-  Nothing <||> a = a
-  Just a <||> _ = Just a  
-
-instance Strategy [] where
-  [] <||> l2 = l2
-  l1 <||> _  = l1
 
 apply :: Strategy m => Exp l -> Exp l -> m (Exp l)
 apply (Abs  _ _ e) f = return (shift (-1) (subst 0 (shift 1 f) e))

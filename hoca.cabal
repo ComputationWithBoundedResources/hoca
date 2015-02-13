@@ -37,6 +37,7 @@ library
         src
     exposed-modules:
         Hoca.Utils
+        Hoca.Strategy
         Hoca.Problem
         Hoca.DFA
         Hoca.PCF

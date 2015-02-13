@@ -7,7 +7,7 @@ module Hoca.Transform (
   , (<=>)
   , repeated
   , exhaustive
-  , traceProblem
+  , traced
   -- * Transformations
   , pcfToTrs
   , narrow
@@ -22,7 +22,6 @@ module Hoca.Transform (
 
 import           Control.Applicative (Applicative, Alternative, empty, pure)
 import           Control.Monad.RWS
-import           Data.List (nub)
 import qualified Data.Map as Map
 import           Data.Maybe (listToMaybe, fromJust, isNothing)
 import qualified Data.MultiSet as MS
@@ -35,8 +34,9 @@ import qualified Hoca.TreeGrammar as TG
 import qualified Hoca.DFA as DFA
 import qualified Hoca.FP as FP
 import qualified Hoca.Narrowing as N
+import Hoca.Strategy
 import qualified Hoca.Uncurry as UC
-import           Hoca.PCF (Strategy(..), Exp)
+import           Hoca.PCF (Exp)
 import qualified Hoca.PCF2Atrs as PCF2Atrs
 import           Hoca.Problem (Symbol (..), Problem)
 import qualified Hoca.Problem as Problem
@@ -45,33 +45,6 @@ import           Hoca.Utils (tracePretty)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Data.Maybe (fromMaybe)
 import Control.Applicative ((<$>))
-
-
--- combinators
-try :: (Strategy m) => (a -> m a) -> a -> m a
-try m a = m a <||> return a
-
-(<=>) :: (Strategy m) => (a -> m b) -> (a -> m b) -> a -> m b
-(<=>) f1 f2 a = f1 a <||> f2 a
-
-repeated :: (Strategy m) => Int -> (a -> m a) -> a -> m a
-repeated n m
-  | n <= 0 = return
-  | otherwise = try (m >=> repeated (n-1) m)
-
-exhaustive :: Strategy m => (a -> m a) -> a -> m a
-exhaustive rel = try (rel >=> exhaustive rel) 
-
-
-traceProblem :: (PP.Pretty (Problem f v), Applicative m) => String -> Problem f v -> m (Problem f v)
-traceProblem s prob = tracePretty doc (pure prob) where
-  ln c = PP.text (replicate 80 c)
-  doc =
-    PP.text s
-    PP.<$> ln '-'
-    PP.<$> PP.indent 2 (PP.pretty prob)
-    PP.<$> ln '='
-    PP.<$> PP.text ""
 
 
 -- Transformations
