@@ -54,11 +54,17 @@ instance PP.Pretty Symbol where
   pretty Main = PP.text "main"
   pretty (Labeled 0 s) = PP.pretty s
   pretty (Labeled i s) = PP.pretty s PP.<> PP.brackets (PP.int i)
-              
+
 
 unlabeled :: Symbol -> Symbol
 unlabeled (Labeled _ s) = unlabeled s
 unlabeled s = s
+
+isCaseSym,isFixSym,isMainSym,isConstructor :: Symbol -> Bool
+isCaseSym f = case unlabeled f of {Cond{} -> True; _ -> False }
+isFixSym f = case unlabeled f of {Fix{} -> True; _ -> False }
+isMainSym f = case unlabeled f of {Main{} -> True; _ -> False }
+isConstructor f = case unlabeled f of {Con{} -> True; _ -> False }
 
 
 data Problem f v = Problem { pRules :: IntMap (ATRS.Rule f v,IntSet)
@@ -197,11 +203,8 @@ removeUnusedRules p = p { pRules = IMap.filterWithKey (\ k _ ->  (k `elem` used)
   used = initial ++ usableIdxs p initial
   initial = [i | (i,(r,_)) <- IMap.toList (pRules p)
                , case R.lhs r of
-                  R.Fun (ATRS.Sym f) _ -> isMainSymbol f
+                  R.Fun (ATRS.Sym f) _ -> unlabeled f == Main
                   _ -> False ]
-  isMainSymbol (Labeled _ f) = isMainSymbol f
-  isMainSymbol Main = True
-  isMainSymbol _ = False
    
 withEdges :: (ATRS.Rule f v -> ATRS.Rule f v -> Bool) -> Problem f v -> Problem f v
 withEdges edgeP p = p { pRules = IMap.map f (pRules p) } where

@@ -147,7 +147,7 @@ complete prog = exec (fixM makeClosure) where
         unless r (modify (S.insert t))
         return r
 
-refinements :: (PP.Pretty x, PP.Pretty v, PP.Pretty f, Ord v, Ord f, Ord x) => [(Int, R.Rule f v)] -> DFAGrammar f v x -> Int -> (v -> Bool) -> ([R.Rule f Int], [Int])
+refinements :: (PP.Pretty x, PP.Pretty v, PP.Pretty f, Ord v, Ord f, Ord x) => [(Int, R.Rule f v)] -> DFAGrammar f v x -> Int -> (v -> [R.Term f ()] -> Bool) -> ([R.Rule f Int], [Int])
 refinements prog initial = 
   \ i refineP ->
    case L.lookup i prog of
@@ -158,8 +158,9 @@ refinements prog initial =
         apply s t = fromJust (S.gApply s t)
         substs = map toSubst (foldl (\ l v -> [ (v,p):s | s <- l, p <- patterns v]) [[]] (L.nub (R.vars rl))) where 
           patterns v
-            | refineP v = L.nub (map unliftTerm (reducts (V v i)))
+            | refineP v assigns = assigns
             | otherwise = [T.Var ()]
+            where assigns = L.nub (map unliftTerm (reducts (V v i)))
   where
     tg = tracePretty' (complete prog initial)
     reducts s =

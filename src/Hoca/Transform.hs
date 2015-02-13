@@ -15,6 +15,7 @@ module Hoca.Transform (
   , neededRules
   , usableRules
   , uncurryRules
+  , etaSaturateRules
   , dfaInstantiate
 )
        where
@@ -130,32 +131,35 @@ neededRules p = Problem.replaceRulesM (\ _ rl _ -> if needed rl then empty else 
      _ -> True
   createdFuns = foldr ATRS.funsDL [] (RS.rhss (Problem.rules p))
 
--- TODO: extend to labeled main symbols!
-dfaInstantiate :: (Monad m, Alternative m) => ((ATRS.TypedRule Symbol Int, ATRS.Env Int) -> [Int]) -> Problem Symbol Int -> m (Problem Symbol Int)
-dfaInstantiate abstractVars prob = 
+dfaInstantiate :: (Monad f, Alternative f) => (ATRS.TypedRule Symbol Int -> Int -> [ATRS.Term Symbol ()] -> Bool) -> Problem Symbol Int -> f (Problem Symbol Int)
+dfaInstantiate refineP prob = 
   case ATRS.inferTypes rs of
    Left _ -> empty
    Right (sig,ers) -> Problem.replaceRulesM replace prob where
-         replace i _ _
-           | null vs = empty
-           | otherwise = pure [(rl,succs) | rl <- rs', argumentNormalised rl] where
-               (rs',succs) = mkRefinements i (`elem` vs)
-               vs = maybe [] (nub . abstractVars) (lookup i ers)
-         initialDFA = TG.fromList (startRules ++ constructorRules)
-         startRules = 
-           [ TG.Production DFA.startNonTerminal (TG.Terminal (ATRS.Sym Main) [TG.NonTerminal (DFA.auxNonTerminal t) | t <- ATRS.inputTypes td])
-           | (Main, td) <- Map.toList sig]
-         constructorRules = 
-           [ TG.Production (DFA.auxNonTerminal (ATRS.outputType td)) (TG.Terminal (ATRS.Sym c) [TG.NonTerminal (DFA.auxNonTerminal t) | t <- ATRS.inputTypes td])
-           | (c@Con{}, td) <- Map.toList sig ]
+     replace i _ _ = pure [(rl,succs) | rl <- rs', argumentNormalised rl] where
+       -- | null vs && all (`elem` succs) (Problem.calleeIdxs prob i) = empty
+       -- | otherwise 
+           (rs',succs) = mkRefinements i refineP'
+           refineP' = maybe (const (const False)) (refineP . fst) (lookup i ers)
            
-         mkRefinements = DFA.refinements rs initialDFA
+     initialDFA = TG.fromList (startRules ++ constructorRules) where
+       startRules = 
+         [ TG.Production DFA.startNonTerminal (TG.Terminal (ATRS.Sym f) [TG.NonTerminal (DFA.auxNonTerminal t) | t <- ATRS.inputTypes td])
+         | (f, td) <- Map.toList sig, Problem.isMainSym f]
+       constructorRules = 
+         [ TG.Production (DFA.auxNonTerminal (ATRS.outputType td)) (TG.Terminal (ATRS.Sym c) [TG.NonTerminal (DFA.auxNonTerminal t) | t <- ATRS.inputTypes td])
+         | (c, td) <- Map.toList sig, Problem.isConstructor c ]
+           
+     mkRefinements = DFA.refinements rs initialDFA
 
-         argumentNormalised rl = all norm (T.properSubterms (R.lhs rl)) where
-           norm (T.Var _) = True
-           norm (ATRS.atermM -> Just (_ ATRS.:@ _)) = False
-           norm li = all (isNothing . unify li) (RS.lhss (map snd rs))
+     argumentNormalised rl = all norm (T.properSubterms (R.lhs rl)) where
+       norm (T.Var _) = True
+       norm (ATRS.atermM -> Just (_ ATRS.:@ _)) = False
+       norm li = all (isNothing . unify li) (RS.lhss (map snd rs))
   where rs = Problem.rulesEnum prob
 
 uncurryRules :: (Monad m, Alternative m) => Problem Symbol Int -> m (Problem Symbol Int)
 uncurryRules p = Problem.fromRules <$> UC.uncurried (Problem.rules p)
+
+etaSaturateRules :: (Monad m, Alternative m) => Problem Symbol Int -> m (Problem Symbol Int)
+etaSaturateRules p = Problem.fromRules <$> UC.etaSaturate (Problem.rules p)

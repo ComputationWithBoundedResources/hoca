@@ -171,8 +171,8 @@ toTRS = nubRules . snd . eval . mainM . label
     toTRSM (PCF.App _ e1 e2) = ATRS.app <$> toTRSM e1 <*> toTRSM e2
     toTRSM (PCF.Con _ g es) = ATRS.fun (Con g) <$> mapM toTRSM es
     toTRSM PCF.Bot = do
-      i <- freshInt
-      return (ATRS.fun (Bot i) [])
+      -- i <- freshInt
+      return (ATRS.fun (Bot 0) [])
     
     toTRSM (PCF.Cond l f cs) = do
       vs <- foldM (\ vs' (_,eg) -> Set.union vs' <$> freeVars eg) Set.empty cs

@@ -9,8 +9,8 @@ import qualified Data.Rewriting.Term as T
 import qualified Data.Rewriting.Rule as R
 import Control.Applicative (Alternative, (<$>),(<*>), empty)
 
-etaSaturate :: [TypedRule f v] -> [TypedRule f (Either v Int)]
-etaSaturate = concatMap (etaSaturateRule 1 . ren) where
+etaSaturateTyped :: [TypedRule f v] -> [TypedRule f (Either v Int)]
+etaSaturateTyped = concatMap (etaSaturateRule 1 . ren) where
   etaSaturateRule i rl =
     case ATRS.getType (R.lhs rl) of
      tp1 :~> tp2 ->
@@ -39,14 +39,23 @@ uncurried rs =
   case ATRS.inferTypes (zip [1..] rs) of
    Left _ -> empty
    Right (_, map (fst . snd) -> rs') -> 
-     map (R.map ren) <$> uncurryRules (etaSaturate rs')
+     map ren <$> uncurryRules (etaSaturateTyped rs')
    where
-     ren = T.fold var fun 
-       where
-         var (Left v) = T.Var (v * 2 + 1)
-         var (Right v) = T.Var (v * 2)
-         fun (ATRS.Sym (f,i)) as = ATRS.fun (Problem.Labeled i f) as
-         fun _ _ = error "uncurried: TRS contains application symbol"
+     ren = R.map (T.fold var fun)
+     var (Left v) = T.Var (v * 2 + 1)
+     var (Right v) = T.Var (v * 2)
+     fun (ATRS.Sym (f,i)) as = ATRS.fun (Problem.Labeled i f) as
+     fun _ _ = error "uncurried: TRS contains application symbol"
      
+-- etaSaturate :: (Monad m, Alternative m) => [ATRS.Rule Problem.Symbol Int] -> m [ATRS.Rule Problem.Symbol Int]
+etaSaturate :: (Monad m, Alternative m) => [ATRS.Rule Problem.Symbol Int] -> m [ATRS.Rule Problem.Symbol Int]
+etaSaturate rs =
+  case ATRS.inferTypes (zip [1..] rs) of
+   Left _ -> empty
+   Right (_, map (fst . snd) -> rs') -> return (map ren (ATRS.unTypeRules (etaSaturateTyped rs'))) where
+     ren = R.map (T.fold var fun)
+     var (Left v) = T.Var (v * 2 + 1)
+     var (Right v) = T.Var (v * 2)
+     fun f as = T.Fun f as
       
     
