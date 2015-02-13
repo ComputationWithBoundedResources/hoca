@@ -1202,22 +1202,23 @@ let runParser p str = (force p) (fun a fc tl ln -> ParseSuccess(a,tl)) (fun ln -
 
 (* return: 'a -> 'a parser *)
 let return x = lazy (fun sc -> sc x) ;;
+let return2 x = lazy (fun sc -> sc x) ;;
   
 (* fail : 'a parser *)
 let fail = lazy (fun sc fc ts n -> fc n) ;;
 
 (* bind : 'a parser -> ('a -> 'b parser) -> 'b parser *)
 let bind p f = lazy (fun sc -> (force p) (fun x -> (force (f x)) sc));;
-
 let bind2 p f = lazy (fun sc -> (force p) (fun x -> (force (f x)) sc));;
+let bind3 p f = lazy (fun sc -> (force p) (fun x -> (force (f x)) sc));;  
   
 
 (* alt : 'a parser -> 'a parser -> 'a parser *)
 let alt p q  =
   lazy
     (fun sc fc ts n -> 
-     let fcp np = (force q) sc (fun nq -> fc (max np nq)) ts n
-     in (force p) sc fcp ts n)
+     let alt_fail np = (force q) sc (fun nq -> fc (max np nq)) ts n
+     in (force p) sc alt_fail ts n)
 ;;	  
   
 (* any : Token parser *)
@@ -1289,32 +1290,22 @@ let between pl pr p = bind' pl (bind p (fun r -> bind' pr (return r)))
 let parens = between (lexeme (char LPAREN)) (lexeme (char RPAREN))
 ;;		     
 
-(* let rec pExp = *)
-(*   let pVar = many1 alphaChar *)
-(*   and pApp = *)
-(*     seq (fun e1 e2 -> App e1 e2) (lexeme pExp) (lexeme pExp) *)
-(*   and pAbs = *)
-(*     bind' (lexeme (char SLASH)) *)
-(* 	  (seq (fun v e -> Abs v e) *)
-(* 	       (followedBy (lexeme pVar) (lexeme (char DOT))) *)
-(* 	       (lexeme pExp)) *)
-(*   in alt pVar (parens (alt pAbs pApp)) *)
-(* ;; *)
-
 (* promote : 'a parser parser -> 'a parser *)
-let promote p = bind p (fun q -> q)  
+let promote p = bind2 p (fun q -> q)  
 ;;
 
 let rec pas p =
-  bind (maybe (char A))
-       (fun ma ->
-	match ma with
-	| Some(a) -> pas (bind' (char B) p)
-	| None -> return p)
+  alt (bind (char A) (fun a -> pas (bind3 (char B) (fun x -> p))))
+      (return p)
 ;;
 
+(* let rec pas p = *)
+(*   bind (maybe (char A)) *)
+(*        (fun ma -> *)
+(* 	match ma with *)
+(* 	| Some(a) -> return2 p *)
+(* 	| None -> return2 p )              ;;   *)
 
 let parser = promote (pas eos);;
-
   runParser parser input
 		 
