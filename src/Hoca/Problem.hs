@@ -15,9 +15,8 @@ import qualified Hoca.ATRS as ATRS
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Data.List (nub)
 import Control.Monad.State (lift)
-import Data.Maybe (catMaybes)
 import Control.Applicative ((<$>), Alternative, optional, empty, pure)
-import Data.Maybe (listToMaybe)
+import Data.Maybe (listToMaybe, mapMaybe, catMaybes)
 
 data Lbl = LString String
          | LInt Int
@@ -73,7 +72,7 @@ data Problem f v = Problem { pRules :: IntMap (ATRS.Rule f v,IntSet)
 
 instance (PP.Pretty f) => PP.Pretty (Problem f Int) where
   pretty p =
-    PP.vcat $
+    PP.vcat
     [ PP.int i PP.<+> PP.text ":" PP.<+> R.prettyRule (PP.text "->") PP.pretty ppVar rl | (i,(rl,_)) <- IMap.toList (pRules p) ]
     -- ++ [ PP.int i PP.<+> PP.text "~>" PP.<+> PP.hcat [ PP.int j PP.<> PP.text ";" | j <- ISet.toList js] | (i,(_,js)) <- IMap.toList (pRules p)]
     where
@@ -184,7 +183,7 @@ calleeIdxs p i = maybe [] (ISet.toList . snd) (IMap.lookup i (pRules p))
 
 callees :: (Eq f, Eq v) => Problem f v -> ATRS.Rule f v -> [ATRS.Rule f v]
 callees p r =
-  maybe [] (map fst . catMaybes . map (flip IMap.lookup (pRules p)) . ISet.toList)
+  maybe [] (map fst . mapMaybe (`IMap.lookup` pRules p) . ISet.toList)
    (lookup r (IMap.elems (pRules p)))
 
 usableIdxs :: Problem f v -> [Int] -> [Int]

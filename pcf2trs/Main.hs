@@ -12,6 +12,7 @@ import qualified Hoca.Problem as Problem
 import qualified Hoca.ATRS as ATRS
 import           Hoca.Utils (putDocLn, writeDocFile, render)
 import           Hoca.Transform
+import Hoca.Strategy
 import           System.Environment (getArgs)
 import           System.IO (hPutStrLn, stderr)
 import GHC.IO (unsafePerformIO)
@@ -68,7 +69,6 @@ expressionFromArgs fname args = do
         fun (zip [(1::Int)..] args)
     fromString src str = FP.expFromString src str >>= FP.toPCF
 
-cfa :: PCF.Strategy m => Problem -> m Problem
 cfa = dfaInstantiate abstractP where
   abstractP _ _ [_] = True
   abstractP trl v _ =
@@ -125,14 +125,6 @@ sizeNonIncreasing :: Problem -> NarrowedRule -> Bool
 sizeNonIncreasing _ ns = all (\ n -> sz (N.narrowing n) <= sz (N.narrowedRule ns)) (N.narrowings ns) where
   sz rl = size (R.lhs rl) + size (R.rhs rl)
 
-complexityPreserving :: Problem -> NarrowedRule -> Bool
-complexityPreserving p nr =
-  all (redexReflecting . N.narrowedWith) (N.narrowings nr)
-  || argumentNormalised (N.narrowSubterm nr) where
-  redexReflecting rl = varsMS (R.rhs rl) `MS.isSubsetOf` varsMS (R.lhs rl) where
-    varsMS = MS.fromList . T.vars
-  argumentNormalised (T.Fun _ ts) = null (UR.usableRules ts (Problem.rules p))
-  argumentNormalised _ = True
 
 
 branching :: Problem -> NarrowedRule -> Bool
@@ -184,37 +176,45 @@ provided t f p = do
 --   >=> try uncurryRules >=> try usableRules >=> try neededRules >=> traceProblem "uncurried"
 --   >=> exhaustive (narrow sizeDecreasing >=> traceProblem "size-decreasing narrowing")
 
-n1 :: PCF.Strategy m => Problem -> m Problem
+type Strat = Strategy Maybe Problem Problem
+
+n1 :: Strat
 n1 =
-  exhaustive (narrowWith caseRule)
-  >=> exhaustive (narrowWith fixRule)
+  try (exhaustive (narrowWith caseRule))
+  >=> try (exhaustive (narrowWith fixRule))
   >=> try usableRules
 
-t1 :: PCF.Strategy m => Problem -> m Problem
-t1 = cfa >=> uncurryRules >=> usableRules
+t1 :: Strat
+t1 = try n1 >=> cfa >=> uncurryRules >=> try usableRules
   
   
-n2 :: PCF.Strategy m => Problem -> m Problem
-n2 = narrow (complexityPreserving && (sizeNonIncreasing && not branching
-                                      || sizeDecreasing
-                                      || withRule leafRule))
-     >=> try usableRules
+n2 :: Strat
+n2 =
+  narrow (complexityPreserving
+          && (not branching
+              || sizeDecreasing
+              || withRule leafRule))
+  >=> try usableRules
+  
+t2 :: Strat
+t2 = exhaustive n2 >=> cfa >=> try t2
 
-simplify :: PCF.Strategy m => Problem -> m Problem
+simplify :: Strat
 simplify =
-  traced "initial"
-  >=> try (cfa >=> traced "CFA")
-  >=> exhaustive ((narrow (withRule caseRule) >=> traced "case narrowing")
-                  <=> (rewrite (withRule lambdaRule) >=> traced "lambda rewrite"))
-  >=> exhaustive (rewrite (withRule fixRule) >=> traced "fix rewrite")
-  >=> try usableRules >=> try neededRules          
-  >=> exhaustive (narrow (withRule (not recursiveRule)) >=> traced "non-recursive narrowing")
-  >=> try usableRules >=> try neededRules
-  >=> try (uncurryRules >=> try usableRules >=> try neededRules >=> traced "uncurried")
-  >=> exhaustive (narrow (withRule (not recursiveRule)) >=> traced "non-recursive narrowing")
-  >=> try usableRules >=> try neededRules  
+  traced "initial" >=> t1 >=> try t2
+  
+  -- >=> try (cfa >=> traced "CFA")
+  -- >=> exhaustive ((narrow (withRule caseRule) >=> traced "case narrowing")
+  --                 <=> (rewrite (withRule lambdaRule) >=> traced "lambda rewrite"))
+  -- >=> exhaustive (rewrite (withRule fixRule) >=> traced "fix rewrite")
+  -- >=> try usableRules >=> try neededRules          
+  -- >=> exhaustive (narrow (withRule (not recursiveRule)) >=> traced "non-recursive narrowing")
+  -- >=> try usableRules >=> try neededRules
+  -- >=> try (uncurryRules >=> try usableRules >=> try neededRules >=> traced "uncurried")
+  -- >=> exhaustive (narrow (withRule (not recursiveRule)) >=> traced "non-recursive narrowing")
+  -- >=> try usableRules >=> try neededRules  
 
--- narrowConst :: PCF.Strategy m => Problem -> m Problem
+-- narrowConst :: Strategy
 -- narrowConst =
 --   narrow (\ _ ns -> all (decreasingConst (N.narrowSubterm ns) . N.narrowing) (N.narrowings ns))
 --   >=> try usableRules >=> try neededRules

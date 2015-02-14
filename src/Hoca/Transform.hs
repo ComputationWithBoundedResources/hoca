@@ -1,33 +1,27 @@
 -- | 
 
 module Hoca.Transform (
-  -- * Combinators
-  try
-  , (>=>)
-  , (<=>)
-  , repeated
-  , exhaustive
-  , traced
-  -- * Transformations
-  , pcfToTrs
-  , narrow
-  , rewrite
-  , neededRules
+  pcfToTrs
+  -- * Simplifications
   , usableRules
   , uncurryRules
   , etaSaturateRules
   , dfaInstantiate
+    -- ** Rule Narrowing
+  , narrow
+  , rewrite
+  , complexityPreserving
+  , complexityReflecting
 )
        where
 
-import           Control.Applicative (Applicative, Alternative, empty, pure)
-import           Control.Monad.RWS
+import           Control.Applicative (Applicative, Alternative, empty, pure, (<$>))
 import qualified Data.Map as Map
-import           Data.Maybe (listToMaybe, fromJust, isNothing)
+import           Data.Maybe (listToMaybe, fromJust, isNothing, fromMaybe)
 import qualified Data.MultiSet as MS
 import qualified Data.Rewriting.Rule as R
 import qualified Data.Rewriting.Rules as RS
-import           Data.Rewriting.Substitution (unify)
+import           Data.Rewriting.Substitution (unify, apply)
 import qualified Data.Rewriting.Term as T
 import qualified Hoca.ATRS as ATRS
 import qualified Hoca.TreeGrammar as TG
@@ -41,29 +35,38 @@ import qualified Hoca.PCF2Atrs as PCF2Atrs
 import           Hoca.Problem (Symbol (..), Problem)
 import qualified Hoca.Problem as Problem
 import qualified Hoca.UsableRules as UR
-import           Hoca.Utils (tracePretty)
-import qualified Text.PrettyPrint.ANSI.Leijen as PP
-import Data.Maybe (fromMaybe)
-import Control.Applicative ((<$>))
-
 
 -- Transformations
 
 pcfToTrs :: Applicative m => Exp FP.Context -> m (Problem Symbol Int)
 pcfToTrs = pure . PCF2Atrs.toProblem
 
+normalisedVars :: (Ord f, Ord v) => Problem f v -> N.Narrowing (ATRS.ASym f) v v -> [v]
+normalisedVars p n =
+  [ v | v <- T.vars (R.lhs rl)
+      , null (UR.usableRules [mgu `apply` T.Var (Right v)] rules) ]
+  where
+    rl = N.narrowedWith n    
+    rules = Problem.rules p
+    mgu = N.narrowingMgu n
+    
+complexityReflecting :: (Ord f, Ord v) => Problem f v -> N.NarrowedRule (ATRS.ASym f) v v -> Bool
+complexityReflecting p nr = all redexPreserving (N.narrowings nr) where
+  redexPreserving n = varsMS (R.lhs rl) `MS.isSubsetOf` varsMS (R.rhs rl) where
+    rl = N.narrowedWith n
+    varsMS = MS.fromList . filter (`notElem` normalised) . T.vars
+    normalised = normalisedVars p n
+
+complexityPreserving :: (Ord f, Ord v) => Problem f v -> N.NarrowedRule (ATRS.ASym f) v v -> Bool
+complexityPreserving p nr = all redexReflecting (N.narrowings nr) where
+  redexReflecting n = varsMS (R.rhs rl) `MS.isSubsetOf` varsMS (R.lhs rl) where
+    rl = N.narrowedWith n
+    varsMS = MS.fromList . filter (`notElem` normalised) . T.vars
+    normalised = normalisedVars p n
+
 narrow :: (Ord f, Ord v, Enum v, Alternative m, Monad m) => (Problem f v -> N.NarrowedRule (ATRS.ASym f) v v -> Bool) -> Problem f v -> m (Problem f v)
 narrow sensible p = Problem.replaceRulesM narrowRule p where
-  sound nr =
-    all (redexPreserving . N.narrowedWith) (N.narrowings nr)
-    || argumentNormalised (N.narrowSubterm nr)
-         
-  redexPreserving rl = varsMS (R.lhs rl) `MS.isSubsetOf` varsMS (R.rhs rl) where
-    varsMS = MS.fromList . T.vars
-           
-  argumentNormalised (T.Fun _ ts) = null (UR.usableRules ts rules)
-  argumentNormalised _ = True
-        
+  
   renameRule rl = R.rename f rl where
     f = either (\ v -> fromJust (lookup v lvs)) id
     lhs = R.lhs rl
@@ -71,7 +74,7 @@ narrow sensible p = Problem.replaceRulesM narrowRule p where
     insrt vs v = (v, head (dropWhile (`elem` map snd vs) [v..])):vs
                  
   narrowRule _ rl ss = 
-    case listToMaybe [ ni | ni <- N.narrow rl rules, sound ni, sensible p ni ] of
+    case listToMaybe [ ni | ni <- N.narrow rl rules, complexityReflecting p ni, sensible p ni ] of
      Nothing -> empty
      Just ni -> return [(renameRule (N.narrowing n)
                          , ss ++ Problem.calleeIdxs p nidx )
@@ -94,15 +97,6 @@ usableRules p
     rs = Problem.rules p
     r1 `edgeP` r2 = maybe False (elem r2) (lookup r1 ss)
     ss = [(r,UR.calls (R.rhs r) rs) | r <- rs ]
-
-neededRules :: (Monad m, Alternative m, Ord v) => Problem Symbol v -> m (Problem Symbol v)
-neededRules p = Problem.replaceRulesM (\ _ rl _ -> if needed rl then empty else pure []) p where
-  needed rl =
-    case ATRS.headSymbol (R.lhs rl) of
-     Just (l@Lambda {}) -> l `elem` createdFuns
-     Just (l@Fix {}) -> l `elem` createdFuns           
-     _ -> True
-  createdFuns = foldr ATRS.funsDL [] (RS.rhss (Problem.rules p))
 
 dfaInstantiate :: (Monad f, Alternative f) => (ATRS.TypedRule Symbol Int -> Int -> [ATRS.Term Symbol ()] -> Bool) -> Problem Symbol Int -> f (Problem Symbol Int)
 dfaInstantiate refineP prob = 

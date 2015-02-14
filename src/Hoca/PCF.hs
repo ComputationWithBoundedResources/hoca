@@ -12,7 +12,6 @@ module Hoca.PCF
   , isInstanceOf
   , applySubst
     -- * reduction
-  , Strategy (..)
   , beta
   , cond
   , apply
@@ -23,13 +22,13 @@ module Hoca.PCF
   , ctxtClosure
   ) where
 
-import           Control.Applicative ((<$>), (<*>), Alternative(..))
+import           Control.Applicative ((<$>), Applicative(..), Alternative(..))
 import qualified Data.Set as Set
 import Hoca.Strategy
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import qualified Data.IntMap as IntMap
 import Data.Maybe (isJust)
-import Control.Monad (foldM,guard,(>=>))
+import Control.Monad (foldM,guard)
 import Data.Function (on)
 import Data.List (sortBy, intersperse)
 
@@ -103,7 +102,7 @@ match e f = go 0 e f IntMap.empty where
          _ -> Nothing
   go k (Con _ g1 ss) (Con _ g2 ts) sub
     | g1 /= g2 || length ss /= length ts = Nothing
-    | otherwise = composeM (zipWith (go k) ss ts) sub
+    | otherwise = sequenceS (zipWith (go k) ss ts) sub
   go _ Bot Bot sub = Just sub
   go k (App _ s1 s2) (App _ t1 t2) sub =
    go k s1 t1 sub >>= go k s2 t2
@@ -112,10 +111,10 @@ match e f = go 0 e f IntMap.empty where
       srt = sortBy (compare `on` fst)
       (cs',ct') = (srt cs, srt ct)
     guard (map fst cs' == map fst ct')    
-    go k s t sub >>= composeM (zipWith (go k) (map snd cs') (map snd ct'))
+    go k s t sub >>= sequenceS (zipWith (go k) (map snd cs') (map snd ct'))
   go k (Fix i ss) (Fix j ts) sub = do
     guard (i == j)
-    composeM (zipWith (go k) ss ts) sub
+    sequenceS (zipWith (go k) ss ts) sub
   go k (Abs _ _ s) (Abs _ _ t) sub = go (k+1) s t sub
   go _ _ _ _ = Nothing
   
@@ -129,9 +128,6 @@ match e f = go 0 e f IntMap.empty where
 
 applySubst :: Exp l -> Subst l -> Exp l
 applySubst = IntMap.foldWithKey subst
-
-composeM :: Monad m => [a -> m a] -> a -> m a
-composeM = foldr (>=>) return
 
 isInstanceOf :: (Show l, Eq l) => Exp l -> Exp l -> Bool
 isInstanceOf e f = isJust (match f e)
@@ -165,19 +161,19 @@ subst j e (Fix i es) = Fix i [subst j e ei | ei <- es]
 
 -- * steps
 
-apply :: Strategy m => Exp l -> Exp l -> m (Exp l)
-apply (Abs  _ _ e) f = return (shift (-1) (subst 0 (shift 1 f) e))
+apply :: Alternative m => Exp l -> Exp l -> m (Exp l)
+apply (Abs  _ _ e) f = pure (shift (-1) (subst 0 (shift 1 f) e))
 apply _ _ = empty
 
-applyL :: Strategy m => Exp l -> [Exp l] -> m (Exp l)
+applyL :: (Alternative m, Monad m) => Exp l -> [Exp l] -> m (Exp l)
 applyL = foldM apply
 
-beta :: Strategy m => Exp l -> m (Exp l)
+beta :: (Alternative m, Monad m) => Exp l -> m (Exp l)
 beta (App _ e f) = e `apply` f
 beta _ = empty
 
 -- cond g(e1,...,en) [... (g,\a1...an.e) ...] -> e{e1/a1,...,en/an}
-cond :: Strategy m => Exp l -> m (Exp l)
+cond :: (Alternative m, Monad m) => Exp l -> m (Exp l)
 cond (Cond _ (Con _ g es) cs) =
   case lookup g cs of
    Nothing -> return Bot
@@ -186,28 +182,28 @@ cond _ = empty
 
 
 -- fix(\e.f) --> f{(\z.fix(\e.f) z) / e}
-fixCBV :: Strategy m => Exp l -> m (Exp l)
+fixCBV :: (Alternative m, Monad m) => Exp l -> m (Exp l)
 fixCBV (App l (Fix i fs) a)
   | 0 <= i && i < length fs =
       App l <$> (fs !! i) `applyL` [Fix j fs | j <- [0..length fs - 1]] <*> return a
 fixCBV _ = empty
 
 -- * combinators 
-leftToRight :: Strategy m => (Exp l -> m (Exp l)) -> [Exp l] -> m [Exp l]
+leftToRight :: (Alternative m, Monad m, Choice m) => (Exp l -> m (Exp l)) -> [Exp l] -> m [Exp l]
 leftToRight _ [] = empty
 leftToRight stp (f:fs) = reduceF <||> reduceFS
       where
         reduceF = (: fs) <$> stp f
         reduceFS = (:) f <$> leftToRight stp fs
 
-oneOf :: Strategy m => (Exp l -> m (Exp l)) -> [Exp l] -> m [Exp l]
+oneOf :: (Alternative m, Monad m) => (Exp l -> m (Exp l)) -> [Exp l] -> m [Exp l]
 oneOf _ [] = empty
 oneOf stp (f:fs) = reduceF <|> reduceFS
       where
         reduceF = (: fs) <$> stp f
         reduceFS = (:) f <$> oneOf stp fs
 
-ctxtClosure :: Strategy m => (Exp l -> m (Exp l)) -> Exp l -> m (Exp l)
+ctxtClosure :: (Alternative m, Monad m) => (Exp l -> m (Exp l)) -> Exp l -> m (Exp l)
 ctxtClosure stp e = ctxt e <|> stp e
   where
     ctxt (App l e1 e2) = do
@@ -226,10 +222,10 @@ ctxtClosure stp e = ctxt e <|> stp e
     ctxt _ = empty
     
 
-nf :: Strategy m => (Exp l -> m (Exp l)) -> Exp l -> m (Exp l)
-nf rel e = (rel e >>= nf rel) <||> return e
+nf :: (Monad m, Choice m) => (Exp l -> m (Exp l)) -> Exp l -> m (Exp l)
+nf = exhaustive
 
-cbvCtxtClosure :: Strategy m => (Exp l -> m (Exp l)) -> Exp l -> m (Exp l)
+cbvCtxtClosure :: (Alternative m, Monad m, Choice m) => (Exp l -> m (Exp l)) -> Exp l -> m (Exp l)
 cbvCtxtClosure stp e = ctxt e <||> stp e
   where       
     ctxt (App l e1 e2) = do
@@ -239,5 +235,5 @@ cbvCtxtClosure stp e = ctxt e <||> stp e
     ctxt (Cond l f cs) = Cond l <$> cbvCtxtClosure stp f <*> return cs
     ctxt _ = empty
 
-cbv :: Strategy m => Exp l -> m (Exp l)
+cbv :: (Alternative m, Monad m, Choice m) => Exp l -> m (Exp l)
 cbv = cbvCtxtClosure (\ e -> beta e <|> fixCBV e <|> cond e)
