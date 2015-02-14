@@ -41,6 +41,7 @@ library
         Hoca.Problem
         Hoca.DFA
         Hoca.PCF
+        Hoca.URM
         Hoca.FP
         Hoca.ATRS
         Hoca.PCF2Atrs
