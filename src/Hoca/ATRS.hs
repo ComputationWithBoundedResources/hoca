@@ -14,18 +14,18 @@ module Hoca.ATRS
        , args
        , function
        , var
-         -- * operations
+         -- * operations on terms
        , headSymbol
        , headVars
        , funsDL
-       , funs         
+       , funs
          -- * Typing
        , Type (..)
        , TypeDecl (..)
        , Signature
        , Env
        , inferTypes
-         -- ** Typed Terms
+         -- ** Typed Terms and Rules
        , TypedTerm
        , TypedRule
        , withType
