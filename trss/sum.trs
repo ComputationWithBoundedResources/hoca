@@ -1,0 +1,24 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x3 x5 x7 x1)
+(RULES
+    fold_f_z[1](x3,x5,Nil()) -> x5
+    fold_f_z[1](rec[plus_0](),x5,Cons(x3,x7)) ->
+      plus_x[1](x3,fold_f_z[1](rec[plus_0](),x5,x7))
+    plus_x[1](0(),x5) -> x5
+    plus_x[1](S(x3),x5) -> S(plus_x[1](x3,x5))
+    main(x1) -> fold_f_z[1](rec[plus_0](),0(),x1))
+(COMMENT
+    Types are as follows: 
+      0 :: B
+      Cons :: [B,C] -> C
+      Nil :: C
+      S :: [B] -> B
+      rec[plus_0] :: A
+      main :: [C] -> B
+      plus_x[1] :: [B,B] -> B
+      fold_f_z[1] :: [A,B,C] -> B 
+)

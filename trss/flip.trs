@@ -1,0 +1,19 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x1)
+(RULES
+    flip[1](E()) -> E()
+    flip[1](Z(x1)) -> O(flip[1](x1))
+    flip[1](O(x1)) -> Z(flip[1](x1))
+    main(x1) -> flip[1](x1))
+(COMMENT
+    Types are as follows: 
+      E :: A
+      O :: [A] -> A
+      Z :: [A] -> A
+      main :: [A] -> A
+      flip[1] :: [A] -> A 
+)

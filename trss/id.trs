@@ -1,0 +1,28 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x3 x5 x7)
+(RULES
+    iter_f_g[1](x3,id(),0()) -> id()
+    iter_f_g[1](compS(),x5,S(x7)) -> compS_f(iter_f_g[1](compS(),x5,x7))
+    compS_f[1](compS_f(x5),x3) -> compS_f[1](x5,S(x3))
+    compS_f[1](id(),x3) -> S(x3)
+    main(0()) -> 0()
+    main(S(x7)) -> compS_f[1](iter_f_g[1](compS(),id(),x7),0()))
+(COMMENT
+    Types are as follows: 
+      0 :: C
+      S :: [C] -> C
+      compS :: A
+      compS_f :: [B] -> B
+      id :: B
+      main :: [C] -> C
+      compS[1] :: [B] -> B
+      compS_f[1] :: [B,C] -> C
+      iter_f_g[1] :: [A,B,C] -> B
+      id[1] :: [C] -> C
+      compS[2] :: [B,C] -> C
+      iter_f_g[2] :: [A,B,C,C] -> C 
+)

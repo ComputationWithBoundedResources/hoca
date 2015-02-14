@@ -1,0 +1,20 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x11 x13 x9 x5 x1)
+(RULES
+    append_xs[1](Nil(),x11) -> x11
+    append_xs[1](Cons(x13,x9),x11) -> Cons(x13,append_xs[1](x9,x11))
+    rev[1](Nil()) -> Nil()
+    rev[1](Cons(x5,x1)) -> append_xs[1](rev[1](x1),Cons(x5,Nil()))
+    main(x1) -> rev[1](x1))
+(COMMENT
+    Types are as follows: 
+      Cons :: [B,A] -> A
+      Nil :: A
+      main :: [A] -> A
+      rev[1] :: [A] -> A
+      append_xs[1] :: [A,A] -> A 
+)

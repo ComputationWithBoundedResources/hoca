@@ -1,0 +1,22 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x1)
+(RULES
+    odd[1](0()) -> False()
+    odd[1](S(x1)) -> even[1](x1)
+    even[1](0()) -> True()
+    even[1](S(x1)) -> odd[1](x1)
+    main(x1) -> even[1](x1))
+(COMMENT
+    Types are as follows: 
+      0 :: A
+      False :: B
+      S :: [A] -> A
+      True :: B
+      main :: [A] -> B
+      even[1] :: [A] -> B
+      odd[1] :: [A] -> B 
+)

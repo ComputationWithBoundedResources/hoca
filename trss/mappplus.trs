@@ -1,0 +1,24 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x5 x3 x7 x1)
+(RULES
+    map_f[1](x5,Nil()) -> Nil()
+    map_f[1](plus_x(x3),Cons(x7,x5)) -> Cons(plus_x[1](x3,x7)
+                                            ,map_f[1](plus_x(x3),x5))
+    plus_x[1](0(),x7) -> x7
+    plus_x[1](S(x5),x7) -> S(plus_x[1](x5,x7))
+    main(x1,x5) -> map_f[1](plus_x(x5),x1))
+(COMMENT
+    Types are as follows: 
+      0 :: C
+      Cons :: [C,B] -> B
+      Nil :: B
+      S :: [C] -> C
+      plus_x :: [C] -> A
+      main :: [B,C] -> B
+      map_f[1] :: [A,B] -> B
+      plus_x[1] :: [C,C] -> C 
+)

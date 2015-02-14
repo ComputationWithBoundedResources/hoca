@@ -1,0 +1,29 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x7 x9 x11 x13 x1)
+(RULES
+    comp_f_g[1](comp_f_g(x7,x9),cons_x(x11),x13) -> comp_f_g[1](x7
+                                                               ,x9
+                                                               ,Cons(x11,x13))
+    comp_f_g[1](id(),cons_x(x11),x13) -> Cons(x11,x13)
+    walk[1](Nil()) -> id()
+    walk[1](Cons(x11,x1)) -> comp_f_g(walk[1](x1),cons_x(x11))
+    main(Nil()) -> Nil()
+    main(Cons(x11,x1)) -> comp_f_g[1](walk[1](x1),cons_x(x11),Nil()))
+(COMMENT
+    Types are as follows: 
+      Cons :: [D,A] -> A
+      Nil :: A
+      comp_f_g :: [B,C] -> B
+      id :: B
+      cons_x :: [D] -> C
+      main :: [A] -> A
+      comp_f_g[1] :: [B,C,A] -> A
+      id[1] :: [A] -> A
+      walk[1] :: [A] -> B
+      cons_x[1] :: [D,A] -> A
+      walk[2] :: [A,A] -> A 
+)

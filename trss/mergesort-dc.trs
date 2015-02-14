@@ -1,0 +1,83 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x15 x3 x5 x7 x9 x11 x13 x1 x17 x19 x21 x23 x27 x29 x25 x31)
+(RULES
+    mapL_f[1](x15,NilL()) -> NilL()
+    mapL_f[1](rec[dc_0](x3,x5,x7,x9),ConsL(x11,x13)) ->
+      ConsL(dc[1](x3,x5,x7,x9,x11),mapL_f[1](rec[dc_0](x3,x5,x7,x9),x13))
+    dc_cond(True(),x9,x7,divide(),const_f(combine()),x3) ->
+      combine[1](mapL_f[1](rec[dc_0](x9,x7,divide(),const_f(combine()))
+                          ,ConsL(take_n[1](halve[1](length[1](x3)),x3)
+                                ,ConsL(drop_n[1](halve[1](length[1](x3)),x3)
+                                      ,NilL()))))
+    dc[1](divisible(),mergesort_0(),x7,x5,Nil()) -> Nil()
+    dc[1](divisible(),mergesort_0(),x7,x5,Cons(x9,Nil())) -> Cons(x9,Nil())
+    dc[1](divisible(),x13,x7,x15,Cons(x5,Cons(x9,x11))) ->
+      dc_cond(True(),divisible(),x13,x7,x15,Cons(x5,Cons(x9,x11)))
+    take_n[1](0(),x7) -> Nil()
+    take_n[1](S(0()),Nil()) -> Cons(Head_error_empty_list(),Nil())
+    take_n[1](S(x5),Cons(x13,x15)) -> Cons(x13,take_n[1](x5,x15))
+    halve[1](0()) -> 0()
+    halve[1](S(0())) -> S(0())
+    halve[1](S(S(x1))) -> S(halve[1](x1))
+    length[1](Nil()) -> 0()
+    length[1](Cons(x7,x1)) -> S(length[1](x1))
+    drop_n[1](0(),x7) -> x7
+    drop_n[1](S(0()),Nil()) -> Tail_error_empty_list()
+    drop_n[1](S(x5),Cons(x13,x15)) -> drop_n[1](x5,x15)
+    merge_cond_2(True(),x15,x17,x19,x13,x21,x23) -> Cons(x19
+                                                        ,merge_ys[1](x13,x17))
+    merge_cond_2(False(),x13,x15,x17,x19,x21,x23) -> Cons(x21
+                                                         ,merge_ys[1](x13,x23))
+    leq_x[1](0(),x27) -> True()
+    leq_x[1](S(x29),0()) -> False()
+    leq_x[1](S(x25),S(x31)) -> leq_x[1](x25,x31)
+    merge_ys[1](Nil(),x15) -> x15
+    merge_ys[1](Cons(x17,x19),Nil()) -> Cons(x17,x19)
+    merge_ys[1](Cons(x25,x19),Cons(x21,x23)) -> merge_cond_2(leq_x[1](x25,x21)
+                                                            ,Cons(x25,x19)
+                                                            ,Cons(x21,x23)
+                                                            ,x25
+                                                            ,x19
+                                                            ,x21
+                                                            ,x23)
+    combine[1](ConsL(x13,ConsL(x9,x11))) -> merge_ys[1](x13,x9)
+    main(x11) -> dc[1](divisible()
+                      ,mergesort_0()
+                      ,divide()
+                      ,const_f(combine())
+                      ,x11))
+(COMMENT
+    Types are as follows: 
+      0 :: J
+      Cons :: [J,G] -> G
+      ConsL :: [G,B] -> B
+      False :: H
+      Head_error_empty_list :: J
+      Nil :: G
+      NilL :: B
+      S :: [J] -> J
+      Tail_error_empty_list :: G
+      True :: H
+      combine :: I
+      divide :: E
+      divisible :: C
+      const_f :: [I] -> F
+      mergesort_0 :: D
+      dc_cond :: [H,C,D,E,F,G] -> G
+      merge_cond_2 :: [H,G,G,J,G,J,G] -> G
+      rec[dc_0] :: [C,D,E,F] -> A
+      main :: [G] -> G
+      combine[1] :: [B] -> G
+      dc[1] :: [C,D,E,F,G] -> G
+      mapL_f[1] :: [A,B] -> B
+      halve[1] :: [J] -> J
+      length[1] :: [G] -> J
+      drop_n[1] :: [J,G] -> G
+      take_n[1] :: [J,G] -> G
+      leq_x[1] :: [J,J] -> H
+      merge_ys[1] :: [G,G] -> G 
+)

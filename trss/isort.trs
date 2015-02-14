@@ -1,0 +1,40 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x11 x13 x17 x19 x3 x7 x5 x9 x1)
+(RULES
+    insert_cond_1(True(),x11,x13,x17,x19) -> Cons(x13,Cons(x17,x19))
+    insert_cond_1(False(),x11,x13,x17,x19) -> Cons(x17
+                                                  ,insert_ord_x[1](x11,x13,x19))
+    insert_ord_x[1](x11,x13,Nil()) -> Cons(x13,Nil())
+    insert_ord_x[1](rec[leq_0](),x3,Cons(x7,x5)) -> insert_cond_1(leq_x[1](x3
+                                                                          ,x7)
+                                                                 ,rec[leq_0]()
+                                                                 ,x3
+                                                                 ,x7
+                                                                 ,x5)
+    sort_ord[1](x3,Nil()) -> Nil()
+    sort_ord[1](x11,Cons(x13,x9)) -> insert_ord_x[1](x11
+                                                    ,x13
+                                                    ,sort_ord[1](x11,x9))
+    leq_x[1](0(),x5) -> True()
+    leq_x[1](S(x7),0()) -> False()
+    leq_x[1](S(x3),S(x9)) -> leq_x[1](x3,x9)
+    main(x1) -> sort_ord[1](rec[leq_0](),x1))
+(COMMENT
+    Types are as follows: 
+      0 :: C
+      Cons :: [C,D] -> D
+      False :: A
+      Nil :: D
+      S :: [C] -> C
+      True :: A
+      insert_cond_1 :: [A,B,C,C,D] -> D
+      rec[leq_0] :: B
+      main :: [D] -> D
+      sort_ord[1] :: [B,D] -> D
+      leq_x[1] :: [C,C] -> A
+      insert_ord_x[1] :: [B,C,D] -> D 
+)

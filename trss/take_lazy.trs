@@ -1,0 +1,23 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x7 x9 x3)
+(RULES
+    take_l_cond(ConsL(x7,x9),0()) -> Nil()
+    take_l_cond(ConsL(x7,x9),S(x3)) -> Cons(x7,take_l_n[1](x3,x9))
+    take_l_n[1](x3,rec[zeros_0]()) -> take_l_cond(ConsL(0(),rec[zeros_0]()),x3)
+    main(x3) -> take_l_n[1](x3,rec[zeros_0]()))
+(COMMENT
+    Types are as follows: 
+      0 :: B
+      Cons :: [B,C] -> C
+      ConsL :: [B,D] -> A
+      Nil :: C
+      S :: [B] -> B
+      take_l_cond :: [A,B] -> C
+      rec[zeros_0] :: D
+      main :: [B] -> C
+      take_l_n[1] :: [B,D] -> C 
+)

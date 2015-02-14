@@ -1,0 +1,100 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x11 x13 x12 x17 x5 x7 x14 x15 x9 x8 x21 x23 x19 x25 x3)
+(RULES
+    rpm_8[1](f_0(rec[x_0](f(Leaf(x11)))),Leaf(x13),Leaf(x12),x17) ->
+      Node(Leaf(x11),Leaf(x11))
+    rpm_8[1](f_0(rec[x_0](f(Node(x5,x7)))),Leaf(x14),Leaf(x12),x17) ->
+      Node(Leaf(rpm_9[1](f_0(rec[x_0](f(Node(x5,x7)))),x5,x7,bot[11]()))
+          ,Leaf(rpm_9[1](f_0(rec[x_0](f(Node(x5,x7)))),x5,x7,bot[11]())))
+    rpm_8[1](f_0(rec[x_0](f(Leaf(x11)))),Leaf(x15),Node(x7,x9),x17) ->
+      Node(Leaf(x11),rpm_8[1](f_0(rec[x_0](f(Leaf(x11)))),x7,x9,bot[5]()))
+    rpm_8[1](f_0(rec[x_0](f(Node(x5,x7)))),Leaf(x15),Node(x8,x9),x17) ->
+      Node(Leaf(rpm_9[1](f_0(rec[x_0](f(Node(x5,x7)))),x5,x7,bot[11]()))
+          ,rpm_8[1](f_0(rec[x_0](f(Node(x5,x7)))),x8,x9,bot[5]()))
+    rpm_8[1](f_0(rec[x_0](f(Leaf(x11)))),Node(x7,x13),Leaf(x12),x17) ->
+      Node(rpm_8[1](f_0(rec[x_0](f(Leaf(x11)))),x7,x13,bot[3]()),Leaf(x11))
+    rpm_8[1](f_0(rec[x_0](f(Node(x5,x7)))),Node(x8,x14),Leaf(x12),x17) ->
+      Node(rpm_8[1](f_0(rec[x_0](f(Node(x5,x7)))),x8,x14,bot[3]())
+          ,Leaf(rpm_9[1](f_0(rec[x_0](f(Node(x5,x7)))),x5,x7,bot[11]())))
+    rpm_8[1](x5,Node(x11,x15),Node(x7,x9),x17) -> Node(rpm_8[1](x5
+                                                               ,x11
+                                                               ,x15
+                                                               ,bot[3]())
+                                                      ,rpm_8[1](x5
+                                                               ,x7
+                                                               ,x9
+                                                               ,bot[5]()))
+    min_a[1](0(),x21) -> 0()
+    min_a[1](S(x23),0()) -> 0()
+    min_a[1](S(x19),S(x25)) -> S(min_a[1](x19,x25))
+    rpm_9[1](x9,Leaf(x13),Leaf(x11),x17) -> min_a[1](x13,x11)
+    rpm_9[1](x3,Leaf(x15),Node(x5,x7),x17) -> min_a[1](x15
+                                                      ,rpm_9[1](x3
+                                                               ,x5
+                                                               ,x7
+                                                               ,bot[9]()))
+    rpm_9[1](x9,Node(x5,x7),Leaf(x11),x17) -> min_a[1](rpm_9[1](x9
+                                                               ,x5
+                                                               ,x7
+                                                               ,bot[7]())
+                                                      ,x11)
+    rpm_9[1](x3,Node(x9,x11),Node(x5,x7),x17) -> min_a[1](rpm_9[1](x3
+                                                                  ,x9
+                                                                  ,x11
+                                                                  ,bot[7]())
+                                                         ,rpm_9[1](x3
+                                                                  ,x5
+                                                                  ,x7
+                                                                  ,bot[9]()))
+    main(Leaf(x11)) -> Leaf(x11)
+    main(Node(x7,x9)) -> rpm_8[1](f_0(rec[x_0](f(Node(x7,x9))))
+                                 ,x7
+                                 ,x9
+                                 ,bot[13]()))
+(COMMENT
+    Types are as follows: 
+      0 :: E
+      Leaf :: [E] -> D
+      Node :: [D,D] -> D
+      P :: [F,G] -> C
+      S :: [E] -> E
+      f :: [D] -> A
+      f_0 :: [I] -> H
+      rpm_2 :: [H,E] -> N
+      rpm_3 :: [H] -> F
+      rpm_4 :: [E] -> G
+      rpm_7 :: [H,D,D] -> N
+      rpm_8 :: [H,D,D] -> F
+      rpm_9 :: [H,D,D] -> G
+      bot[1] :: K
+      bot[3] :: J
+      bot[5] :: J
+      bot[7] :: L
+      bot[9] :: L
+      bot[10] :: B
+      bot[11] :: L
+      bot[12] :: B
+      bot[13] :: J
+      rec[x_0] :: [A] -> I
+      main :: [D] -> D
+      min_a[1] :: [E,E] -> E
+      f[1] :: [D,I] -> N
+      fst[1] :: [C] -> F
+      snd[1] :: [C] -> G
+      x[1] :: [A,B] -> C
+      f_0[1] :: [I,K] -> E
+      rpm_2[1] :: [H,E,M] -> C
+      rpm_3[1] :: [H,J] -> D
+      rpm_4[1] :: [E,L] -> E
+      rpm_7[1] :: [H,D,D,M] -> C
+      rpm_8[1] :: [H,D,D,J] -> D
+      rpm_9[1] :: [H,D,D,L] -> E
+      rec[x_0][1] :: [A,B] -> C
+      f[2] :: [D,I,M] -> C
+      fst[2] :: [C,J] -> D
+      snd[2] :: [C,L] -> E 
+)

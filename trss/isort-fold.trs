@@ -1,0 +1,39 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x3 x5 x7 x9 x11 x1)
+(RULES
+    fold_f_z[1](x3,x5,Nil()) -> x5
+    fold_f_z[1](insert_ord(x3),x5,Cons(x7,x9)) ->
+      insert_ord_x[1](x3,x7,fold_f_z[1](insert_ord(x3),x5,x9))
+    insert_cond_1(True(),x3,x5,x9,x11) -> Cons(x5,Cons(x9,x11))
+    insert_cond_1(False(),x3,x5,x9,x11) -> Cons(x9,insert_ord_x[1](x3,x5,x11))
+    insert_ord_x[1](x3,x5,Nil()) -> Cons(x5,Nil())
+    insert_ord_x[1](rec[leq_0](),x3,Cons(x7,x5)) -> insert_cond_1(leq_x[1](x3
+                                                                          ,x7)
+                                                                 ,rec[leq_0]()
+                                                                 ,x3
+                                                                 ,x7
+                                                                 ,x5)
+    leq_x[1](0(),x5) -> True()
+    leq_x[1](S(x7),0()) -> False()
+    leq_x[1](S(x3),S(x9)) -> leq_x[1](x3,x9)
+    main(x1) -> fold_f_z[1](insert_ord(rec[leq_0]()),Nil(),x1))
+(COMMENT
+    Types are as follows: 
+      0 :: D
+      Cons :: [D,B] -> B
+      False :: E
+      Nil :: B
+      S :: [D] -> D
+      True :: E
+      insert_ord :: [C] -> A
+      insert_cond_1 :: [E,C,D,D,B] -> B
+      rec[leq_0] :: C
+      main :: [B] -> B
+      leq_x[1] :: [D,D] -> E
+      insert_ord_x[1] :: [C,D,B] -> B
+      fold_f_z[1] :: [A,B,B] -> B 
+)

@@ -1,0 +1,15 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x5)
+(RULES
+    main(S(x5)) -> x5
+    main(0()) -> 0())
+(COMMENT
+    Types are as follows: 
+      0 :: A
+      S :: [A] -> A
+      main :: [A] -> A 
+)

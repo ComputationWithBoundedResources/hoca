@@ -1,0 +1,48 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x3 x11 x9 x7 x5)
+(RULES
+    foldr_f_z[1](x3,fleft_0(),Nil()) -> fleft_0()
+    foldr_f_z[1](step(x3),x11,Cons(x9,x7)) -> step_x_f(x3
+                                                      ,x9
+                                                      ,foldr_f_z[1](step(x3)
+                                                                   ,x11
+                                                                   ,x7))
+    step_x_f[1](rev_0(),x5,step_x_f(x7,x9,x11),x3) -> step_x_f[1](x7
+                                                                 ,x9
+                                                                 ,x11
+                                                                 ,Cons(x5,x3))
+    step_x_f[1](rev_0(),x5,fleft_0(),x3) -> Cons(x5,x3)
+    main(Nil()) -> Nil()
+    main(Cons(x9,x7)) -> step_x_f[1](rev_0()
+                                    ,x9
+                                    ,foldr_f_z[1](step(rev_0()),fleft_0(),x7)
+                                    ,Nil()))
+(COMMENT
+    Types are as follows: 
+      Cons :: [E,C] -> C
+      Nil :: C
+      rev_anonymous :: [I] -> J
+      step_x_f :: [D,E,B] -> B
+      step :: [D] -> A
+      step_x :: [F,G] -> H
+      fleft_0 :: B
+      rev_0 :: D
+      main :: [C] -> C
+      rev_anonymous[1] :: [C,E] -> C
+      fleft_op_e[1] :: [D,C,C] -> C
+      step_x_f[1] :: [D,E,B,C] -> C
+      step[1] :: [F,G] -> H
+      step_x[1] :: [D,E,B] -> B
+      foldr_f_z[1] :: [A,B,C] -> B
+      fleft_0[1] :: [C] -> C
+      rev_0[1] :: [I] -> J
+      step[2] :: [D,E,B] -> B
+      step_x[2] :: [D,E,B,C] -> C
+      foldr_f_z[2] :: [A,B,C,C] -> C
+      rev_0[2] :: [C,E] -> C
+      step[3] :: [D,E,B,C] -> C 
+)
