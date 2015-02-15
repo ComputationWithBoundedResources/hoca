@@ -28,7 +28,6 @@ import qualified Hoca.TreeGrammar as TG
 import qualified Hoca.DFA as DFA
 import qualified Hoca.FP as FP
 import qualified Hoca.Narrowing as N
-import Hoca.Strategy
 import qualified Hoca.Uncurry as UC
 import           Hoca.PCF (Exp)
 import qualified Hoca.PCF2Atrs as PCF2Atrs
@@ -77,7 +76,7 @@ narrow sensible p = Problem.replaceRulesM narrowRule p where
     case listToMaybe [ ni | ni <- N.narrow rl rules, complexityReflecting p ni, sensible p ni ] of
      Nothing -> empty
      Just ni -> return [(renameRule (N.narrowing n)
-                         , ss ++ Problem.calleeIdxs p nidx )
+                         , ss ++ Problem.cgSuccs p nidx )
                        | n <- N.narrowings ni
                        , let nidx = fromMaybe (error "narrow rule id not found") (Problem.indexOf p (N.narrowedWith n))
                        ]

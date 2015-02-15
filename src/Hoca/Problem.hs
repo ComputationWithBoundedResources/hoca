@@ -178,20 +178,26 @@ indexOf p rl = listToMaybe [ i | (i,(rl',_)) <- IMap.toList (pRules p), rl == rl
 rule :: Problem f v -> Int -> Maybe (ATRS.Rule f v)
 rule p i = fst <$> IMap.lookup i (pRules p)
 
-calleeIdxs :: Problem f v -> Int -> [Int]
-calleeIdxs p i = maybe [] (ISet.toList . snd) (IMap.lookup i (pRules p))
+cgSuccs :: Problem f v -> Int -> [Int]
+cgSuccs p i = maybe [] (ISet.toList . snd) (IMap.lookup i (pRules p))
 
-callees :: (Eq f, Eq v) => Problem f v -> ATRS.Rule f v -> [ATRS.Rule f v]
-callees p r =
-  maybe [] (map fst . mapMaybe (`IMap.lookup` pRules p) . ISet.toList)
-   (lookup r (IMap.elems (pRules p)))
+cgPreds :: Problem f v -> Int -> [Int]
+cgPreds p i = IMap.foldWithKey collect [] (pRules p) where
+  collect j (_,ss) preds
+    | i `ISet.member` ss = j : preds
+    | otherwise = preds
+
+-- cgSuccs :: (Eq f, Eq v) => Problem f v -> ATRS.Rule f v -> [ATRS.Rule f v]
+-- cgSuccs p r =
+--   maybe [] (map fst . mapMaybe (`IMap.lookup` pRules p) . ISet.toList)
+--    (lookup r (IMap.elems (pRules p)))
 
 usableIdxs :: Problem f v -> [Int] -> [Int]
-usableIdxs p initial = walk (concatMap (calleeIdxs p) initial) [] where
+usableIdxs p initial = walk (concatMap (cgSuccs p) initial) [] where
   walk [] seen = seen
   walk (i:is) seen
     | i `elem` seen = walk is seen
-    | otherwise = walk (calleeIdxs p i ++ is) (i : seen)
+    | otherwise = walk (cgSuccs p i ++ is) (i : seen)
 
 usable :: (Eq f, Eq v) => Problem f v -> [ATRS.Rule f v] -> [(Int, ATRS.Rule f v)]
 usable p rs = [(i,r) | i <- usableIdxs p (catMaybes [indexOf p rl | rl <- rs])

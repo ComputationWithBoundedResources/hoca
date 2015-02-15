@@ -110,7 +110,7 @@ oneOfIdx :: [Int] -> Problem -> Rule -> Bool
 oneOfIdx is p r = maybe False (`elem` is) (Problem.indexOf p r)
 
 leafRule :: Problem -> Rule -> Bool
-leafRule p n = null (Problem.callees p n)
+leafRule p r = maybe True (null . Problem.cgSuccs p) (Problem.indexOf p r)
 
 -- branching  :: Problem -> Rule -> Bool
 -- branching p n = length (Problem.callees p n) >= 1
@@ -341,7 +341,7 @@ dotCallGraph hl = withProblem mkGraph where
                 | isJust hl = [GVattribs.color GVSVG.Gray]
                 | otherwise = []
                               
-      mkEdges (i,_) = mapM_ (\ j -> GV.edge i j (eAttribs j)) (Problem.calleeIdxs p i)
+      mkEdges (i,_) = mapM_ (\ j -> GV.edge i j (eAttribs j)) (Problem.cgSuccs p i)
         where eAttribs j
                 | i `elem` highlightedNodes && j `elem` highlightedNodes =
                     [GVattribs.color GVSVG.RoyalBlue] ++ [ GVattribs.style GVattribs.dashed | j `notElem` reachSelectedNodes]
