@@ -3,179 +3,90 @@
     INNERMOST)
 
 (VAR
-    x7 x2 x4 x6 x19 x23 x5 x3 x17 x15 x9 x11 x13 x1)
+    x3 x2 x1 x4 x5)
 (RULES
-    bind_1[4](filter_0(eqChar_x(A())),x7,A(),x2,x4,x6) -> return_0[4](A()
-                                                                     ,x7
-                                                                     ,x2
-                                                                     ,x4
-                                                                     ,x6)
-    bind_1[4](filter_0(eqChar_x(A())),x19,B(),runParser_1(),x23,x7) ->
-      ParseFail(x7)
-    bind_1[4](filter_0(eqChar_x(A())),x19,C(),runParser_1(),x23,x7) ->
-      ParseFail(x7)
-    bind_1[4](filter_0(eqChar_x(B())),x19,A(),runParser_1(),x23,x7) ->
-      ParseFail(x7)
-    bind_1[4](filter_0(eqChar_x(B())),x7,B(),x2,x4,x6) -> return_0[4](B()
-                                                                     ,x7
-                                                                     ,x2
-                                                                     ,x4
-                                                                     ,x6)
-    bind_1[4](filter_0(eqChar_x(B())),x19,C(),runParser_1(),x23,x7) ->
-      ParseFail(x7)
-    bind_1[4](filter_0(eqChar_x(C())),x19,A(),runParser_1(),x23,x7) ->
-      ParseFail(x7)
-    bind_1[4](filter_0(eqChar_x(C())),x19,B(),runParser_1(),x23,x7) ->
-      ParseFail(x7)
-    bind_1[4](filter_0(eqChar_x(C())),x7,C(),x2,x4,x6) -> return_0[4](C()
-                                                                     ,x7
-                                                                     ,x2
-                                                                     ,x4
-                                                                     ,x6)
-    bind_1[4](bind'_0(eos()),x5,x3,x2,x4,x6) -> eos_anonymous[3](x5,x2,x4,x6)
-    bind_1[4](bind'_0(return_x(x17)),x7,x3,x2,x4,x6) -> return_0[4](x17
-                                                                   ,x7
-                                                                   ,x2
-                                                                   ,x4
-                                                                   ,x6)
-    bind_1[4](bind'_0(bind_p_f(x15,x17)),x9,x3,x2,x4,x6) -> bind_0[4](x15
-                                                                     ,x17
-                                                                     ,x9
-                                                                     ,x2
-                                                                     ,x4
-                                                                     ,x6)
-    bind_0[4](any(),x5,x3,x2,x4,x6) -> any_anonymous[3](bind_1(x5,x3),x2,x4,x6)
-    bind_0[4](bind_p_f(x15,x17),x5,x3,x2,x4,x6) -> bind_0[4](x15
-                                                            ,x17
-                                                            ,bind_1(x5,x3)
-                                                            ,x2
-                                                            ,x4
-                                                            ,x6)
-    bind_0[4](return_x(x7),x3,x5,x2,x4,x6) -> bind_1[4](x3,x5,x7,x2,x4,x6)
-    bind_1[4](filter_0(eqChar_x(A())),x7,A(),x2,x4,x6) -> return_0[4](A()
-                                                                     ,x7
-                                                                     ,x2
-                                                                     ,x4
-                                                                     ,x6)
-    bind_1[4](filter_0(eqChar_x(A())),x19,B(),runParser_1(),x23,x7) ->
-      ParseFail(x7)
-    bind_1[4](filter_0(eqChar_x(A())),x19,C(),runParser_1(),x23,x7) ->
-      ParseFail(x7)
-    bind_1[4](filter_0(eqChar_x(B())),x19,A(),runParser_1(),x23,x7) ->
-      ParseFail(x7)
-    bind_1[4](filter_0(eqChar_x(B())),x7,B(),x2,x4,x6) -> return_0[4](B()
-                                                                     ,x7
-                                                                     ,x2
-                                                                     ,x4
-                                                                     ,x6)
-    bind_1[4](filter_0(eqChar_x(B())),x19,C(),runParser_1(),x23,x7) ->
-      ParseFail(x7)
-    bind_1[4](filter_0(eqChar_x(C())),x19,A(),runParser_1(),x23,x7) ->
-      ParseFail(x7)
-    bind_1[4](filter_0(eqChar_x(C())),x19,B(),runParser_1(),x23,x7) ->
-      ParseFail(x7)
-    bind_1[4](filter_0(eqChar_x(C())),x7,C(),x2,x4,x6) -> return_0[4](C()
-                                                                     ,x7
-                                                                     ,x2
-                                                                     ,x4
-                                                                     ,x6)
-    bind_1[4](bind'_0(eos()),x5,x3,x2,x4,x6) -> eos_anonymous[3](x5,x2,x4,x6)
-    bind_1[4](bind'_0(return_x(x17)),x7,x3,x2,x4,x6) -> return_0[4](x17
-                                                                   ,x7
-                                                                   ,x2
-                                                                   ,x4
-                                                                   ,x6)
-    bind_1[4](bind'_0(bind_p_f(x15,x17)),x9,x3,x2,x4,x6) -> bind_0[4](x15
-                                                                     ,x17
-                                                                     ,x9
-                                                                     ,x2
-                                                                     ,x4
-                                                                     ,x6)
-    bind_0[4](any(),x5,x3,x2,x4,x6) -> any_anonymous[3](bind_1(x5,x3),x2,x4,x6)
-    bind_0[4](bind_p_f(x15,x17),x5,x3,x2,x4,x6) -> bind_0[4](x15
-                                                            ,x17
-                                                            ,bind_1(x5,x3)
-                                                            ,x2
-                                                            ,x4
-                                                            ,x6)
-    bind_0[4](return_x(x7),x3,x5,x2,x4,x6) -> bind_1[4](x3,x5,x7,x2,x4,x6)
-    bind_1[4](filter_0(eqChar_x(A())),x7,A(),x2,x4,x6) -> return_0[4](A()
-                                                                     ,x7
-                                                                     ,x2
-                                                                     ,x4
-                                                                     ,x6)
-    bind_1[4](filter_0(eqChar_x(A())),x19,B(),runParser_1(),x23,x7) ->
-      ParseFail(x7)
-    bind_1[4](filter_0(eqChar_x(A())),x19,C(),runParser_1(),x23,x7) ->
-      ParseFail(x7)
-    bind_1[4](filter_0(eqChar_x(B())),x19,A(),runParser_1(),x23,x7) ->
-      ParseFail(x7)
-    bind_1[4](filter_0(eqChar_x(B())),x7,B(),x2,x4,x6) -> return_0[4](B()
-                                                                     ,x7
-                                                                     ,x2
-                                                                     ,x4
-                                                                     ,x6)
-    bind_1[4](filter_0(eqChar_x(B())),x19,C(),runParser_1(),x23,x7) ->
-      ParseFail(x7)
-    bind_1[4](filter_0(eqChar_x(C())),x19,A(),runParser_1(),x23,x7) ->
-      ParseFail(x7)
-    bind_1[4](filter_0(eqChar_x(C())),x19,B(),runParser_1(),x23,x7) ->
-      ParseFail(x7)
-    bind_1[4](filter_0(eqChar_x(C())),x7,C(),x2,x4,x6) -> return_0[4](C()
-                                                                     ,x7
-                                                                     ,x2
-                                                                     ,x4
-                                                                     ,x6)
-    bind_1[4](bind'_0(eos()),x5,x3,x2,x4,x6) -> eos_anonymous[3](x5,x2,x4,x6)
-    bind_1[4](bind'_0(return_x(x17)),x7,x3,x2,x4,x6) -> return_0[4](x17
-                                                                   ,x7
-                                                                   ,x2
-                                                                   ,x4
-                                                                   ,x6)
-    bind_1[4](bind'_0(bind_p_f(x15,x17)),x9,x3,x2,x4,x6) -> bind_0[4](x15
-                                                                     ,x17
-                                                                     ,x9
-                                                                     ,x2
-                                                                     ,x4
-                                                                     ,x6)
-    bind_0[4](any(),x5,x3,x2,x4,x6) -> any_anonymous[3](bind_1(x5,x3),x2,x4,x6)
-    bind_0[4](bind_p_f(x15,x17),x5,x3,x2,x4,x6) -> bind_0[4](x15
-                                                            ,x17
-                                                            ,bind_1(x5,x3)
-                                                            ,x2
-                                                            ,x4
-                                                            ,x6)
-    bind_0[4](return_x(x7),x3,x5,x2,x4,x6) -> bind_1[4](x3,x5,x7,x2,x4,x6)
-    return_0[4](x7,bind_1(x3,x5),x2,x4,x6) -> bind_1[4](x3,x5,x7,x2,x4,x6)
-    return_0[4](x7,runParser_0(),x9,x11,x13) -> ParseSuccess(x7,x11)
-    any_anonymous_2[1](x5,runParser_1(),Nil(),x7) -> ParseFail(x7)
-    any_anonymous_2[1](bind_1(x7,x9),x5,Cons(x13,x11),x3) -> bind_1[4](x7
-                                                                      ,x9
-                                                                      ,x13
-                                                                      ,x5
-                                                                      ,x11
-                                                                      ,S(x3))
-    any_anonymous_1[2](x13,x15,x17,x2) -> any_anonymous_2[1](x13,x15,x17,x2)
-    any_anonymous[3](x13,x15,x2,x4) -> any_anonymous_1[2](x13,x15,x2,x4)
-    string[1](Nil()) -> return_x(Unit())
-    string[1](Cons(x11,x1)) -> bind_p_f(bind_p_f(any(),filter_0(eqChar_x(x11)))
-                                       ,bind'_0(string[1](x1)))
-    eos_anonymous_2[1](bind_1(x9,x11),x7,Nil(),x3) -> bind_1[4](x9
-                                                               ,x11
-                                                               ,Unit()
-                                                               ,x7
-                                                               ,Nil()
-                                                               ,x3)
-    eos_anonymous_2[1](runParser_0(),x9,Nil(),x13) -> ParseSuccess(Unit(),Nil())
-    eos_anonymous_2[1](x9,runParser_1(),Cons(x11,x13),x7) -> ParseFail(x7)
-    eos_anonymous_1[2](x5,x7,x9,x2) -> eos_anonymous_2[1](x5,x7,x9,x2)
-    eos_anonymous[3](x5,x7,x2,x4) -> eos_anonymous_1[2](x5,x7,x2,x4)
-    main(x3) -> bind_0[4](string[1](Cons(A(),Cons(B(),Nil())))
-                         ,bind'_0(eos())
-                         ,runParser_0()
-                         ,runParser_1()
-                         ,x3
-                         ,0()))
+    bind'_0[6](bind_p_f(bind_p_f(any(),filter_0(eqChar_x(B())))
+                       ,bind'_0(return_x(Unit())))
+              ,x3
+              ,bot[0]()
+              ,bind_1(bind'_0(eos()),runParser_0())
+              ,runParser_1()
+              ,x2
+              ,S(x1)) ->
+      any_anonymous_2[1](bind_1(filter_0(eqChar_x(B()))
+                               ,bind_1(bind'_0(return_x(Unit()))
+                                      ,bind_1(bind'_0(eos()),runParser_0())))
+                        ,runParser_1()
+                        ,x2
+                        ,S(x1))
+    bind'_0[6](return_x(Unit())
+              ,x2
+              ,bot[0]()
+              ,bind_1(bind'_0(eos()),runParser_0())
+              ,runParser_1()
+              ,Nil()
+              ,S(x1)) -> ParseSuccess(Unit(),Nil())
+    bind'_0[6](return_x(Unit())
+              ,x4
+              ,bot[0]()
+              ,bind_1(bind'_0(eos()),runParser_0())
+              ,runParser_1()
+              ,Cons(x3,x2)
+              ,S(x1)) -> ParseFail(S(x1))
+    bind_1[4](bind'_0(x4)
+             ,bind_1(bind'_0(eos()),runParser_0())
+             ,x3
+             ,runParser_1()
+             ,x2
+             ,S(x1)) -> bind'_0[6](x4
+                                  ,x3
+                                  ,bot[0]()
+                                  ,bind_1(bind'_0(eos()),runParser_0())
+                                  ,runParser_1()
+                                  ,x2
+                                  ,S(x1))
+    bind_1[4](filter_0(eqChar_x(A()))
+             ,bind_1(x3,bind_1(bind'_0(eos()),runParser_0()))
+             ,A()
+             ,runParser_1()
+             ,x2
+             ,S(x1)) -> bind_1[4](x3
+                                 ,bind_1(bind'_0(eos()),runParser_0())
+                                 ,A()
+                                 ,runParser_1()
+                                 ,x2
+                                 ,S(x1))
+    bind_1[4](filter_0(eqChar_x(A())),x3,B(),runParser_1(),x2,S(x1)) ->
+      ParseFail(S(x1))
+    bind_1[4](filter_0(eqChar_x(A())),x3,C(),runParser_1(),x2,S(x1)) ->
+      ParseFail(S(x1))
+    bind_1[4](filter_0(eqChar_x(B())),x3,A(),runParser_1(),x2,S(x1)) ->
+      ParseFail(S(x1))
+    bind_1[4](filter_0(eqChar_x(B()))
+             ,bind_1(x3,bind_1(bind'_0(eos()),runParser_0()))
+             ,B()
+             ,runParser_1()
+             ,x2
+             ,S(x1)) -> bind_1[4](x3
+                                 ,bind_1(bind'_0(eos()),runParser_0())
+                                 ,B()
+                                 ,runParser_1()
+                                 ,x2
+                                 ,S(x1))
+    bind_1[4](filter_0(eqChar_x(B())),x3,C(),runParser_1(),x2,S(x1)) ->
+      ParseFail(S(x1))
+    any_anonymous_2[1](bind_1(x3,x2),runParser_1(),Nil(),x1) -> ParseFail(x1)
+    any_anonymous_2[1](bind_1(x5,x4),runParser_1(),Cons(x3,x2),x1) ->
+      bind_1[4](x5,x4,x3,runParser_1(),x2,S(x1))
+    main(x1) ->
+      any_anonymous_2[1](bind_1(filter_0(eqChar_x(A()))
+                               ,bind_1(bind'_0(bind_p_f(bind_p_f(any()
+                                                                ,filter_0(eqChar_x(B())))
+                                                       ,bind'_0(return_x(Unit()))))
+                                      ,bind_1(bind'_0(eos()),runParser_0())))
+                        ,runParser_1()
+                        ,x1
+                        ,0()))
 (COMMENT
     Types are as follows: 
       0 :: C
@@ -183,137 +94,210 @@
       B :: A
       C :: A
       Cons :: [A,B] -> B
-      False :: 8
+      False :: X
       Nil :: B
       ParseFail :: [C] -> D
       ParseSuccess :: [A,B] -> D
       S :: [C] -> C
-      True :: 8
+      True :: X
       Unit :: A
-      any_anonymous :: [M] -> K
-      eos_anonymous :: [M] -> K
-      fail_anonymous :: K
-      runParser_anonymous :: [A] -> K
-      any :: O
-      eos :: O
-      bind_p_f :: [O,L] -> O
-      fail :: O
-      eqChar_x :: [A] -> N
-      return_x :: [A] -> O
-      any_0 :: 3
-      bind_0 :: [O,L] -> S
-      bind'_0 :: [O] -> L
-      eos_0 :: S
-      fail_0 :: S
-      filter_0 :: [N] -> L
-      return_0 :: [A] -> S
+      any_anonymous :: [M] -> I
+      eos_anonymous :: [M] -> I
+      fail_anonymous :: I
+      runParser_anonymous :: [A] -> I
+      any :: J
+      eos :: J
+      bind_p_f :: [J,K] -> J
+      fail :: J
+      bind_p :: [V] -> W
+      bind'_p :: [S] -> T
+      filter_p :: [J] -> Y
+      runParser_p :: [N] -> O
+      eqChar_x :: [A] -> U
+      return_x :: [A] -> J
+      any_0 :: Z
+      bind_0 :: [J,K] -> R
+      bind'_0 :: [J] -> K
+      eos_0 :: R
+      fail_0 :: R
+      filter_0 :: [U] -> K
+      return_0 :: [A] -> R
       runParser_0 :: M
       any_anonymous_1 :: [M,G] -> H
       eos_anonymous_1 :: [M,G] -> H
       fail_anonymous_1 :: [G] -> H
       runParser_anonymous_1 :: [A] -> H
-      bind_1 :: [L,M] -> M
-      runParser_1 :: J
-      any_anonymous_2 :: [M,I,E] -> F
-      eos_anonymous_2 :: [M,I,E] -> F
-      fail_anonymous_2 :: [I] -> F
+      bind_1 :: [K,M] -> M
+      runParser_1 :: G
+      any_anonymous_2 :: [M,G,E] -> F
+      eos_anonymous_2 :: [M,G,E] -> F
+      fail_anonymous_2 :: [G] -> F
       runParser_anonymous_2 :: [A,E] -> F
+      bot[0] :: L
+      filter_cond :: [X,A] -> J
       main :: [B] -> D
       any_anonymous[1] :: [M,G] -> H
       eos_anonymous[1] :: [M,G] -> H
       fail_anonymous[1] :: [G] -> H
       runParser_anonymous[1] :: [A,G] -> H
-      any[1] :: [2] -> 3
-      eos[1] :: [R] -> S
-      bind_p_f[1] :: [O,L,R] -> S
-      fail[1] :: [R] -> S
-      string[1] :: [B] -> O
-      eqChar_x[1] :: [A,A] -> 8
-      return_x[1] :: [A,R] -> S
-      any_0[1] :: [M] -> K
-      bind_0[1] :: [O,L,M] -> K
-      bind'_0[1] :: [O,P] -> O
-      eos_0[1] :: [M] -> K
-      fail_0[1] :: [M] -> K
-      filter_0[1] :: [N,A] -> O
-      return_0[1] :: [A,M] -> K
-      runParser_0[1] :: [A] -> K
-      any_anonymous_1[1] :: [M,I,E] -> F
-      eos_anonymous_1[1] :: [M,I,E] -> F
-      fail_anonymous_1[1] :: [I,E] -> F
+      any[1] :: [L] -> Z
+      bind[1] :: [V] -> W
+      bind'[1] :: [S] -> T
+      char[1] :: [A] -> J
+      eos[1] :: [L] -> R
+      eqChar[1] :: [A] -> U
+      bind_p_f[1] :: [J,K,L] -> R
+      fail[1] :: [L] -> R
+      filter[1] :: [J] -> Y
+      bind_p[1] :: [J,K] -> J
+      bind'_p[1] :: [J,J] -> J
+      filter_p[1] :: [J,U] -> J
+      runParser_p[1] :: [J,B] -> D
+      return[1] :: [A] -> J
+      runParser[1] :: [N] -> O
+      string[1] :: [B] -> J
+      eqChar_x[1] :: [A,A] -> X
+      return_x[1] :: [A,L] -> R
+      any_0[1] :: [M] -> I
+      bind_0[1] :: [J,K,M] -> I
+      bind'_0[1] :: [J,P] -> J
+      eos_0[1] :: [M] -> I
+      fail_0[1] :: [M] -> I
+      filter_0[1] :: [U,A] -> J
+      return_0[1] :: [A,M] -> I
+      runParser_0[1] :: [A] -> I
+      any_anonymous_1[1] :: [M,G,E] -> F
+      eos_anonymous_1[1] :: [M,G,E] -> F
+      fail_anonymous_1[1] :: [G,E] -> F
       runParser_anonymous_1[1] :: [A,E] -> F
-      bind_1[1] :: [L,M,A] -> K
+      bind_1[1] :: [K,M,A] -> I
       runParser_1[1] :: [C] -> D
-      any_anonymous_2[1] :: [M,J,B,C] -> D
-      eos_anonymous_2[1] :: [M,J,B,C] -> D
-      fail_anonymous_2[1] :: [J,C] -> D
+      any_anonymous_2[1] :: [M,G,B,C] -> D
+      eos_anonymous_2[1] :: [M,G,B,C] -> D
+      fail_anonymous_2[1] :: [G,C] -> D
       runParser_anonymous_2[1] :: [A,B,C] -> D
-      any_anonymous[2] :: [M,I,E] -> F
-      eos_anonymous[2] :: [M,I,E] -> F
-      fail_anonymous[2] :: [I,E] -> F
-      runParser_anonymous[2] :: [A,I,E] -> F
-      any[2] :: [4,M] -> K
-      eos[2] :: [U,M] -> K
-      bind_p_f[2] :: [O,L,U,M] -> K
-      fail[2] :: [U,M] -> K
-      string[2] :: [B,R] -> S
-      return_x[2] :: [A,U,M] -> K
+      filter_cond[1] :: [X,A,L] -> R
+      rec[string_0][1] :: [B] -> J
+      any_anonymous[2] :: [M,G,E] -> F
+      eos_anonymous[2] :: [M,G,E] -> F
+      fail_anonymous[2] :: [G,E] -> F
+      runParser_anonymous[2] :: [A,G,E] -> F
+      any[2] :: [L,M] -> I
+      bind[2] :: [J,K] -> J
+      bind'[2] :: [J,J] -> J
+      char[2] :: [A,L] -> R
+      eos[2] :: [L,M] -> I
+      eqChar[2] :: [A,A] -> X
+      bind_p_f[2] :: [J,K,L,M] -> I
+      fail[2] :: [L,M] -> I
+      filter[2] :: [J,U] -> J
+      bind_p[2] :: [J,K,L] -> R
+      bind'_p[2] :: [J,J,L] -> R
+      filter_p[2] :: [J,U,L] -> R
+      return[2] :: [A,L] -> R
+      runParser[2] :: [J,B] -> D
+      string[2] :: [B,L] -> R
+      return_x[2] :: [A,L,M] -> I
       any_0[2] :: [M,G] -> H
-      bind_0[2] :: [O,L,M,G] -> H
-      bind'_0[2] :: [O,Q,R] -> S
+      bind_0[2] :: [J,K,M,G] -> H
+      bind'_0[2] :: [J,Q,L] -> R
       eos_0[2] :: [M,G] -> H
       fail_0[2] :: [M,G] -> H
-      filter_0[2] :: [N,A,R] -> S
+      filter_0[2] :: [U,A,L] -> R
       return_0[2] :: [A,M,G] -> H
       runParser_0[2] :: [A,G] -> H
-      any_anonymous_1[2] :: [M,J,B,C] -> D
-      eos_anonymous_1[2] :: [M,J,B,C] -> D
-      fail_anonymous_1[2] :: [J,B,C] -> D
+      any_anonymous_1[2] :: [M,G,B,C] -> D
+      eos_anonymous_1[2] :: [M,G,B,C] -> D
+      fail_anonymous_1[2] :: [G,B,C] -> D
       runParser_anonymous_1[2] :: [A,B,C] -> D
-      bind_1[2] :: [L,M,A,G] -> H
-      any_anonymous[3] :: [M,J,B,C] -> D
-      eos_anonymous[3] :: [M,J,B,C] -> D
-      fail_anonymous[3] :: [J,B,C] -> D
-      runParser_anonymous[3] :: [A,J,B,C] -> D
-      any[3] :: [5,M,G] -> H
-      eos[3] :: [W,M,G] -> H
-      bind_p_f[3] :: [O,L,W,M,G] -> H
-      fail[3] :: [W,M,G] -> H
-      string[3] :: [B,U,M] -> K
-      return_x[3] :: [A,W,M,G] -> H
-      any_0[3] :: [M,I,E] -> F
-      bind_0[3] :: [O,L,M,I,E] -> F
-      bind'_0[3] :: [O,T,U,M] -> K
-      eos_0[3] :: [M,I,E] -> F
-      fail_0[3] :: [M,I,E] -> F
-      filter_0[3] :: [N,A,U,M] -> K
-      return_0[3] :: [A,M,I,E] -> F
-      runParser_0[3] :: [A,I,E] -> F
-      bind_1[3] :: [L,M,A,I,E] -> F
-      any[4] :: [6,M,I,E] -> F
-      eos[4] :: [Y,M,I,E] -> F
-      bind_p_f[4] :: [O,L,Y,M,I,E] -> F
-      fail[4] :: [Y,M,I,E] -> F
-      string[4] :: [B,W,M,G] -> H
-      return_x[4] :: [A,Y,M,I,E] -> F
-      any_0[4] :: [M,J,B,C] -> D
-      bind_0[4] :: [O,L,M,J,B,C] -> D
-      bind'_0[4] :: [O,V,W,M,G] -> H
-      eos_0[4] :: [M,J,B,C] -> D
-      fail_0[4] :: [M,J,B,C] -> D
-      filter_0[4] :: [N,A,W,M,G] -> H
-      return_0[4] :: [A,M,J,B,C] -> D
-      runParser_0[4] :: [A,J,B,C] -> D
-      bind_1[4] :: [L,M,A,J,B,C] -> D
-      any[5] :: [7,M,J,B,C] -> D
-      eos[5] :: [1,M,J,B,C] -> D
-      bind_p_f[5] :: [O,L,1,M,J,B,C] -> D
-      fail[5] :: [1,M,J,B,C] -> D
-      string[5] :: [B,Y,M,I,E] -> F
-      return_x[5] :: [A,1,M,J,B,C] -> D
-      bind'_0[5] :: [O,X,Y,M,I,E] -> F
-      filter_0[5] :: [N,A,Y,M,I,E] -> F
-      string[6] :: [B,1,M,J,B,C] -> D
-      bind'_0[6] :: [O,Z,1,M,J,B,C] -> D
-      filter_0[6] :: [N,A,1,M,J,B,C] -> D 
+      bind_1[2] :: [K,M,A,G] -> H
+      filter_cond[2] :: [X,A,L,M] -> I
+      rec[string_0][2] :: [B,L] -> R
+      any_anonymous[3] :: [M,G,B,C] -> D
+      eos_anonymous[3] :: [M,G,B,C] -> D
+      fail_anonymous[3] :: [G,B,C] -> D
+      runParser_anonymous[3] :: [A,G,B,C] -> D
+      any[3] :: [L,M,G] -> H
+      bind[3] :: [J,K,L] -> R
+      bind'[3] :: [J,J,L] -> R
+      char[3] :: [A,L,M] -> I
+      eos[3] :: [L,M,G] -> H
+      bind_p_f[3] :: [J,K,L,M,G] -> H
+      fail[3] :: [L,M,G] -> H
+      filter[3] :: [J,U,L] -> R
+      bind_p[3] :: [J,K,L,M] -> I
+      bind'_p[3] :: [J,J,L,M] -> I
+      filter_p[3] :: [J,U,L,M] -> I
+      return[3] :: [A,L,M] -> I
+      string[3] :: [B,L,M] -> I
+      return_x[3] :: [A,L,M,G] -> H
+      any_0[3] :: [M,G,E] -> F
+      bind_0[3] :: [J,K,M,G,E] -> F
+      bind'_0[3] :: [J,A,L,M] -> I
+      eos_0[3] :: [M,G,E] -> F
+      fail_0[3] :: [M,G,E] -> F
+      filter_0[3] :: [U,A,L,M] -> I
+      return_0[3] :: [A,M,G,E] -> F
+      runParser_0[3] :: [A,G,E] -> F
+      bind_1[3] :: [K,M,A,G,E] -> F
+      filter_cond[3] :: [X,A,L,M,G] -> H
+      rec[string_0][3] :: [B,L,M] -> I
+      any[4] :: [L,M,G,E] -> F
+      bind[4] :: [J,K,L,M] -> I
+      bind'[4] :: [J,J,L,M] -> I
+      char[4] :: [A,L,M,G] -> H
+      eos[4] :: [L,M,G,E] -> F
+      bind_p_f[4] :: [J,K,L,M,G,E] -> F
+      fail[4] :: [L,M,G,E] -> F
+      filter[4] :: [J,U,L,M] -> I
+      bind_p[4] :: [J,K,L,M,G] -> H
+      bind'_p[4] :: [J,J,L,M,G] -> H
+      filter_p[4] :: [J,U,L,M,G] -> H
+      return[4] :: [A,L,M,G] -> H
+      string[4] :: [B,L,M,G] -> H
+      return_x[4] :: [A,L,M,G,E] -> F
+      any_0[4] :: [M,G,B,C] -> D
+      bind_0[4] :: [J,K,M,G,B,C] -> D
+      bind'_0[4] :: [J,A,L,M,G] -> H
+      eos_0[4] :: [M,G,B,C] -> D
+      fail_0[4] :: [M,G,B,C] -> D
+      filter_0[4] :: [U,A,L,M,G] -> H
+      return_0[4] :: [A,M,G,B,C] -> D
+      runParser_0[4] :: [A,G,B,C] -> D
+      bind_1[4] :: [K,M,A,G,B,C] -> D
+      filter_cond[4] :: [X,A,L,M,G,E] -> F
+      rec[string_0][4] :: [B,L,M,G] -> H
+      any[5] :: [L,M,G,B,C] -> D
+      bind[5] :: [J,K,L,M,G] -> H
+      bind'[5] :: [J,J,L,M,G] -> H
+      char[5] :: [A,L,M,G,E] -> F
+      eos[5] :: [L,M,G,B,C] -> D
+      bind_p_f[5] :: [J,K,L,M,G,B,C] -> D
+      fail[5] :: [L,M,G,B,C] -> D
+      filter[5] :: [J,U,L,M,G] -> H
+      bind_p[5] :: [J,K,L,M,G,E] -> F
+      bind'_p[5] :: [J,J,L,M,G,E] -> F
+      filter_p[5] :: [J,U,L,M,G,E] -> F
+      return[5] :: [A,L,M,G,E] -> F
+      string[5] :: [B,L,M,G,E] -> F
+      return_x[5] :: [A,L,M,G,B,C] -> D
+      bind'_0[5] :: [J,A,L,M,G,E] -> F
+      filter_0[5] :: [U,A,L,M,G,E] -> F
+      filter_cond[5] :: [X,A,L,M,G,B,C] -> D
+      rec[string_0][5] :: [B,L,M,G,E] -> F
+      bind[6] :: [J,K,L,M,G,E] -> F
+      bind'[6] :: [J,J,L,M,G,E] -> F
+      char[6] :: [A,L,M,G,B,C] -> D
+      filter[6] :: [J,U,L,M,G,E] -> F
+      bind_p[6] :: [J,K,L,M,G,B,C] -> D
+      bind'_p[6] :: [J,J,L,M,G,B,C] -> D
+      filter_p[6] :: [J,U,L,M,G,B,C] -> D
+      return[6] :: [A,L,M,G,B,C] -> D
+      string[6] :: [B,L,M,G,B,C] -> D
+      bind'_0[6] :: [J,A,L,M,G,B,C] -> D
+      filter_0[6] :: [U,A,L,M,G,B,C] -> D
+      rec[string_0][6] :: [B,L,M,G,B,C] -> D
+      bind[7] :: [J,K,L,M,G,B,C] -> D
+      bind'[7] :: [J,J,L,M,G,B,C] -> D
+      filter[7] :: [J,U,L,M,G,B,C] -> D 
 )

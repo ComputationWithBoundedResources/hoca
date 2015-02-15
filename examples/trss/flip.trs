@@ -3,12 +3,12 @@
     INNERMOST)
 
 (VAR
-    x1)
+    x3)
 (RULES
     flip[1](E()) -> E()
-    flip[1](Z(x1)) -> O(flip[1](x1))
-    flip[1](O(x1)) -> Z(flip[1](x1))
-    main(x1) -> flip[1](x1))
+    flip[1](Z(x3)) -> O(flip[1](x3))
+    flip[1](O(x3)) -> Z(flip[1](x3))
+    main(x3) -> flip[1](x3))
 (COMMENT
     Types are as follows: 
       E :: A

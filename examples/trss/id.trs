@@ -3,26 +3,43 @@
     INNERMOST)
 
 (VAR
-    x3 x5 x7)
+    x1 x2)
 (RULES
-    iter_f_g[1](x3,id(),0()) -> id()
-    iter_f_g[1](compS(),x5,S(x7)) -> compS_f(iter_f_g[1](compS(),x5,x7))
-    compS_f[1](compS_f(x5),x3) -> compS_f[1](x5,S(x3))
-    compS_f[1](id(),x3) -> S(x3)
-    main(0()) -> 0()
-    main(S(x7)) -> compS_f[1](iter_f_g[1](compS(),id(),x7),0()))
+    iter_f_g[1](compS(),id(),0()) -> id()
+    iter_f_g[2](compS(),id(),0(),0()) -> 0()
+    iter_f_g[1](compS(),id(),S(x1)) -> compS_f(iter_f_g[1](compS(),id(),x1))
+    iter_f_g[2](compS(),id(),S(x1),0()) -> compS_f[1](iter_f_g[1](compS()
+                                                                 ,id()
+                                                                 ,x1)
+                                                     ,0())
+    compS_f[1](compS_f(x2),x1) -> compS_f[1](x2,S(x1))
+    compS_f[1](id(),x1) -> S(x1)
+    main(x1) -> iter_f_g[2](compS(),id(),x1,0()))
 (COMMENT
     Types are as follows: 
       0 :: C
       S :: [C] -> C
       compS :: A
       compS_f :: [B] -> B
+      iter_f :: [A] -> E
+      iter_f_g :: [A,B] -> D
       id :: B
       main :: [C] -> C
       compS[1] :: [B] -> B
       compS_f[1] :: [B,C] -> C
+      iter_f[1] :: [A,B] -> D
       iter_f_g[1] :: [A,B,C] -> B
       id[1] :: [C] -> C
+      iter[1] :: [A] -> E
+      rec[iter_0][1] :: [A] -> E
       compS[2] :: [B,C] -> C
-      iter_f_g[2] :: [A,B,C,C] -> C 
+      iter_f[2] :: [A,B,C] -> B
+      iter_f_g[2] :: [A,B,C,C] -> C
+      iter[2] :: [A,B] -> D
+      rec[iter_0][2] :: [A,B] -> D
+      iter_f[3] :: [A,B,C,C] -> C
+      iter[3] :: [A,B,C] -> B
+      rec[iter_0][3] :: [A,B,C] -> B
+      iter[4] :: [A,B,C,C] -> C
+      rec[iter_0][4] :: [A,B,C,C] -> C 
 )

@@ -3,27 +3,40 @@
     INNERMOST)
 
 (VAR
-    x7 x9 x11 x13 x1)
+    x4 x3 x2 x1)
 (RULES
-    comp_f_g[1](comp_f_g(x7,x9),cons_x(x11),x13) -> comp_f_g[1](x7
-                                                               ,x9
-                                                               ,Cons(x11,x13))
-    comp_f_g[1](id(),cons_x(x11),x13) -> Cons(x11,x13)
+    comp_f_g[1](comp_f_g(x4,cons_x(x3)),cons_x(x2),x1) -> comp_f_g[1](x4
+                                                                     ,cons_x(x3)
+                                                                     ,Cons(x2
+                                                                          ,x1))
+    comp_f_g[1](id(),cons_x(x2),x1) -> Cons(x2,x1)
     walk[1](Nil()) -> id()
-    walk[1](Cons(x11,x1)) -> comp_f_g(walk[1](x1),cons_x(x11))
-    main(Nil()) -> Nil()
-    main(Cons(x11,x1)) -> comp_f_g[1](walk[1](x1),cons_x(x11),Nil()))
+    walk[2](Nil(),Nil()) -> Nil()
+    walk[1](Cons(x2,x1)) -> comp_f_g(walk[1](x1),cons_x(x2))
+    walk[2](Cons(x2,x1),Nil()) -> comp_f_g[1](walk[1](x1),cons_x(x2),Nil())
+    main(x1) -> walk[2](x1,Nil()))
 (COMMENT
     Types are as follows: 
       Cons :: [D,A] -> A
       Nil :: A
+      comp_f :: [E] -> F
       comp_f_g :: [B,C] -> B
       id :: B
       cons_x :: [D] -> C
       main :: [A] -> A
+      comp[1] :: [E] -> F
+      cons[1] :: [D] -> C
+      comp_f[1] :: [B,C] -> B
       comp_f_g[1] :: [B,C,A] -> A
       id[1] :: [A] -> A
+      rev[1] :: [A] -> A
       walk[1] :: [A] -> B
       cons_x[1] :: [D,A] -> A
-      walk[2] :: [A,A] -> A 
+      rec[walk_0][1] :: [A] -> B
+      comp[2] :: [B,C] -> B
+      cons[2] :: [D,A] -> A
+      comp_f[2] :: [B,C,A] -> A
+      walk[2] :: [A,A] -> A
+      rec[walk_0][2] :: [A,A] -> A
+      comp[3] :: [B,C,A] -> A 
 )

@@ -3,25 +3,24 @@
     INNERMOST)
 
 (VAR
-    x11 x13 x17 x19 x3 x7 x5 x9 x1)
+    x3 x2 x1)
 (RULES
-    insert_cond_1(True(),x11,x13,x17,x19) -> Cons(x13,Cons(x17,x19))
-    insert_cond_1(False(),x11,x13,x17,x19) -> Cons(x17
-                                                  ,insert_ord_x[1](x11,x13,x19))
-    insert_ord_x[1](x11,x13,Nil()) -> Cons(x13,Nil())
-    insert_ord_x[1](rec[leq_0](),x3,Cons(x7,x5)) -> insert_cond_1(leq_x[1](x3
-                                                                          ,x7)
+    insert_cond_1(True(),rec[leq_0](),x3,x2,x1) -> Cons(x3,Cons(x2,x1))
+    insert_cond_1(False(),rec[leq_0](),x3,x2,x1) ->
+      Cons(x2,insert_ord_x[1](rec[leq_0](),x3,x1))
+    insert_ord_x[1](rec[leq_0](),x1,Nil()) -> Cons(x1,Nil())
+    insert_ord_x[1](rec[leq_0](),x3,Cons(x2,x1)) -> insert_cond_1(leq_x[1](x3
+                                                                          ,x2)
                                                                  ,rec[leq_0]()
                                                                  ,x3
-                                                                 ,x7
-                                                                 ,x5)
-    sort_ord[1](x3,Nil()) -> Nil()
-    sort_ord[1](x11,Cons(x13,x9)) -> insert_ord_x[1](x11
-                                                    ,x13
-                                                    ,sort_ord[1](x11,x9))
-    leq_x[1](0(),x5) -> True()
-    leq_x[1](S(x7),0()) -> False()
-    leq_x[1](S(x3),S(x9)) -> leq_x[1](x3,x9)
+                                                                 ,x2
+                                                                 ,x1)
+    sort_ord[1](rec[leq_0](),Nil()) -> Nil()
+    sort_ord[1](rec[leq_0](),Cons(x2,x1)) ->
+      insert_ord_x[1](rec[leq_0](),x2,sort_ord[1](rec[leq_0](),x1))
+    leq_x[1](0(),x1) -> True()
+    leq_x[1](S(x1),0()) -> False()
+    leq_x[1](S(x2),S(x1)) -> leq_x[1](x2,x1)
     main(x1) -> sort_ord[1](rec[leq_0](),x1))
 (COMMENT
     Types are as follows: 
@@ -31,10 +30,30 @@
       Nil :: D
       S :: [C] -> C
       True :: A
+      insert_ord :: [B] -> G
+      sort_ord :: [B] -> H
+      leq_x :: [I] -> J
+      insert_ord_x :: [B,E] -> F
       insert_cond_1 :: [A,B,C,C,D] -> D
       rec[leq_0] :: B
       main :: [D] -> D
+      insert[1] :: [B] -> G
+      leq[1] :: [I] -> J
+      insert_ord[1] :: [B,E] -> F
       sort_ord[1] :: [B,D] -> D
+      sort[1] :: [B] -> H
       leq_x[1] :: [C,C] -> A
-      insert_ord_x[1] :: [B,C,D] -> D 
+      insert_ord_x[1] :: [B,C,D] -> D
+      rec[insert_0][1] :: [B] -> G
+      rec[leq_0][1] :: [I] -> J
+      rec[sort_0][1] :: [B] -> H
+      insert[2] :: [B,E] -> F
+      leq[2] :: [C,C] -> A
+      insert_ord[2] :: [B,C,D] -> D
+      sort[2] :: [B,D] -> D
+      rec[insert_0][2] :: [B,E] -> F
+      rec[leq_0][2] :: [C,C] -> A
+      rec[sort_0][2] :: [B,D] -> D
+      insert[3] :: [B,C,D] -> D
+      rec[insert_0][3] :: [B,C,D] -> D 
 )

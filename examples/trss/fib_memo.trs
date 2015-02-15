@@ -3,143 +3,168 @@
     INNERMOST)
 
 (VAR
-    x9 x11 x5 x7 x3 x13 x15 x21 x25 x31 x27 x33 x19 x17 x23)
+    x2 x1 x3 x4)
 (RULES
-    evalState_cond(Pair(x9,x11)) -> x11
-    evalState_m[1](bind_m_f(x5,x7),x3) -> evalState_cond(bind_m_f[1](x5,x7,x3))
-    plus_x[1](0(),x13) -> x13
-    plus_x[1](S(x11),x13) -> S(plus_x[1](x11,x13))
-    find_cond_2(True(),x15,x21,x25) -> Some(x25)
-    find_cond_2(False(),x15,x21,x25) -> find_key[1](x15,x21)
+    evalState_cond(Pair(x2,x1)) -> x1
+    plus_x[1](0(),x1) -> x1
+    plus_x[1](S(x2),x1) -> S(plus_x[1](x2,x1))
+    find_cond_2(True(),x3,x2,x1) -> Some(x1)
+    find_cond_2(False(),x3,x2,x1) -> find_key[1](x3,x2)
     equal_x[1](0(),0()) -> True()
-    equal_x[1](0(),S(x31)) -> False()
-    equal_x[1](S(x31),0()) -> False()
-    equal_x[1](S(x27),S(x33)) -> equal_x[1](x27,x33)
-    find_key[1](x15,Nil()) -> None()
-    find_key[1](x15,Cons(Pair(x27,x25),x21)) -> find_cond_2(equal_x[1](x27,x15)
-                                                           ,x15
-                                                           ,x21
-                                                           ,x25)
-    bind_cond(Pair(x21,x3),bind'_0(return_a(x19))) -> Pair(x21,x19)
-    bind_cond(Pair(x21,x19),memoM_1(x13)) -> Pair(Cons(Pair(x13,x19),x21),x19)
-    bind_cond(Pair(x21,x3),liftM2_1(rec[plus_0](),x11)) -> Pair(x21
-                                                               ,plus_x[1](x11
-                                                                         ,x3))
-    bind_cond(Pair(x9,x17),liftM2_0(x11,x23)) -> bind_m_f[1](x23
-                                                            ,liftM2_1(x11,x17)
-                                                            ,x9)
-    bind_cond(Pair(x21,None()),memoM_0(rec[fibM_0](),0())) ->
-      Pair(Cons(Pair(0(),S(0())),x21),S(0()))
-    bind_cond(Pair(x21,None()),memoM_0(rec[fibM_0](),S(0()))) ->
-      Pair(Cons(Pair(S(0()),S(0())),x21),S(0()))
-    bind_cond(Pair(x9,None()),memoM_0(rec[fibM_0](),S(S(x15)))) ->
-      bind_m_f[1](bind_m_f(bind_m_f(bind_m_f(get(),liftM_0(find_key(S(x15))))
-                                   ,memoM_0(rec[fibM_0](),S(x15)))
-                          ,liftM2_0(rec[plus_0]()
-                                   ,bind_m_f(bind_m_f(get()
-                                                     ,liftM_0(find_key(x15)))
-                                            ,memoM_0(rec[fibM_0](),x15))))
-                 ,memoM_1(S(S(x15)))
-                 ,x9)
-    bind_cond(Pair(x21,Some(x19)),memoM_0(x11,x13)) -> Pair(x21,x19)
-    bind_cond(Pair(x21,x3),liftM_0(find_key(x5))) -> Pair(x21
-                                                         ,find_key[1](x5,x3))
-    bind_m_f[1](modify_f(insertM_0(x13,x19)),x5,x21) ->
-      bind_cond(Pair(Cons(Pair(x13,x19),x21),Unit()),x5)
-    bind_m_f[1](bind_m_f(x7,x9),x5,x3) -> bind_cond(bind_m_f[1](x7,x9,x3),x5)
-    bind_m_f[1](return_a(x3),bind'_0(return_a(x19)),x21) -> Pair(x21,x19)
-    bind_m_f[1](return_a(x19),memoM_1(x13),x21) -> Pair(Cons(Pair(x13,x19),x21)
-                                                       ,x19)
-    bind_m_f[1](return_a(x3),liftM2_1(rec[plus_0](),x11),x21) ->
-      Pair(x21,plus_x[1](x11,x3))
-    bind_m_f[1](return_a(x17),liftM2_0(x11,x23),x9) -> bind_m_f[1](x23
-                                                                  ,liftM2_1(x11
-                                                                           ,x17)
-                                                                  ,x9)
-    bind_m_f[1](return_a(None()),memoM_0(rec[fibM_0](),0()),x21) ->
-      Pair(Cons(Pair(0(),S(0())),x21),S(0()))
-    bind_m_f[1](return_a(None()),memoM_0(rec[fibM_0](),S(0())),x21) ->
-      Pair(Cons(Pair(S(0()),S(0())),x21),S(0()))
-    bind_m_f[1](return_a(None()),memoM_0(rec[fibM_0](),S(S(x15))),x9) ->
-      bind_m_f[1](bind_m_f(bind_m_f(bind_m_f(get(),liftM_0(find_key(S(x15))))
-                                   ,memoM_0(rec[fibM_0](),S(x15)))
-                          ,liftM2_0(rec[plus_0]()
-                                   ,bind_m_f(bind_m_f(get()
-                                                     ,liftM_0(find_key(x15)))
-                                            ,memoM_0(rec[fibM_0](),x15))))
-                 ,memoM_1(S(S(x15)))
-                 ,x9)
-    bind_m_f[1](return_a(Some(x19)),memoM_0(x11,x13),x21) -> Pair(x21,x19)
-    bind_m_f[1](return_a(x3),liftM_0(find_key(x5)),x21) -> Pair(x21
-                                                               ,find_key[1](x5
-                                                                           ,x3))
-    bind_m_f[1](get(),bind'_0(return_a(x19)),x21) -> Pair(x21,x19)
-    bind_m_f[1](get(),memoM_1(x13),x19) -> Pair(Cons(Pair(x13,x19),x19),x19)
-    bind_m_f[1](get(),liftM2_1(rec[plus_0](),x11),x21) -> Pair(x21
-                                                              ,plus_x[1](x11
-                                                                        ,x21))
-    bind_m_f[1](get(),liftM2_0(x11,x23),x17) -> bind_m_f[1](x23
-                                                           ,liftM2_1(x11,x17)
-                                                           ,x17)
-    bind_m_f[1](get(),memoM_0(rec[fibM_0](),0()),None()) ->
-      Pair(Cons(Pair(0(),S(0())),None()),S(0()))
-    bind_m_f[1](get(),memoM_0(rec[fibM_0](),S(0())),None()) ->
-      Pair(Cons(Pair(S(0()),S(0())),None()),S(0()))
-    bind_m_f[1](get(),memoM_0(rec[fibM_0](),S(S(x15))),None()) ->
-      bind_m_f[1](bind_m_f(bind_m_f(bind_m_f(get(),liftM_0(find_key(S(x15))))
-                                   ,memoM_0(rec[fibM_0](),S(x15)))
-                          ,liftM2_0(rec[plus_0]()
-                                   ,bind_m_f(bind_m_f(get()
-                                                     ,liftM_0(find_key(x15)))
-                                            ,memoM_0(rec[fibM_0](),x15))))
-                 ,memoM_1(S(S(x15)))
-                 ,None())
-    bind_m_f[1](get(),memoM_0(x11,x13),Some(x19)) -> Pair(Some(x19),x19)
-    bind_m_f[1](get(),liftM_0(find_key(x5)),x21) -> Pair(x21
-                                                        ,find_key[1](x5,x21))
+    equal_x[1](0(),S(x1)) -> False()
+    equal_x[1](S(x1),0()) -> False()
+    equal_x[1](S(x2),S(x1)) -> equal_x[1](x2,x1)
+    find_key[1](x1,Nil()) -> None()
+    find_key[1](x4,Cons(Pair(x3,x2),x1)) -> find_cond_2(equal_x[1](x3,x4)
+                                                       ,x4
+                                                       ,x1
+                                                       ,x2)
+    bind_cond(Pair(x3,x2),memoM_1(S(S(x1)))) -> Pair(Cons(Pair(S(S(x1)),x2),x3)
+                                                    ,x2)
+    bind_cond(Pair(x3,x2),liftM2_1(rec[plus_0](),x1)) -> Pair(x3
+                                                             ,plus_x[1](x1,x2))
+    bind_cond(Pair(x4,x3)
+             ,liftM2_0(rec[plus_0]()
+                      ,bind_m_f(bind_m_f(get(),liftM_0(find_key(x2)))
+                               ,memoM_0(rec[fibM_0](),x1)))) ->
+      bind_cond(memoM_0[2](rec[fibM_0](),x1,find_key[1](x2,x4),x4)
+               ,liftM2_1(rec[plus_0](),x3))
+    memoM_0[2](rec[fibM_0](),0(),None(),x1) -> Pair(Cons(Pair(0(),S(0())),x1)
+                                                   ,S(0()))
+    memoM_0[2](rec[fibM_0](),S(0()),None(),x1) -> Pair(Cons(Pair(S(0()),S(0()))
+                                                           ,x1)
+                                                      ,S(0()))
+    memoM_0[2](rec[fibM_0](),S(S(x2)),None(),x1) ->
+      bind_cond(bind_cond(memoM_0[2](rec[fibM_0]()
+                                    ,S(x2)
+                                    ,find_key[1](S(x2),x1)
+                                    ,x1)
+                         ,liftM2_0(rec[plus_0]()
+                                  ,bind_m_f(bind_m_f(get()
+                                                    ,liftM_0(find_key(x2)))
+                                           ,memoM_0(rec[fibM_0](),x2))))
+               ,memoM_1(S(S(x2))))
+    memoM_0[2](rec[fibM_0](),x3,Some(x2),x1) -> Pair(x1,x2)
     main(0()) -> S(0())
     main(S(0())) -> S(0())
-    main(S(S(x15))) ->
-      evalState_m[1](bind_m_f(bind_m_f(bind_m_f(get(),liftM_0(find_key(S(x15))))
-                                      ,memoM_0(rec[fibM_0](),S(x15)))
-                             ,liftM2_0(rec[plus_0]()
-                                      ,bind_m_f(bind_m_f(get()
-                                                        ,liftM_0(find_key(x15)))
-                                               ,memoM_0(rec[fibM_0](),x15))))
-                    ,Nil()))
+    main(S(S(x1))) ->
+      evalState_cond(bind_cond(memoM_0[2](rec[fibM_0](),S(x1),None(),Nil())
+                              ,liftM2_0(rec[plus_0]()
+                                       ,bind_m_f(bind_m_f(get()
+                                                         ,liftM_0(find_key(x1)))
+                                                ,memoM_0(rec[fibM_0](),x1))))))
 (COMMENT
     Types are as follows: 
       0 :: B
       Cons :: [A,B] -> B
-      False :: E
+      False :: M
       Nil :: B
       None :: B
       Pair :: [B,B] -> A
       S :: [B] -> B
       Some :: [B] -> B
-      True :: E
+      True :: M
       Unit :: B
       return_a :: [B] -> C
+      liftM_f :: [P] -> Q
+      liftM2_f :: [G] -> J
       bind_m_f :: [C,D] -> C
-      modify_f :: [I] -> C
+      modify_f :: [S] -> C
       get :: C
-      find_key :: [B] -> H
+      find_key :: [B] -> P
+      bind_m :: [T] -> U
+      evalState_m :: [E] -> F
+      memoM_m :: [R] -> Y
+      bind'_m1 :: [W] -> X
+      liftM2_f_m1 :: [G,H] -> I
+      equal_x :: [N] -> O
+      plus_x :: [K] -> L
       bind'_0 :: [C] -> D
-      insertM_0 :: [B,B] -> I
-      liftM_0 :: [H] -> D
-      liftM2_0 :: [F,C] -> D
-      memoM_0 :: [G,B] -> D
-      liftM2_1 :: [F,B] -> D
+      insertM_0 :: [B,B] -> S
+      liftM_0 :: [P] -> D
+      liftM2_0 :: [G,C] -> D
+      memoM_0 :: [R,B] -> D
+      liftM2_1 :: [G,B] -> D
       memoM_1 :: [B] -> D
       bind_cond :: [A,D] -> A
       evalState_cond :: [A] -> B
-      find_cond_2 :: [E,B,B,B] -> B
-      rec[fibM_0] :: G
-      rec[plus_0] :: F
+      find_cond_2 :: [M,B,B,B] -> B
+      rec[fibM_0] :: R
+      rec[plus_0] :: G
       main :: [B] -> B
+      return_a[1] :: [B,B] -> A
+      bind[1] :: [T] -> U
+      bind'[1] :: [W] -> X
+      equal[1] :: [N] -> O
+      evalState[1] :: [E] -> F
+      liftM_f[1] :: [P,C] -> C
+      liftM2_f[1] :: [G,H] -> I
       bind_m_f[1] :: [C,D,B] -> A
+      modify_f[1] :: [S,B] -> A
+      fib[1] :: [B] -> B
+      fibM[1] :: [B] -> C
+      find[1] :: [B] -> P
+      get[1] :: [B] -> A
+      insertM[1] :: [B,B] -> C
       find_key[1] :: [B,B] -> B
+      liftM[1] :: [P] -> Q
+      liftM2[1] :: [G] -> J
+      bind_m[1] :: [C,D] -> C
       evalState_m[1] :: [C,B] -> B
-      equal_x[1] :: [B,B] -> E
-      plus_x[1] :: [B,B] -> B 
+      memoM_m[1] :: [R,B] -> C
+      bind'_m1[1] :: [C,C] -> C
+      liftM2_f_m1[1] :: [G,C,C] -> C
+      memoM[1] :: [R] -> Y
+      modify[1] :: [S] -> C
+      plus[1] :: [K] -> L
+      return[1] :: [B] -> C
+      equal_x[1] :: [B,B] -> M
+      plus_x[1] :: [B,B] -> B
+      bind'_0[1] :: [C,V] -> C
+      insertM_0[1] :: [B,B,B] -> B
+      liftM_0[1] :: [P,B] -> C
+      liftM2_0[1] :: [G,C,B] -> C
+      memoM_0[1] :: [R,B,B] -> C
+      liftM2_1[1] :: [G,B,B] -> C
+      memoM_1[1] :: [B,B] -> C
+      rec[equal_0][1] :: [N] -> O
+      rec[fibM_0][1] :: [B] -> C
+      rec[find_0][1] :: [B] -> P
+      rec[plus_0][1] :: [K] -> L
+      bind[2] :: [C,D] -> C
+      bind'[2] :: [C,C] -> C
+      equal[2] :: [B,B] -> M
+      evalState[2] :: [C,B] -> B
+      liftM_f[2] :: [P,C,B] -> A
+      liftM2_f[2] :: [G,C,C] -> C
+      fibM[2] :: [B,B] -> A
+      find[2] :: [B,B] -> B
+      insertM[2] :: [B,B,B] -> A
+      liftM[2] :: [P,C] -> C
+      liftM2[2] :: [G,H] -> I
+      bind_m[2] :: [C,D,B] -> A
+      memoM_m[2] :: [R,B,B] -> A
+      bind'_m1[2] :: [C,C,B] -> A
+      liftM2_f_m1[2] :: [G,C,C,B] -> A
+      memoM[2] :: [R,B] -> C
+      modify[2] :: [S,B] -> A
+      plus[2] :: [B,B] -> B
+      return[2] :: [B,B] -> A
+      bind'_0[2] :: [C,B,B] -> A
+      liftM_0[2] :: [P,B,B] -> A
+      liftM2_0[2] :: [G,C,B,B] -> A
+      memoM_0[2] :: [R,B,B,B] -> A
+      liftM2_1[2] :: [G,B,B,B] -> A
+      memoM_1[2] :: [B,B,B] -> A
+      rec[equal_0][2] :: [B,B] -> M
+      rec[fibM_0][2] :: [B,B] -> A
+      rec[find_0][2] :: [B,B] -> B
+      rec[plus_0][2] :: [B,B] -> B
+      bind[3] :: [C,D,B] -> A
+      bind'[3] :: [C,C,B] -> A
+      liftM2_f[3] :: [G,C,C,B] -> A
+      liftM[3] :: [P,C,B] -> A
+      liftM2[3] :: [G,C,C] -> C
+      memoM[3] :: [R,B,B] -> A
+      liftM2[4] :: [G,C,C,B] -> A 
 )

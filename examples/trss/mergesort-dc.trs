@@ -3,81 +3,146 @@
     INNERMOST)
 
 (VAR
-    x15 x3 x5 x7 x9 x11 x13 x1 x17 x19 x21 x23 x27 x29 x25 x31)
+    x1 x3 x2 x8 x7 x6 x5 x4)
 (RULES
-    mapL_f[1](x15,NilL()) -> NilL()
-    mapL_f[1](rec[dc_0](x3,x5,x7,x9),ConsL(x11,x13)) ->
-      ConsL(dc[1](x3,x5,x7,x9,x11),mapL_f[1](rec[dc_0](x3,x5,x7,x9),x13))
-    dc_cond(True(),x9,x7,divide(),const_f(combine()),x3) ->
-      combine[1](mapL_f[1](rec[dc_0](x9,x7,divide(),const_f(combine()))
-                          ,ConsL(take_n[1](halve[1](length[1](x3)),x3)
-                                ,ConsL(drop_n[1](halve[1](length[1](x3)),x3)
-                                      ,NilL()))))
-    dc[1](divisible(),mergesort_0(),x7,x5,Nil()) -> Nil()
-    dc[1](divisible(),mergesort_0(),x7,x5,Cons(x9,Nil())) -> Cons(x9,Nil())
-    dc[1](divisible(),x13,x7,x15,Cons(x5,Cons(x9,x11))) ->
-      dc_cond(True(),divisible(),x13,x7,x15,Cons(x5,Cons(x9,x11)))
-    take_n[1](0(),x7) -> Nil()
+    dc[1](divisible(),mergesort_0(),divide(),const_f(combine()),Nil()) -> Nil()
+    dc[1](divisible()
+         ,mergesort_0()
+         ,divide()
+         ,const_f(combine())
+         ,Cons(x1,Nil())) -> Cons(x1,Nil())
+    dc[1](divisible()
+         ,mergesort_0()
+         ,divide()
+         ,const_f(combine())
+         ,Cons(x3,Cons(x2,x1))) ->
+      merge_ys[1](dc[1](divisible()
+                       ,mergesort_0()
+                       ,divide()
+                       ,const_f(combine())
+                       ,Cons(x3,take_n[1](halve[1](length[1](x1)),Cons(x2,x1))))
+                 ,dc[1](divisible()
+                       ,mergesort_0()
+                       ,divide()
+                       ,const_f(combine())
+                       ,drop_n[1](halve[1](length[1](x1)),Cons(x2,x1))))
+    take_n[1](0(),x1) -> Nil()
     take_n[1](S(0()),Nil()) -> Cons(Head_error_empty_list(),Nil())
-    take_n[1](S(x5),Cons(x13,x15)) -> Cons(x13,take_n[1](x5,x15))
+    take_n[1](S(x3),Cons(x2,x1)) -> Cons(x2,take_n[1](x3,x1))
     halve[1](0()) -> 0()
     halve[1](S(0())) -> S(0())
     halve[1](S(S(x1))) -> S(halve[1](x1))
     length[1](Nil()) -> 0()
-    length[1](Cons(x7,x1)) -> S(length[1](x1))
-    drop_n[1](0(),x7) -> x7
+    length[1](Cons(x2,x1)) -> S(length[1](x1))
+    drop_n[1](0(),x1) -> x1
     drop_n[1](S(0()),Nil()) -> Tail_error_empty_list()
-    drop_n[1](S(x5),Cons(x13,x15)) -> drop_n[1](x5,x15)
-    merge_cond_2(True(),x15,x17,x19,x13,x21,x23) -> Cons(x19
-                                                        ,merge_ys[1](x13,x17))
-    merge_cond_2(False(),x13,x15,x17,x19,x21,x23) -> Cons(x21
-                                                         ,merge_ys[1](x13,x23))
-    leq_x[1](0(),x27) -> True()
-    leq_x[1](S(x29),0()) -> False()
-    leq_x[1](S(x25),S(x31)) -> leq_x[1](x25,x31)
-    merge_ys[1](Nil(),x15) -> x15
-    merge_ys[1](Cons(x17,x19),Nil()) -> Cons(x17,x19)
-    merge_ys[1](Cons(x25,x19),Cons(x21,x23)) -> merge_cond_2(leq_x[1](x25,x21)
-                                                            ,Cons(x25,x19)
-                                                            ,Cons(x21,x23)
-                                                            ,x25
-                                                            ,x19
-                                                            ,x21
-                                                            ,x23)
-    combine[1](ConsL(x13,ConsL(x9,x11))) -> merge_ys[1](x13,x9)
-    main(x11) -> dc[1](divisible()
-                      ,mergesort_0()
-                      ,divide()
-                      ,const_f(combine())
-                      ,x11))
+    drop_n[1](S(x3),Cons(x2,x1)) -> drop_n[1](x3,x1)
+    merge_cond_2(True(),Cons(x8,x7),Cons(x6,x5),x4,x3,x2,x1) ->
+      Cons(x4,merge_ys[1](x3,Cons(x6,x5)))
+    merge_cond_2(False(),Cons(x8,x7),Cons(x6,x5),x4,x3,x2,x1) ->
+      Cons(x2,merge_ys[1](Cons(x8,x7),x1))
+    leq_x[1](0(),x1) -> True()
+    leq_x[1](S(x1),0()) -> False()
+    leq_x[1](S(x2),S(x1)) -> leq_x[1](x2,x1)
+    merge_ys[1](Nil(),Cons(x1,x2)) -> Cons(x1,x2)
+    merge_ys[1](Cons(x2,x1),Nil()) -> Cons(x2,x1)
+    merge_ys[1](Cons(x4,x3),Cons(x2,x1)) -> merge_cond_2(leq_x[1](x4,x2)
+                                                        ,Cons(x4,x3)
+                                                        ,Cons(x2,x1)
+                                                        ,x4
+                                                        ,x3
+                                                        ,x2
+                                                        ,x1)
+    main(x1) -> dc[1](divisible(),mergesort_0(),divide(),const_f(combine()),x1))
 (COMMENT
     Types are as follows: 
-      0 :: J
-      Cons :: [J,G] -> G
-      ConsL :: [G,B] -> B
-      False :: H
-      Head_error_empty_list :: J
-      Nil :: G
-      NilL :: B
-      S :: [J] -> J
-      Tail_error_empty_list :: G
-      True :: H
-      combine :: I
-      divide :: E
-      divisible :: C
-      const_f :: [I] -> F
-      mergesort_0 :: D
-      dc_cond :: [H,C,D,E,F,G] -> G
-      merge_cond_2 :: [H,G,G,J,G,J,G] -> G
-      rec[dc_0] :: [C,D,E,F] -> A
-      main :: [G] -> G
-      combine[1] :: [B] -> G
-      dc[1] :: [C,D,E,F,G] -> G
-      mapL_f[1] :: [A,B] -> B
-      halve[1] :: [J] -> J
-      length[1] :: [G] -> J
-      drop_n[1] :: [J,G] -> G
-      take_n[1] :: [J,G] -> G
-      leq_x[1] :: [J,J] -> H
-      merge_ys[1] :: [G,G] -> G 
+      0 :: O
+      Cons :: [O,F] -> F
+      ConsL :: [F,I] -> I
+      False :: A
+      Head_error_empty_list :: O
+      Nil :: F
+      NilL :: I
+      S :: [O] -> O
+      Tail_error_empty_list :: F
+      True :: A
+      combine :: G
+      divideAndConquer_isDivisible_solve_divide_combine :: [B,C,D,E] -> K
+      divide :: D
+      divideAndConquer_isDivisible_solve_divide :: [B,C,D] -> L
+      divisible :: B
+      const_f :: [G] -> E
+      mapL_f :: [H] -> J
+      divideAndConquer_isDivisible :: [B] -> N
+      drop_n :: [R] -> S
+      take_n :: [P] -> Q
+      divideAndConquer_isDivisible_solve :: [B,C] -> M
+      leq_x :: [U] -> V
+      merge_ys :: [W] -> X
+      mergesort_0 :: C
+      dc_cond :: [A,B,C,D,E,F] -> F
+      merge_cond_2 :: [A,F,F,O,F,O,F] -> F
+      rec[dc_0] :: [B,C,D,E] -> H
+      main :: [F] -> F
+      combine[1] :: [I] -> F
+      divideAndConquer_isDivisible_solve_divide_combine[1] :: [B
+                                                              ,C
+                                                              ,D
+                                                              ,E
+                                                              ,F] -> F
+      const[1] :: [G] -> E
+      dc[1] :: [B,C,D,E,F] -> F
+      divide[1] :: [F] -> I
+      divideAndConquer_isDivisible_solve_divide[1] :: [B,C,D,E] -> K
+      divideAndConquer[1] :: [B] -> N
+      divisible[1] :: [F] -> A
+      drop[1] :: [R] -> S
+      const_f[1] :: [G,T] -> G
+      mapL_f[1] :: [H,I] -> I
+      halve[1] :: [O] -> O
+      head[1] :: [F] -> O
+      divideAndConquer_isDivisible[1] :: [B,C] -> M
+      length[1] :: [F] -> O
+      leq[1] :: [U] -> V
+      mapL[1] :: [H] -> J
+      merge[1] :: [W] -> X
+      drop_n[1] :: [O,F] -> F
+      take_n[1] :: [O,F] -> F
+      divideAndConquer_isDivisible_solve[1] :: [B,C,D] -> L
+      tail[1] :: [F] -> F
+      take[1] :: [P] -> Q
+      leq_x[1] :: [O,O] -> A
+      merge_ys[1] :: [F,F] -> F
+      mergesort_0[1] :: [F] -> F
+      rec[dc_0][1] :: [B,C,D,E,F] -> F
+      rec[drop_0][1] :: [R] -> S
+      rec[halve_0][1] :: [O] -> O
+      rec[length_0][1] :: [F] -> O
+      rec[leq_0][1] :: [U] -> V
+      rec[mapL_0][1] :: [H] -> J
+      rec[merge_0][1] :: [W] -> X
+      rec[take_0][1] :: [P] -> Q
+      const[2] :: [G,T] -> G
+      divideAndConquer_isDivisible_solve_divide[2] :: [B,C,D,E,F] -> F
+      divideAndConquer[2] :: [B,C] -> M
+      drop[2] :: [O,F] -> F
+      const_f[2] :: [G,F,I] -> F
+      divideAndConquer_isDivisible[2] :: [B,C,D] -> L
+      leq[2] :: [O,O] -> A
+      mapL[2] :: [H,I] -> I
+      merge[2] :: [F,F] -> F
+      divideAndConquer_isDivisible_solve[2] :: [B,C,D,E] -> K
+      take[2] :: [O,F] -> F
+      rec[drop_0][2] :: [O,F] -> F
+      rec[leq_0][2] :: [O,O] -> A
+      rec[mapL_0][2] :: [H,I] -> I
+      rec[merge_0][2] :: [F,F] -> F
+      rec[take_0][2] :: [O,F] -> F
+      const[3] :: [G,F,I] -> F
+      divideAndConquer[3] :: [B,C,D] -> L
+      divideAndConquer_isDivisible[3] :: [B,C,D,E] -> K
+      divideAndConquer_isDivisible_solve[3] :: [B,C,D,E,F] -> F
+      divideAndConquer[4] :: [B,C,D,E] -> K
+      divideAndConquer_isDivisible[4] :: [B,C,D,E,F] -> F
+      divideAndConquer[5] :: [B,C,D,E,F] -> F 
 )

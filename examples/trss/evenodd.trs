@@ -3,13 +3,13 @@
     INNERMOST)
 
 (VAR
-    x1)
+    x3)
 (RULES
     odd[1](0()) -> False()
-    odd[1](S(x1)) -> even[1](x1)
+    odd[1](S(x3)) -> even[1](x3)
     even[1](0()) -> True()
-    even[1](S(x1)) -> odd[1](x1)
-    main(x1) -> even[1](x1))
+    even[1](S(x3)) -> odd[1](x3)
+    main(x3) -> even[1](x3))
 (COMMENT
     Types are as follows: 
       0 :: A

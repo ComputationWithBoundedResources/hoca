@@ -3,18 +3,27 @@
     INNERMOST)
 
 (VAR
-    x11 x13 x9 x5 x1)
+    x1 x3 x2)
 (RULES
-    append_xs[1](Nil(),x11) -> x11
-    append_xs[1](Cons(x13,x9),x11) -> Cons(x13,append_xs[1](x9,x11))
+    append_xs[1](Nil(),Cons(x1,Nil())) -> Cons(x1,Nil())
+    append_xs[1](Cons(x3,x2),Cons(x1,Nil())) -> Cons(x3
+                                                    ,append_xs[1](x2
+                                                                 ,Cons(x1
+                                                                      ,Nil())))
     rev[1](Nil()) -> Nil()
-    rev[1](Cons(x5,x1)) -> append_xs[1](rev[1](x1),Cons(x5,Nil()))
+    rev[1](Cons(x2,x1)) -> append_xs[1](rev[1](x1),Cons(x2,Nil()))
     main(x1) -> rev[1](x1))
 (COMMENT
     Types are as follows: 
       Cons :: [B,A] -> A
       Nil :: A
+      append_xs :: [C] -> D
       main :: [A] -> A
+      append[1] :: [C] -> D
       rev[1] :: [A] -> A
-      append_xs[1] :: [A,A] -> A 
+      append_xs[1] :: [A,A] -> A
+      rec[append_0][1] :: [C] -> D
+      rec[rev_0][1] :: [A] -> A
+      append[2] :: [A,A] -> A
+      rec[append_0][2] :: [A,A] -> A 
 )

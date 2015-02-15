@@ -3,54 +3,69 @@
     INNERMOST)
 
 (VAR
-    x3 x4 x5 x7 x2 x9 x1)
+    x2 x1 x3)
 (RULES
-    foldr_f_z[1](x3,id(),NilF()) -> id()
-    foldr_f_z[2](x4,id(),NilF(),x3) -> x3
-    foldr_f_z[1](comp(),x5,ConsF(x3,x7)) -> comp_f_g(x3
-                                                    ,foldr_f_z[1](comp(),x5,x7))
-    foldr_f_z[2](comp(),x5,ConsF(x3,x7),x2) -> comp_f_g[1](x3
-                                                          ,foldr_f_z[1](comp()
-                                                                       ,x5
-                                                                       ,x7)
-                                                          ,x2)
-    comp_f_g[1](plus_x(x9),comp_f_g(x5,x7),x3) -> plus_x[1](x9
-                                                           ,comp_f_g[1](x5
-                                                                       ,x7
-                                                                       ,x3))
-    comp_f_g[1](plus_x(x5),id(),x3) -> plus_x[1](x5,x3)
-    mapF_f[1](x3,Nil()) -> NilF()
-    mapF_f[1](rec[plus_0](),Cons(x3,x5)) -> ConsF(plus_x(x3)
-                                                 ,mapF_f[1](rec[plus_0](),x5))
-    plus_x[1](0(),x5) -> x5
-    plus_x[1](S(x3),x5) -> S(plus_x[1](x3,x5))
+    foldr_f_z[1](comp(),id(),NilF()) -> id()
+    foldr_f_z[2](comp(),id(),NilF(),0()) -> 0()
+    foldr_f_z[1](comp(),id(),ConsF(plus_x(x2),x1)) ->
+      comp_f_g(plus_x(x2),foldr_f_z[1](comp(),id(),x1))
+    foldr_f_z[2](comp(),id(),ConsF(plus_x(x2),x1),0()) ->
+      comp_f_g[1](plus_x(x2),foldr_f_z[1](comp(),id(),x1),0())
+    comp_f_g[1](plus_x(x3),comp_f_g(plus_x(x2),x1),0()) ->
+      plus_x[1](x3,comp_f_g[1](plus_x(x2),x1,0()))
+    comp_f_g[1](plus_x(x1),id(),0()) -> plus_x[1](x1,0())
+    mapF_f[1](rec[plus_0](),Nil()) -> NilF()
+    mapF_f[1](rec[plus_0](),Cons(x2,x1)) -> ConsF(plus_x(x2)
+                                                 ,mapF_f[1](rec[plus_0](),x1))
+    plus_x[1](0(),x1) -> x1
+    plus_x[1](S(x2),x1) -> S(plus_x[1](x2,x1))
     main(x1) -> foldr_f_z[2](comp(),id(),mapF_f[1](rec[plus_0](),x1),0()))
 (COMMENT
     Types are as follows: 
       0 :: D
-      Cons :: [D,I] -> I
+      Cons :: [D,K] -> K
       ConsF :: [E,C] -> C
-      Nil :: I
+      Nil :: K
       NilF :: C
       S :: [D] -> D
       comp :: A
-      comp_f :: [F] -> G
+      comp_f :: [H] -> I
+      foldr_f :: [A] -> G
+      mapF_f :: [J] -> L
       comp_f_g :: [E,B] -> B
       id :: B
       plus_x :: [D] -> E
-      rec[plus_0] :: H
-      main :: [I] -> D
-      comp[1] :: [F] -> G
+      foldr_f_z :: [A,B] -> F
+      rec[plus_0] :: J
+      main :: [K] -> D
+      comp[1] :: [H] -> I
       comp_f[1] :: [E,B] -> B
-      mapF_f[1] :: [H,I] -> C
+      foldr_f[1] :: [A,B] -> F
+      mapF_f[1] :: [J,K] -> C
+      foldr[1] :: [A] -> G
       comp_f_g[1] :: [E,B,D] -> D
       id[1] :: [D] -> D
+      mapF[1] :: [J] -> L
+      plus[1] :: [D] -> E
       plus_x[1] :: [D,D] -> D
       foldr_f_z[1] :: [A,B,C] -> B
+      rec[foldr_0][1] :: [A] -> G
+      rec[mapF_0][1] :: [J] -> L
       rec[plus_0][1] :: [D] -> E
       comp[2] :: [E,B] -> B
       comp_f[2] :: [E,B,D] -> D
+      foldr_f[2] :: [A,B,C] -> B
+      foldr[2] :: [A,B] -> F
+      mapF[2] :: [J,K] -> C
+      plus[2] :: [D,D] -> D
       foldr_f_z[2] :: [A,B,C,D] -> D
+      rec[foldr_0][2] :: [A,B] -> F
+      rec[mapF_0][2] :: [J,K] -> C
       rec[plus_0][2] :: [D,D] -> D
-      comp[3] :: [E,B,D] -> D 
+      comp[3] :: [E,B,D] -> D
+      foldr_f[3] :: [A,B,C,D] -> D
+      foldr[3] :: [A,B,C] -> B
+      rec[foldr_0][3] :: [A,B,C] -> B
+      foldr[4] :: [A,B,C,D] -> D
+      rec[foldr_0][4] :: [A,B,C,D] -> D 
 )

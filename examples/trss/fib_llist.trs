@@ -3,70 +3,107 @@
     INNERMOST)
 
 (VAR
-    x7 x9 x3 x5 x15 x17 x13 x11)
+    x1 x2 x3 x4)
 (RULES
-    take_l_cond(ConsL(x7,x9),0()) -> Nil()
-    take_l_cond(ConsL(x7,x9),S(x3)) -> Cons(x7,take_l_n[1](x3,x9))
-    take_l_n[1](x3,rec[fibs_0]()) -> take_l_cond(ConsL(0(),fibs_1()),x3)
-    take_l_n[1](x3,fibs_1()) ->
+    take_l_cond(NilL(),x1) -> Nil()
+    take_l_cond(ConsL(x2,x1),0()) -> Nil()
+    take_l_cond(ConsL(x3,x2),S(x1)) -> Cons(x3,take_l_n[1](x1,x2))
+    take_l_n[1](x1,rec[fibs_0]()) -> take_l_cond(ConsL(0(),fibs_1()),x1)
+    take_l_n[1](x1,fibs_1()) ->
       take_l_cond(ConsL(S(0())
                        ,zipwith_l_f_xs_ys(rec[plus_0](),rec[fibs_0](),fibs_1()))
-                 ,x3)
-    take_l_n[1](x9,zipwith_l_f_xs_ys(x3,x5,x7)) ->
-      take_l_cond(zipwith_l_f_xs_ys[1](x3,x5,x7,bot[0]()),x9)
-    zipwith_l_cond_1(NilL(),x7,x15,x17) -> NilL()
-    zipwith_l_cond_1(ConsL(x13,x11),rec[plus_0](),x7,x9) ->
-      ConsL(plus_x[1](x7,x13),zipwith_l_f_xs_ys(rec[plus_0](),x9,x11))
-    zipwith_l_cond(ConsL(x13,x11),x9,zipwith_l_f_xs_ys(x3,x5,x7)) ->
-      zipwith_l_cond_1(zipwith_l_f_xs_ys[1](x3,x5,x7,bot[1]()),x9,x13,x11)
-    zipwith_l_cond(ConsL(x7,x9),rec[plus_0](),fibs_1()) ->
-      ConsL(plus_x[1](x7,S(0()))
+                 ,x1)
+    take_l_n[1](x3,zipwith_l_f_xs_ys(rec[plus_0](),x2,x1)) ->
+      take_l_cond(zipwith_l_f_xs_ys[1](rec[plus_0](),x2,x1,bot[0]()),x3)
+    zipwith_l_cond(NilL(),x2,x1) -> NilL()
+    zipwith_l_cond_1(NilL(),x3,x2,x1) -> NilL()
+    zipwith_l_cond_1(ConsL(x4,x3),rec[plus_0](),x2,x1) ->
+      ConsL(plus_x[1](x2,x4),zipwith_l_f_xs_ys(rec[plus_0](),x1,x3))
+    zipwith_l_cond(ConsL(x4,x3)
+                  ,rec[plus_0]()
+                  ,zipwith_l_f_xs_ys(rec[plus_0](),x2,x1)) ->
+      zipwith_l_cond_1(zipwith_l_f_xs_ys[1](rec[plus_0](),x2,x1,bot[0]())
+                      ,rec[plus_0]()
+                      ,x4
+                      ,x3)
+    zipwith_l_cond(ConsL(x2,x1),rec[plus_0](),fibs_1()) ->
+      ConsL(plus_x[1](x2,S(0()))
            ,zipwith_l_f_xs_ys(rec[plus_0]()
-                             ,x9
+                             ,x1
                              ,zipwith_l_f_xs_ys(rec[plus_0]()
                                                ,rec[fibs_0]()
                                                ,fibs_1())))
-    zipwith_l_f_xs_ys[1](x7,rec[fibs_0](),x5,x3) ->
-      zipwith_l_cond(ConsL(0(),fibs_1()),x7,x5)
-    zipwith_l_f_xs_ys[1](x9,fibs_1(),zipwith_l_f_xs_ys(x3,x5,x7),x11) ->
-      zipwith_l_cond_1(zipwith_l_f_xs_ys[1](x3,x5,x7,bot[1]())
-                      ,x9
-                      ,S(0())
-                      ,zipwith_l_f_xs_ys(rec[plus_0](),rec[fibs_0](),fibs_1()))
-    zipwith_l_f_xs_ys[1](rec[plus_0](),fibs_1(),fibs_1(),x5) ->
-      ConsL(plus_x[1](S(0()),S(0()))
-           ,zipwith_l_f_xs_ys(rec[plus_0]()
-                             ,zipwith_l_f_xs_ys(rec[plus_0]()
-                                               ,rec[fibs_0]()
-                                               ,fibs_1())
-                             ,zipwith_l_f_xs_ys(rec[plus_0]()
-                                               ,rec[fibs_0]()
-                                               ,fibs_1())))
-    zipwith_l_f_xs_ys[1](x13,zipwith_l_f_xs_ys(x7,x9,x11),x5,x3) ->
-      zipwith_l_cond(zipwith_l_f_xs_ys[1](x7,x9,x11,bot[2]()),x13,x5)
-    plus_x[1](0(),x9) -> x9
-    plus_x[1](S(x7),x9) -> S(plus_x[1](x7,x9))
-    main(x3) -> take_l_n[1](x3,rec[fibs_0]()))
+    zipwith_l_f_xs_ys[1](rec[plus_0](),rec[fibs_0](),x1,bot[0]()) ->
+      zipwith_l_cond(ConsL(0(),fibs_1()),rec[plus_0](),x1)
+    zipwith_l_f_xs_ys[1](rec[plus_0](),fibs_1(),x1,bot[0]()) ->
+      zipwith_l_cond(ConsL(S(0())
+                          ,zipwith_l_f_xs_ys(rec[plus_0]()
+                                            ,rec[fibs_0]()
+                                            ,fibs_1()))
+                    ,rec[plus_0]()
+                    ,x1)
+    zipwith_l_f_xs_ys[1](rec[plus_0]()
+                        ,zipwith_l_f_xs_ys(rec[plus_0](),x3,x2)
+                        ,x1
+                        ,bot[0]()) ->
+      zipwith_l_cond(zipwith_l_f_xs_ys[1](rec[plus_0](),x3,x2,bot[0]())
+                    ,rec[plus_0]()
+                    ,x1)
+    plus_x[1](0(),x1) -> x1
+    plus_x[1](S(x2),x1) -> S(plus_x[1](x2,x1))
+    main(x1) -> take_l_cond(ConsL(0(),fibs_1()),x1))
 (COMMENT
     Types are as follows: 
       0 :: B
       Cons :: [B,C] -> C
       ConsL :: [B,D] -> A
+      Error_empty_list :: D
       Nil :: C
       NilL :: A
       S :: [B] -> B
-      zipwith_l_f_xs_ys :: [E,D,D] -> D
+      zipwith_l_f :: [F] -> K
+      take_l_n :: [G] -> H
+      plus_x :: [L] -> M
+      zipwith_l_f_xs :: [F,I] -> J
+      zipwith_l_f_xs_ys :: [F,D,D] -> D
       fibs_1 :: D
-      bot[0] :: F
-      bot[1] :: F
-      bot[2] :: F
+      bot[0] :: E
+      tail_l_cond :: [A] -> D
       take_l_cond :: [A,B] -> C
-      zipwith_l_cond :: [A,E,D] -> A
-      zipwith_l_cond_1 :: [A,E,B,D] -> A
+      zipwith_l_cond :: [A,F,D] -> A
+      zipwith_l_cond_1 :: [A,F,B,D] -> A
       rec[fibs_0] :: D
-      rec[plus_0] :: E
+      rec[plus_0] :: F
       main :: [B] -> C
+      Error_empty_list[1] :: [E] -> A
+      zipwith_l_f[1] :: [F,I] -> J
+      fibs[1] :: [E] -> A
       take_l_n[1] :: [B,D] -> C
+      plus[1] :: [L] -> M
+      tail_l[1] :: [D] -> D
+      take_l[1] :: [G] -> H
       plus_x[1] :: [B,B] -> B
-      zipwith_l_f_xs_ys[1] :: [E,D,D,F] -> A 
+      zipwith_l_f_xs[1] :: [F,D,D] -> D
+      zipwith_l_f_xs_ys[1] :: [F,D,D,E] -> A
+      zipwith_l[1] :: [F] -> K
+      fibs_1[1] :: [E] -> A
+      tail_l_cond[1] :: [A,E] -> A
+      rec[fibs_0][1] :: [E] -> A
+      rec[plus_0][1] :: [L] -> M
+      rec[take_l_0][1] :: [G] -> H
+      rec[zipwith_l_0][1] :: [F] -> K
+      zipwith_l_f[2] :: [F,D,D] -> D
+      plus[2] :: [B,B] -> B
+      tail_l[2] :: [D,E] -> A
+      take_l[2] :: [B,D] -> C
+      zipwith_l_f_xs[2] :: [F,D,D,E] -> A
+      zipwith_l[2] :: [F,I] -> J
+      rec[plus_0][2] :: [B,B] -> B
+      rec[take_l_0][2] :: [B,D] -> C
+      rec[zipwith_l_0][2] :: [F,I] -> J
+      zipwith_l_f[3] :: [F,D,D,E] -> A
+      zipwith_l[3] :: [F,D,D] -> D
+      rec[zipwith_l_0][3] :: [F,D,D] -> D
+      zipwith_l[4] :: [F,D,D,E] -> A
+      rec[zipwith_l_0][4] :: [F,D,D,E] -> A 
 )
