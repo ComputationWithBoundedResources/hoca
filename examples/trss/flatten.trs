@@ -3,39 +3,16 @@
     INNERMOST)
 
 (VAR
-    x5 x4 x3 x2 x1)
+    x4 x3 x2 x1 x5)
 (RULES
+    comp_f_g[1](cons_x(x4),comp_f_g(x3,x2),x1) -> Cons(x4,comp_f_g[1](x3,x2,x1))
+    comp_f_g[1](cons_x(x3),cons_x(x2),x1) -> Cons(x3,Cons(x2,x1))
     comp_f_g[1](comp_f_g(x5,x4),comp_f_g(x3,x2),x1) ->
       comp_f_g[1](x5,x4,comp_f_g[1](x3,x2,x1))
     comp_f_g[1](comp_f_g(x4,x3),cons_x(x2),x1) -> comp_f_g[1](x4,x3,Cons(x2,x1))
-    comp_f_g[1](cons_x(x4),comp_f_g(x3,x2),x1) -> Cons(x4,comp_f_g[1](x3,x2,x1))
-    comp_f_g[1](cons_x(x3),cons_x(x2),x1) -> Cons(x3,Cons(x2,x1))
     walk[1](Leaf(x1)) -> cons_x(x1)
-    walk[2](Leaf(x1),Nil()) -> Cons(x1,Nil())
+    walk[2](Leaf(x1)) -> Cons(x1,Nil())
     walk[1](Node(x2,x1)) -> comp_f_g(walk[1](x2),walk[1](x1))
-    walk[2](Node(x2,x1),Nil()) -> comp_f_g[1](walk[1](x2),walk[1](x1),Nil())
-    main(x1) -> walk[2](x1,Nil()))
-(COMMENT
-    Types are as follows: 
-      Cons :: [A,B] -> B
-      Leaf :: [A] -> F
-      Nil :: B
-      Node :: [F,F] -> F
-      comp_f :: [D] -> E
-      comp_f_g :: [C,C] -> C
-      cons_x :: [A] -> C
-      main :: [F] -> B
-      comp[1] :: [D] -> E
-      cons[1] :: [A] -> C
-      comp_f[1] :: [C,C] -> C
-      comp_f_g[1] :: [C,C,B] -> B
-      walk[1] :: [F] -> C
-      cons_x[1] :: [A,B] -> B
-      rec[walk_0][1] :: [F] -> C
-      comp[2] :: [C,C] -> C
-      cons[2] :: [A,B] -> B
-      comp_f[2] :: [C,C,B] -> B
-      walk[2] :: [F,B] -> B
-      rec[walk_0][2] :: [F,B] -> B
-      comp[3] :: [C,C,B] -> B 
-)
+    walk[2](Node(x2,x1)) -> comp_f_g[1](walk[1](x2),walk[1](x1),Nil())
+    main(x1) -> walk[2](x1))
+

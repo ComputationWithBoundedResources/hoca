@@ -5,61 +5,11 @@
 (VAR
     x2 x1 x4 x3)
 (RULES
-    foldr_f_z[1](step(rev_0()),fleft_0(),Nil()) -> fleft_0()
-    foldr_f_z[2](step(rev_0()),fleft_0(),Nil(),Nil()) -> Nil()
-    foldr_f_z[1](step(rev_0()),fleft_0(),Cons(x2,x1)) ->
-      step_x_f(rev_0(),x2,foldr_f_z[1](step(rev_0()),fleft_0(),x1))
-    foldr_f_z[2](step(rev_0()),fleft_0(),Cons(x2,x1),Nil()) ->
-      step_x_f[1](rev_0(),x2,foldr_f_z[1](step(rev_0()),fleft_0(),x1),Nil())
-    step_x_f[1](rev_0(),x4,step_x_f(rev_0(),x3,x2),x1) -> step_x_f[1](rev_0()
-                                                                     ,x3
-                                                                     ,x2
-                                                                     ,Cons(x4
-                                                                          ,x1))
-    step_x_f[1](rev_0(),x2,fleft_0(),x1) -> Cons(x2,x1)
-    main(x1) -> foldr_f_z[2](step(rev_0()),fleft_0(),x1,Nil()))
-(COMMENT
-    Types are as follows: 
-      Cons :: [E,C] -> C
-      Nil :: C
-      rev_anonymous :: [L] -> M
-      fleft_op_e :: [D,C] -> J
-      foldr_f :: [A] -> G
-      step_x_f :: [D,E,B] -> B
-      fleft_op :: [D] -> K
-      step :: [D] -> A
-      step_x :: [D,H] -> I
-      foldr_f_z :: [A,B] -> F
-      fleft_0 :: B
-      rev_0 :: D
-      main :: [C] -> C
-      rev_anonymous[1] :: [C,E] -> C
-      fleft_op_e[1] :: [D,C,C] -> C
-      foldr_f[1] :: [A,B] -> F
-      step_x_f[1] :: [D,E,B,C] -> C
-      fleft[1] :: [D] -> K
-      foldr[1] :: [A] -> G
-      fleft_op[1] :: [D,C] -> J
-      step[1] :: [D,H] -> I
-      step_x[1] :: [D,E,B] -> B
-      foldr_f_z[1] :: [A,B,C] -> B
-      fleft_0[1] :: [C] -> C
-      rev_0[1] :: [L] -> M
-      rec[foldr_0][1] :: [A] -> G
-      foldr_f[2] :: [A,B,C] -> B
-      fleft[2] :: [D,C] -> J
-      foldr[2] :: [A,B] -> F
-      fleft_op[2] :: [D,C,C] -> C
-      step[2] :: [D,E,B] -> B
-      step_x[2] :: [D,E,B,C] -> C
-      foldr_f_z[2] :: [A,B,C,C] -> C
-      rev_0[2] :: [C,E] -> C
-      rec[foldr_0][2] :: [A,B] -> F
-      foldr_f[3] :: [A,B,C,C] -> C
-      fleft[3] :: [D,C,C] -> C
-      foldr[3] :: [A,B,C] -> B
-      step[3] :: [D,E,B,C] -> C
-      rec[foldr_0][3] :: [A,B,C] -> B
-      foldr[4] :: [A,B,C,C] -> C
-      rec[foldr_0][4] :: [A,B,C,C] -> C 
-)
+    foldr_f_z[1](Nil()) -> fleft_0()
+    foldr_f_z[2](Nil()) -> Nil()
+    foldr_f_z[1](Cons(x2,x1)) -> step_x_f(x2,foldr_f_z[1](x1))
+    foldr_f_z[2](Cons(x2,x1)) -> step_x_f[1](x2,foldr_f_z[1](x1),Nil())
+    step_x_f[1](x4,step_x_f(x3,x2),x1) -> step_x_f[1](x3,x2,Cons(x4,x1))
+    step_x_f[1](x2,fleft_0(),x1) -> Cons(x2,x1)
+    main(x1) -> foldr_f_z[2](x1))
+

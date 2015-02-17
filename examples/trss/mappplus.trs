@@ -11,23 +11,4 @@
     plus_x[1](0(),x1) -> x1
     plus_x[1](S(x2),x1) -> S(plus_x[1](x2,x1))
     main(x2,x1) -> map_f[1](plus_x(x1),x2))
-(COMMENT
-    Types are as follows: 
-      0 :: C
-      Cons :: [C,B] -> B
-      Nil :: B
-      S :: [C] -> C
-      map_f :: [A] -> D
-      plus_x :: [C] -> A
-      main :: [B,C] -> B
-      map_f[1] :: [A,B] -> B
-      map[1] :: [A] -> D
-      plus[1] :: [C] -> A
-      plus_x[1] :: [C,C] -> C
-      rec[map_0][1] :: [A] -> D
-      rec[plus_0][1] :: [C] -> A
-      map[2] :: [A,B] -> B
-      plus[2] :: [C,C] -> C
-      rec[map_0][2] :: [A,B] -> B
-      rec[plus_0][2] :: [C,C] -> C 
-)
+

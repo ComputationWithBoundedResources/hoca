@@ -3,15 +3,8 @@
     INNERMOST)
 
 (VAR
-    x3)
+    x1)
 (RULES
-    pred[1](S(x3)) -> x3
-    pred[1](0()) -> 0()
-    main(x3) -> pred[1](x3))
-(COMMENT
-    Types are as follows: 
-      0 :: A
-      S :: [A] -> A
-      main :: [A] -> A
-      pred[1] :: [A] -> A 
-)
+    main(S(x1)) -> x1
+    main(0()) -> 0())
+

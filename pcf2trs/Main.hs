@@ -204,7 +204,7 @@ n2 = exhaustive $
   >=> logMsg "decreasing"
 
 t1 :: Problem :~> Problem
-t1 = try cfaur >=> exhaustive (n2 >=> try cfaur)
+t1 = try cfa >=> logMsg "CFA" >=> try ur >=> try (exhaustive (n2 >=> try cfaur))
 
 toTrs :: Problem :~> Problem
 toTrs =

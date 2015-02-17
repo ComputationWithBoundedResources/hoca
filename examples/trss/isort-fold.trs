@@ -5,62 +5,14 @@
 (VAR
     x2 x1 x3)
 (RULES
-    fold_f_z[1](insert_ord(rec[leq_0]()),Nil(),Nil()) -> Nil()
-    fold_f_z[1](insert_ord(rec[leq_0]()),Nil(),Cons(x2,x1)) ->
-      insert_ord_x[1](rec[leq_0]()
-                     ,x2
-                     ,fold_f_z[1](insert_ord(rec[leq_0]()),Nil(),x1))
-    insert_cond_1(True(),rec[leq_0](),x3,x2,x1) -> Cons(x3,Cons(x2,x1))
-    insert_cond_1(False(),rec[leq_0](),x3,x2,x1) ->
-      Cons(x2,insert_ord_x[1](rec[leq_0](),x3,x1))
-    insert_ord_x[1](rec[leq_0](),x1,Nil()) -> Cons(x1,Nil())
-    insert_ord_x[1](rec[leq_0](),x3,Cons(x2,x1)) -> insert_cond_1(leq_x[1](x3
-                                                                          ,x2)
-                                                                 ,rec[leq_0]()
-                                                                 ,x3
-                                                                 ,x2
-                                                                 ,x1)
+    fold_f_z[1](Nil()) -> Nil()
+    fold_f_z[1](Cons(x2,x1)) -> insert_ord_x[1](x2,fold_f_z[1](x1))
+    insert_cond_1(True(),x3,x2,x1) -> Cons(x3,Cons(x2,x1))
+    insert_cond_1(False(),x3,x2,x1) -> Cons(x2,insert_ord_x[1](x3,x1))
+    insert_ord_x[1](x1,Nil()) -> Cons(x1,Nil())
+    insert_ord_x[1](x3,Cons(x2,x1)) -> insert_cond_1(leq_x[1](x3,x2),x3,x2,x1)
     leq_x[1](0(),x1) -> True()
     leq_x[1](S(x1),0()) -> False()
     leq_x[1](S(x2),S(x1)) -> leq_x[1](x2,x1)
-    main(x1) -> fold_f_z[1](insert_ord(rec[leq_0]()),Nil(),x1))
-(COMMENT
-    Types are as follows: 
-      0 :: D
-      Cons :: [D,B] -> B
-      False :: G
-      Nil :: B
-      S :: [D] -> D
-      True :: G
-      fold_f :: [A] -> F
-      insert_ord :: [C] -> A
-      leq_x :: [J] -> K
-      insert_ord_x :: [C,H] -> I
-      fold_f_z :: [A,B] -> E
-      insert_cond_1 :: [G,C,D,D,B] -> B
-      rec[leq_0] :: C
-      main :: [B] -> B
-      fold_f[1] :: [A,B] -> E
-      fold[1] :: [A] -> F
-      insert[1] :: [C] -> A
-      leq[1] :: [J] -> K
-      insert_ord[1] :: [C,H] -> I
-      leq_x[1] :: [D,D] -> G
-      insert_ord_x[1] :: [C,D,B] -> B
-      fold_f_z[1] :: [A,B,B] -> B
-      rec[fold_0][1] :: [A] -> F
-      rec[insert_0][1] :: [C] -> A
-      rec[leq_0][1] :: [J] -> K
-      fold_f[2] :: [A,B,B] -> B
-      fold[2] :: [A,B] -> E
-      insert[2] :: [C,H] -> I
-      leq[2] :: [D,D] -> G
-      insert_ord[2] :: [C,D,B] -> B
-      rec[fold_0][2] :: [A,B] -> E
-      rec[insert_0][2] :: [C,H] -> I
-      rec[leq_0][2] :: [D,D] -> G
-      fold[3] :: [A,B,B] -> B
-      insert[3] :: [C,D,B] -> B
-      rec[fold_0][3] :: [A,B,B] -> B
-      rec[insert_0][3] :: [C,D,B] -> B 
-)
+    main(x1) -> fold_f_z[1](x1))
+

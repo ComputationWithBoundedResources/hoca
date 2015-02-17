@@ -5,28 +5,8 @@
 (VAR
     x1)
 (RULES
-    take_l_cond(ConsL(0(),rec[zeros_0]()),0()) -> Nil()
-    take_l_cond(ConsL(0(),rec[zeros_0]()),S(x1)) ->
-      Cons(0(),take_l_cond(ConsL(0(),rec[zeros_0]()),x1))
-    main(x1) -> take_l_cond(ConsL(0(),rec[zeros_0]()),x1))
-(COMMENT
-    Types are as follows: 
-      0 :: B
-      Cons :: [B,C] -> C
-      ConsL :: [B,D] -> A
-      Nil :: C
-      NilL :: A
-      S :: [B] -> B
-      take_l_n :: [F] -> G
-      bot[0] :: E
-      take_l_cond :: [A,B] -> C
-      rec[zeros_0] :: D
-      main :: [B] -> C
-      take_l_n[1] :: [B,D] -> C
-      take_l[1] :: [F] -> G
-      zeros[1] :: [E] -> A
-      rec[take_l_0][1] :: [F] -> G
-      rec[zeros_0][1] :: [E] -> A
-      take_l[2] :: [B,D] -> C
-      rec[take_l_0][2] :: [B,D] -> C 
-)
+    take_l_cond(0()) -> Nil()
+    take_l_cond(S(x1)) -> Cons(take_l_n[1](x1))
+    take_l_n[1](x1) -> take_l_cond(x1)
+    main(x1) -> take_l_n[1](x1))
+
