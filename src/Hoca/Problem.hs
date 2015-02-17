@@ -15,11 +15,12 @@ import qualified Hoca.ATRS as ATRS
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Data.List (nub)
 import Control.Monad.State (lift)
-import Control.Applicative ((<$>), Alternative, optional, empty, pure)
-import Data.Maybe (listToMaybe, mapMaybe, catMaybes)
+import Data.Maybe (listToMaybe, catMaybes)
+import Control.Applicative ((<$>))
 
 data Lbl = LString String
          | LInt Int
+         | LSym Symbol
          deriving (Show, Eq, Ord)
                   
 newtype Name = Name [Lbl] deriving (Show, Eq, Ord)
@@ -31,12 +32,13 @@ data Symbol =
   | Cond Name
   | Fix Name
   | Main
-  | Labeled Int Symbol
+  | Labeled Lbl Symbol
   deriving (Show, Eq, Ord)
 
 instance PP.Pretty Lbl where
   pretty (LInt i) = PP.int i
   pretty (LString i) = PP.text i
+  pretty (LSym s) = PP.pretty s
 
 
 instance PP.Pretty Name where
@@ -51,8 +53,7 @@ instance PP.Pretty Symbol where
   pretty (Fix l) = PP.text "rec" PP.<> PP.brackets (PP.pretty l)
   pretty (Bot l) = PP.text "bot" PP.<> PP.brackets (PP.pretty l)      
   pretty Main = PP.text "main"
-  pretty (Labeled 0 s) = PP.pretty s
-  pretty (Labeled i s) = PP.pretty s PP.<> PP.brackets (PP.int i)
+  pretty (Labeled i s) = PP.pretty s PP.<> PP.brackets (PP.pretty i)
 
 
 unlabeled :: Symbol -> Symbol
@@ -86,14 +87,14 @@ toWST p = P.Problem {
   , P.rules = P.RulesPair { P.strictRules = trs, P.weakRules = [] }
   , P.variables = nub (RS.vars trs)
   , P.symbols = nub (RS.funs trs)
-  , P.comment = flip PP.displayS "" <$> PP.renderSmart 1.0 75 <$> ppSig <$> pSig p }
+  , P.comment = Nothing } -- flip PP.displayS "" <$> PP.renderSmart 1.0 75 <$> ppSig <$> pSig p }
   where
     trs = rules p
-    ppSig s =
-      PP.text "Types are as follows:"
-      PP.</> PP.linebreak
-      PP.</> PP.indent 5 (PP.align (PP.pretty s))
-      PP.</> PP.linebreak
+    -- ppSig s =
+    --   PP.text "Types are as follows:"
+    --   PP.</> PP.linebreak
+    --   PP.</> PP.indent 5 (PP.align (PP.pretty s))
+    --   PP.</> PP.linebreak
 
 prettyWST :: (PP.Pretty f, Eq f) => Problem f Int -> PP.Doc
 prettyWST = P.prettyWST PP.pretty ppVar . toWST where
@@ -132,12 +133,11 @@ removeInstances p = p { pRules = foldl removeInstance (pRules p) insts } where
       | ISet.member i ss = (rl,ISet.insert j (ISet.delete i ss))
       | otherwise = (rl,ss)
 
-replaceRulesM :: (Monad m, Alternative m, Ord f, Ord v) => (Int -> ATRS.Rule f v -> [Int] -> m [(ATRS.Rule f v, [Int])]) -> Problem f v -> m (Problem f v)
+replaceRulesM :: (Monad m, Ord f, Ord v) => (Int -> ATRS.Rule f v -> [Int] -> Maybe [(ATRS.Rule f v, [Int])]) -> Problem f v -> m (Problem f v)
 replaceRulesM m p = runVarSupplyT (mapM f (IMap.toList (pRules p))) >>= toProblem 
   where
     f (i,(r,ISet.toList -> ss)) = do
-      mrs <- lift (optional (m i r ss))
-      case mrs of
+      case m i r ss of
        Nothing -> do
          j <- fresh
          return (False, (i, [(j,r,ss)]))
@@ -146,8 +146,8 @@ replaceRulesM m p = runVarSupplyT (mapM f (IMap.toList (pRules p))) >>= toProble
          return (True, (i, [ (j,r',ss') | (j,(r',ss')) <- zip ids rs ]))
 
     toProblem l
-      | any fst l = pure (removeInstances p { pRules = foldl ins IMap.empty (concatMap snd l') })
-      | otherwise = empty
+      | any fst l = return (removeInstances p { pRules = foldl ins IMap.empty (concatMap snd l') })
+      | otherwise = fail "replaceRulesM"
       where
         l' = map snd l
         ins is (j,r,ss) = IMap.insert j (r, newSuccs ss) is
@@ -157,11 +157,13 @@ replaceRulesM m p = runVarSupplyT (mapM f (IMap.toList (pRules p))) >>= toProble
            Nothing -> ISet.empty
            Just ers -> ISet.fromList [ j | (j,_,_) <- ers]
 
+toAssocList :: Problem f v -> [(ATRS.Rule f v, Int, [Int])]
+toAssocList p = [(i,r,ISet.toList ss) | (r,(i,ss)) <- IMap.toList (pRules p)]
 
-replaceRules :: (Monad m, Alternative m, Ord f, Ord v) => (ATRS.Rule f v -> m [(ATRS.Rule f v, [Int])]) -> Problem f v -> m (Problem f v)
+replaceRules :: (Monad m, Ord f, Ord v) => (ATRS.Rule f v -> Maybe [(ATRS.Rule f v, [Int])]) -> Problem f v -> m (Problem f v)
 replaceRules f = replaceRulesM (const (return . f))
 
-replaceRulesIdx :: (Monad m, Alternative m, Ord f, Ord v) => (Int -> m [(ATRS.Rule f v, [Int])]) -> Problem f v -> m (Problem f v)
+replaceRulesIdx :: (Monad m, Ord f, Ord v) => (Int -> Maybe [(ATRS.Rule f v, [Int])]) -> Problem f v -> m (Problem f v)
 replaceRulesIdx f = replaceRulesM m where
   m i _ = return (f i)
 

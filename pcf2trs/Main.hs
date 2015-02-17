@@ -1,13 +1,15 @@
 #!/usr/local/bin/runhaskell
+
+{-# LANGUAGE TypeOperators #-}
+
 module Main where
 import Prelude hiding ((&&),(||), not)
 import qualified Prelude as Prelude
-import           Control.Applicative (Applicative (..),Alternative (..), (<$>))
+import           Control.Applicative ((<$>))
 import           Control.Monad (foldM, void)
 import qualified Hoca.FP as FP
 import qualified Hoca.PCF as PCF
 import qualified Hoca.Narrowing as N
-import qualified Hoca.UsableRules as UR
 import qualified Hoca.Problem as Problem
 import qualified Hoca.ATRS as ATRS
 import           Hoca.Utils (putDocLn, writeDocFile, render)
@@ -23,15 +25,16 @@ import qualified Data.Rewriting.Rule as R
 import qualified Data.Rewriting.Term as T
 import System.Exit (exitSuccess,exitFailure)
 import Data.GraphViz.Commands
+import Data.Graph (flattenSCC, stronglyConnCompR)
 import qualified Data.GraphViz.Types.Monadic as GV
 import Data.GraphViz.Types.Generalised (DotGraph)
 import qualified Data.GraphViz.Attributes as GVattribs
 import qualified Data.GraphViz.Attributes.Complete as GVattribsc
 import Data.Text.Lazy (pack)
-import Control.Monad (guard, MonadPlus)
 import qualified Data.GraphViz.Attributes.Colors.SVG as GVSVG
-import qualified Data.MultiSet as MS
-
+import Data.Maybe (catMaybes)
+import Data.List (nub)
+import Control.Monad (forM)
 
 
 type Problem = Problem.Problem Problem.Symbol Int
@@ -69,6 +72,7 @@ expressionFromArgs fname args = do
         fun (zip [(1::Int)..] args)
     fromString src str = FP.expFromString src str >>= FP.toPCF
 
+cfa :: Problem :~> Problem
 cfa = dfaInstantiate abstractP where
   abstractP _ _ [_] = True
   abstractP trl v _ =
@@ -133,20 +137,22 @@ branching _ ns = length (N.narrowings ns) > 1
 selfInlining :: Problem -> NarrowedRule -> Bool
 selfInlining _ ns = N.narrowedRule ns `elem` map N.narrowedWith (N.narrowings ns)
 
+isBody :: Problem -> NarrowedRule -> Bool
+isBody p ns =
+  case nub (concatMap (Problem.cgPreds p) nwIds) of
+   [i] -> i `notElem` nwIds
+   _ -> False
+   where
+     nwIds = catMaybes ( map (Problem.indexOf p . N.narrowedWith) (N.narrowings ns))
+
 withRule,onRule :: (Problem -> Rule -> Bool) -> Problem -> NarrowedRule -> Bool
 withRule p rs = all (p rs) . map N.narrowedWith . N.narrowings
 onRule p rs = p rs . N.narrowedRule
 
-narrowWith,narrowOn :: (Monad m, Applicative m, Alternative m) => (Problem -> Rule -> Bool) -> Problem -> m Problem
+narrowWith,narrowOn :: (Problem -> Rule -> Bool) -> Problem :~> Problem
 narrowWith = narrow . withRule
-narrowOn = narrow . withRule
+narrowOn = narrow . onRule
 
-
-provided :: MonadPlus m => (Problem -> m Problem) -> (Problem -> Problem -> Bool) -> Problem -> m Problem
-provided t f p = do
-  p' <- t p
-  guard (f p p')
-  return p'
 
 -- provided :: MonadPlus m => (Problem -> m Problem) -> (Problem -> Bool) -> Problem -> m Problem
 -- provided t f p = do
@@ -176,32 +182,37 @@ provided t f p = do
 --   >=> try uncurryRules >=> try usableRules >=> try neededRules >=> traceProblem "uncurried"
 --   >=> exhaustive (narrow sizeDecreasing >=> traceProblem "size-decreasing narrowing")
 
-type Strat = Strategy Maybe Problem Problem
+ur :: Problem :~> Problem
+ur = usableRules >=> logMsg "USABLE"
 
-n1 :: Strat
+cfaur :: Problem :~> Problem
+cfaur =
+  cfa >=> logMsg "CFA"
+  >=> try ur
+  
+n1 :: Problem :~> Problem
 n1 =
-  try (exhaustive (narrowWith caseRule))
-  >=> try (exhaustive (narrowWith fixRule))
-  >=> try usableRules
+  try (exhaustive (narrowWith caseRule >=> logMsg "case"))
+  >=> try (exhaustive (narrowWith fixRule >=> logMsg "fix"))
+  >=> try ur
 
-t1 :: Strat
-t1 = try n1 >=> cfa >=> uncurryRules >=> try usableRules
-  
-  
-n2 :: Strat
-n2 =
-  narrow (complexityPreserving
-          && (not branching
+n2 :: Problem :~> Problem
+n2 = exhaustive $ 
+  narrow (not branching
               || sizeDecreasing
-              || withRule leafRule))
-  >=> try usableRules
-  
-t2 :: Strat
-t2 = exhaustive n2 >=> cfa >=> try t2
+              || withRule leafRule)
+  >=> logMsg "decreasing"
 
-simplify :: Strat
-simplify =
-  traced "initial" >=> t1 >=> try t2
+t1 :: Problem :~> Problem
+t1 = try cfaur >=> exhaustive (n2 >=> try cfaur)
+
+toTrs :: Problem :~> Problem
+toTrs =
+  uncurryRules >=> logMsg "UNCURRY"
+  >=> try cfaur
+
+simplify :: Problem :~> Problem
+simplify = try n1 >=> try t1 >=> toTrs >=> try t1
   
   -- >=> try (cfa >=> traced "CFA")
   -- >=> exhaustive ((narrow (withRule caseRule) >=> traced "case narrowing")
@@ -281,8 +292,8 @@ modifyState f = do
 
 load' :: FilePath -> IO ()
 load' fn = do
-  mp <- pcfToTrs <$> expressionFromArgs fn []
-  case mp of
+  e <- expressionFromArgs fn []
+  case run pcfToTrs e of
    Nothing -> putDocLn "Loading of problem failed."
    Just p -> writeIORef stateRef (STATE (Loaded p) [] (Just p))
 
@@ -312,15 +323,20 @@ save fn = withProblemM (writeDocFile fn . Problem.prettyWST)
 
 dotCallGraph :: Maybe (Problem -> Rule -> Bool) -> IO (DotGraph Int)
 dotCallGraph hl = withProblem mkGraph where
-  mkGraph p = GV.digraph' $ do
-       mapM_ mkNode rs
-       mapM_ mkEdges rs 
-    where 
+  mkGraph p = 
+    GV.digraph' (mapM_ mkSCC (zip [0..] sccs))
+    where
+      sccs = map flattenSCC (stronglyConnCompR (Problem.toAssocList p))
       rs = Problem.rulesEnum p
       selectedNodes = [ i | (i,r) <- rs, maybe False (\ hl' -> hl' p r) hl]
       usableNodes = Problem.usableIdxs p selectedNodes
       reachSelectedNodes = [ j | (j,_) <- rs, let us = Problem.usableIdxs p [j], any (`elem` us) selectedNodes ]
       highlightedNodes = selectedNodes ++ usableNodes
+
+      mkSCC (k,scc) =
+        GV.cluster (GV.Str $ pack $ "scc_" ++ show k) $
+        forM scc $ \ (rl,i,ss) -> mkNode (i,rl) >> mapM (mkEdge i) ss
+                       
       mkNode (i,r) = GV.node i nAttribs
         where nAttribs =
                 shapeFor (ATRS.headSymbol (R.lhs r))
@@ -332,24 +348,25 @@ dotCallGraph hl = withProblem mkGraph where
                 | Problem.isMainSym f = [GVattribsc.Shape GVattribs.House]
               shapeFor _ = []
               highlighting
-                | i `elem` selectedNodes = [GVattribs.style GVattribs.bold
-                                           , GVattribs.fontColor GVSVG.RoyalBlue
-                                           , GVattribs.fillColor GVSVG.SkyBlue
+                | i `elem` selectedNodes = [ GVattribs.fontColor GVSVG.White
+                                           , GVattribs.fillColor GVSVG.RoyalBlue
+                                           , GVattribs.style GVattribs.filled
                                            , GVattribs.color GVSVG.RoyalBlue]
                 | i `elem` usableNodes = [GVattribs.color GVSVG.RoyalBlue
                                          , GVattribs.fontColor GVSVG.RoyalBlue]
                 | isJust hl = [GVattribs.color GVSVG.Gray]
                 | otherwise = []
                               
-      mkEdges (i,_) = mapM_ (\ j -> GV.edge i j (eAttribs j)) (Problem.cgSuccs p i)
-        where eAttribs j
+      mkEdge i j = GV.edge i j eAttribs
+        where eAttribs
                 | i `elem` highlightedNodes && j `elem` highlightedNodes =
                     [GVattribs.color GVSVG.RoyalBlue] ++ [ GVattribs.style GVattribs.dashed | j `notElem` reachSelectedNodes]
                 | otherwise = []
      -- legendM = GV.graphAttrs [GVattribs.toLabel (concatMap (\ (i,r) -> show i ++ ": " ++ showRule r) rs) ]
-      showRule (R.Rule lhs rhs) = showTerm lhs ++ " -> " ++ showTerm rhs
+      showRule (R.Rule lhs rhs) =
+        PP.displayS (PP.renderSmart 1.0 80 (ppTerm lhs PP.<+> PP.text "->" PP.<+> ppTerm rhs)) []
         where
-          showTerm t = [c | c <- show (T.prettyTerm PP.pretty ppVar t), c /= '\n', c /= ' ']
+          ppTerm = T.prettyTerm PP.pretty ppVar
           ppVar i = PP.text "x" PP.<> PP.int i
 
 saveCG :: Maybe (Problem -> Rule -> Bool) -> FilePath -> IO ()
@@ -385,7 +402,7 @@ undo = do undone <- undo'
             then printState
             else putDocLn (PP.text "Nothing to undo")
 
-apply :: (Problem -> Maybe Problem) -> IO ()
+apply :: (Problem :~> Problem) -> IO ()
 apply m = do 
   st <- getState  
   case st of
@@ -394,9 +411,10 @@ apply m = do
                        , PP.text ""
                        , PP.text "Use 'load <filename>' to load a new problem."])
    Loaded p ->
-     case m p of
+     case run m p of
       Nothing -> putDocLn "Transformation inapplicable."
       Just r -> putState (Loaded r) >> printState
+
 
 
 -- Main
@@ -428,7 +446,7 @@ main = do
   where
     transform doSimp fname as = do
       e <- expressionFromArgs fname as  
-      case tr e of
+      case run tr e of
        Just prob -> putDocLn (Problem.prettyWST prob)
        Nothing -> do
          putErrLn "the program cannot be transformed"
@@ -439,6 +457,8 @@ main = do
 
 
 
+-- TODO
+s = save "/home/zini/op.trs" >> saveCG Nothing "/home/zini/op.svg"
+a p = apply p >> s
+sel p = save "/home/zini/op.trs" >> saveCG (Just p) "/home/zini/op.svg" >> void (select p)
 
--- rulesFromFile fname = do
---   

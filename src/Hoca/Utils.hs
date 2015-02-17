@@ -8,6 +8,7 @@ import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Debug.Trace (trace)
 import Control.Monad.State (MonadState,State,StateT,evalState,evalStateT,get,modify)
 import Data.Monoid (Monoid(..))
+import Control.Monad ((>=>))
 import qualified Data.Rewriting.Rule as R
 
 
@@ -18,6 +19,9 @@ orM (mb:ms) = do {b <- mb; if b then return b else orM ms}
 andM :: Monad m => [m Bool] -> m Bool
 andM [] = return True
 andM (mb:ms) = do {b <- mb; if b then andM ms else return False}
+
+composeM :: Monad m => [a -> m a] -> a -> m a 
+composeM = foldr (>=>) return
 
 prod :: [[a]] -> [[a]]
 prod [] = [[]]

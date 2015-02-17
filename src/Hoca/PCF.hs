@@ -25,6 +25,7 @@ module Hoca.PCF
 import           Control.Applicative ((<$>), Applicative(..), Alternative(..))
 import qualified Data.Set as Set
 import Hoca.Strategy
+import Hoca.Utils (composeM)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import qualified Data.IntMap as IntMap
 import Data.Maybe (isJust)
@@ -102,7 +103,7 @@ match e f = go 0 e f IntMap.empty where
          _ -> Nothing
   go k (Con _ g1 ss) (Con _ g2 ts) sub
     | g1 /= g2 || length ss /= length ts = Nothing
-    | otherwise = sequenceS (zipWith (go k) ss ts) sub
+    | otherwise = composeM (zipWith (go k) ss ts) sub
   go _ Bot Bot sub = Just sub
   go k (App _ s1 s2) (App _ t1 t2) sub =
    go k s1 t1 sub >>= go k s2 t2
@@ -111,10 +112,10 @@ match e f = go 0 e f IntMap.empty where
       srt = sortBy (compare `on` fst)
       (cs',ct') = (srt cs, srt ct)
     guard (map fst cs' == map fst ct')    
-    go k s t sub >>= sequenceS (zipWith (go k) (map snd cs') (map snd ct'))
+    go k s t sub >>= composeM (zipWith (go k) (map snd cs') (map snd ct'))
   go k (Fix i ss) (Fix j ts) sub = do
     guard (i == j)
-    sequenceS (zipWith (go k) ss ts) sub
+    composeM (zipWith (go k) ss ts) sub
   go k (Abs _ _ s) (Abs _ _ t) sub = go (k+1) s t sub
   go _ _ _ _ = Nothing
   
@@ -223,7 +224,7 @@ ctxtClosure stp e = ctxt e <|> stp e
     
 
 nf :: (Monad m, Choice m) => (Exp l -> m (Exp l)) -> Exp l -> m (Exp l)
-nf = exhaustive
+nf rel a = (rel a >>= nf rel) <||> return a
 
 cbvCtxtClosure :: (Alternative m, Monad m, Choice m) => (Exp l -> m (Exp l)) -> Exp l -> m (Exp l)
 cbvCtxtClosure stp e = ctxt e <||> stp e

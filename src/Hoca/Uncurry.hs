@@ -44,7 +44,7 @@ uncurried rs =
      ren = R.map (T.fold var fun)
      var (Left v) = T.Var (v * 2 + 1)
      var (Right v) = T.Var (v * 2)
-     fun (ATRS.Sym (f,i)) as = ATRS.fun (Problem.Labeled i f) as
+     fun (ATRS.Sym (f,i)) as = ATRS.fun (Problem.Labeled (Problem.LInt i) f) as
      fun _ _ = error "uncurried: TRS contains application symbol"
      
 -- etaSaturate :: (Monad m, Alternative m) => [ATRS.Rule Problem.Symbol Int] -> m [ATRS.Rule Problem.Symbol Int]

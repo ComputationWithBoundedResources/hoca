@@ -24,11 +24,12 @@ executable pcf2trs
         ansi-wl-pprint >= 0.6 && < 0.7,
         term-rewriting >= 0.1 && < 0.2,
         graphviz >= 2999.17.0.0,
+        containers >= 0.5 && < 0.6,
         text >= 1.1,
         multiset >= 0.2 && < 0.3,
         hoca == 0.1
  extensions:
-        ViewPatterns
+        TypeOperators
  ghc-options:       
    -threaded -Wall -O2 -fno-warn-orphans -fno-spec-constr-count -rtsopts -with-rtsopts=-N
 
