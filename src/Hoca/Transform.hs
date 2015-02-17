@@ -4,6 +4,7 @@ module Hoca.Transform (
   pcfToTrs
   -- * Simplifications
   , usableRules
+  , neededRules
   , uncurryRules
   , etaSaturateRules
   , compress
@@ -132,7 +133,7 @@ rewrite sensible = narrow sensible' where
   sensible' rs nr = all (\ nw -> R.lhs (N.narrowedRule nr) `T.isVariantOf` R.lhs (N.narrowing nw)) (N.narrowings nr)
                     && sensible rs nr
   
-usableRules :: (Ord v) => Problem Symbol v :~> Problem Symbol v
+usableRules :: Ord v => Problem Symbol v :~> Problem Symbol v
 usableRules p
   | Problem.size p' < Problem.size p = pure p'
   | otherwise = empty
@@ -141,6 +142,15 @@ usableRules p
     rs = Problem.rules p
     r1 `edgeP` r2 = maybe False (elem r2) (lookup r1 ss)
     ss = [(r,UR.calls (R.rhs r) rs) | r <- rs ]
+
+neededRules :: Ord v => Problem Symbol v :~> Problem Symbol v
+neededRules p = Problem.replaceRulesM (\ _ rl _ -> if needed rl then empty else pure []) p where
+  needed rl =
+    case ATRS.headSymbol (R.lhs rl) of
+     Just (l@Lambda {}) -> l `elem` createdFuns
+     Just (l@Fix {}) -> l `elem` createdFuns
+     _ -> True
+  createdFuns = foldr ATRS.funsDL [] (RS.rhss (Problem.rules p))
 
 dfaInstantiate :: (ATRS.TypedRule Symbol Int -> Int -> [ATRS.Term Symbol ()] -> Bool) -> Problem Symbol Int :~> Problem Symbol Int
 dfaInstantiate refineP prob = 
