@@ -147,7 +147,7 @@ complete prog = exec (fixM makeClosure) where
         unless r (modify (S.insert t))
         return r
 
-refinements :: (PP.Pretty x, PP.Pretty v, PP.Pretty f, Ord v, Ord f, Ord x) => [(Int, R.Rule f v)] -> DFAGrammar f v x -> Int -> (v -> [R.Term f ()] -> Bool) -> ([R.Rule f Int], [Int])
+refinements :: (Ord v, Ord f, Ord x) => [(Int, R.Rule f v)] -> DFAGrammar f v x -> Int -> (v -> [R.Term f ()] -> Bool) -> ([R.Rule f Int], [Int])
 refinements prog initial = 
   \ i refineP ->
    case L.lookup i prog of
@@ -162,7 +162,7 @@ refinements prog initial =
             | otherwise = [T.Var ()]
             where assigns = L.nub (map unliftTerm (reducts (V v i)))
   where
-    tg = tracePretty' (complete prog initial)
+    tg = complete prog initial
     reducts s =
       case produces' tg s of 
        [] -> [NonTerminal s]
