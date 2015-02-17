@@ -53,6 +53,7 @@ instance PP.Pretty Symbol where
   pretty (Fix l) = PP.text "rec" PP.<> PP.brackets (PP.pretty l)
   pretty (Bot l) = PP.text "bot" PP.<> PP.brackets (PP.pretty l)      
   pretty Main = PP.text "main"
+  pretty (Labeled (LInt 0) s) = PP.pretty s
   pretty (Labeled i s) = PP.pretty s PP.<> PP.brackets (PP.pretty i)
 
 
