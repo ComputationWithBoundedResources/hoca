@@ -193,13 +193,13 @@ cfaur =
 n1 :: Problem :~> Problem
 n1 =
   try (exhaustive (narrowWith caseRule >=> logMsg "case"))
+  >=> try (exhaustive (rewrite (withRule lambdaRule) >=> logMsg "lambda"))  
   >=> try (exhaustive (narrowWith fixRule >=> logMsg "fix"))
   >=> try ur
 
 n2 :: Problem :~> Problem
 n2 = exhaustive $ 
-  narrow (not branching
-              || sizeDecreasing
+  narrow (sizeDecreasing
               || withRule leafRule)
   >=> logMsg "decreasing"
 
@@ -212,7 +212,7 @@ toTrs =
   >=> try cfaur
 
 simplify :: Problem :~> Problem
-simplify = try n1 >=> try t1 >=> toTrs >=> try t1
+simplify = try n1 >=> try t1 >=> toTrs >=> try t1 >=> compress
   
   -- >=> try (cfa >=> traced "CFA")
   -- >=> exhaustive ((narrow (withRule caseRule) >=> traced "case narrowing")
