@@ -5,9 +5,10 @@
 (VAR
     x2 x1)
 (RULES
-    fold_f_z[1](Nil()) -> 0()
-    fold_f_z[1](Cons(x2,x1)) -> plus_x[1](x2,fold_f_z[1](x1))
+    fold_f_z[1](rec[plus_0](),0(),Nil()) -> 0()
+    fold_f_z[1](rec[plus_0](),0(),Cons(x2,x1)) ->
+      plus_x[1](x2,fold_f_z[1](rec[plus_0](),0(),x1))
     plus_x[1](0(),x1) -> x1
     plus_x[1](S(x2),x1) -> S(plus_x[1](x2,x1))
-    main(x1) -> fold_f_z[1](x1))
+    main(x1) -> fold_f_z[1](rec[plus_0](),0(),x1))
 

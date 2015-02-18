@@ -5,14 +5,13 @@
 (VAR
     x2 x1 x4 x3)
 (RULES
-    comp_f_g[1](id(),cons_x(x2),x1) -> Cons(x2,x1)
-    comp_f_g[1](comp_f_g(x4,cons_x(x3)),cons_x(x2),x1) -> comp_f_g[1](x4
-                                                                     ,cons_x(x3)
+    comp_f_g[1](walk_1(),walk_4(x2),x1) -> Cons(x2,x1)
+    comp_f_g[1](comp_f_g(x4,walk_4(x3)),walk_4(x2),x1) -> comp_f_g[1](x4
+                                                                     ,walk_4(x3)
                                                                      ,Cons(x2
                                                                           ,x1))
-    walk[1](Nil()) -> id()
-    walk[2](Nil()) -> Nil()
-    walk[1](Cons(x2,x1)) -> comp_f_g(walk[1](x1),cons_x(x2))
-    walk[2](Cons(x2,x1)) -> comp_f_g[1](walk[1](x1),cons_x(x2),Nil())
-    main(x1) -> walk[2](x1))
+    walk[1](Nil()) -> walk_1()
+    walk[1](Cons(x2,x1)) -> comp_f_g(walk[1](x1),walk_4(x2))
+    main(Nil()) -> Nil()
+    main(Cons(x2,x1)) -> comp_f_g[1](walk[1](x1),walk_4(x2),Nil()))
 

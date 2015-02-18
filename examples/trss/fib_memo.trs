@@ -6,7 +6,6 @@
     x2 x1 x3 x4)
 (RULES
     evalState_cond(Pair(x2,x1)) -> x1
-    liftM2_1[2](x3,x2,x1) -> Pair(x1,plus_x[1](x3,x2))
     plus_x[1](0(),x1) -> x1
     plus_x[1](S(x2),x1) -> S(plus_x[1](x2,x1))
     find_cond_2(True(),x3,x2,x1) -> Some(x1)
@@ -20,34 +19,36 @@
                                                        ,x4
                                                        ,x1
                                                        ,x2)
-    liftM_0[2](find_key(x3),x2,x1) -> Pair(x1,find_key[1](x3,x2))
+    bind_cond(Pair(x1,None()),memoM_0(rec[fibM_0](),0())) ->
+      Pair(Cons(Pair(0(),S(0())),x1),S(0()))
+    bind_cond(Pair(x1,None()),memoM_0(rec[fibM_0](),S(0()))) ->
+      Pair(Cons(Pair(S(0()),S(0())),x1),S(0()))
+    bind_cond(Pair(x2,None()),memoM_0(rec[fibM_0](),S(S(x1)))) ->
+      bind_cond(bind_cond(bind_cond(Pair(x2,find_key[1](S(x1),x2))
+                                   ,memoM_0(rec[fibM_0](),S(x1)))
+                         ,liftM2_0(rec[plus_0]()
+                                  ,bind_m_f(bind_m_f(get()
+                                                    ,liftM_0(find_key(x1)))
+                                           ,memoM_0(rec[fibM_0](),x1))))
+               ,memoM_1(S(S(x1))))
+    bind_cond(Pair(x3,Some(x2)),memoM_0(rec[fibM_0](),x1)) -> Pair(x3,x2)
+    bind_cond(Pair(x4,x3)
+             ,liftM2_0(rec[plus_0]()
+                      ,bind_m_f(bind_m_f(get(),liftM_0(find_key(x2)))
+                               ,memoM_0(rec[fibM_0](),x1)))) ->
+      bind_cond(bind_cond(Pair(x4,find_key[1](x2,x4)),memoM_0(rec[fibM_0](),x1))
+               ,liftM2_1(rec[plus_0](),x3))
     bind_cond(Pair(x3,x2),memoM_1(S(S(x1)))) -> Pair(Cons(Pair(S(S(x1)),x2),x3)
                                                     ,x2)
-    bind_cond(Pair(x1,None()),memoM_0(0())) -> Pair(Cons(Pair(0(),S(0())),x1)
-                                                   ,S(0()))
-    bind_cond(Pair(x1,None()),memoM_0(S(0()))) -> Pair(Cons(Pair(S(0()),S(0()))
-                                                           ,x1)
-                                                      ,S(0()))
-    bind_cond(Pair(x2,None()),memoM_0(S(S(x1)))) ->
-      bind_cond(bind_cond(bind_cond(liftM_0[2](find_key(S(x1)),x2,x2)
-                                   ,memoM_0(S(x1)))
-                         ,liftM2_0(bind_m_f(bind_m_f(get()
-                                                    ,liftM_0(find_key(x1)))
-                                           ,memoM_0(x1))))
-               ,memoM_1(S(S(x1))))
-    bind_cond(Pair(x3,Some(x2)),memoM_0(x1)) -> Pair(x3,x2)
-    bind_cond(Pair(x3,x2),liftM2_1(x1)) -> liftM2_1[2](x1,x2,x3)
-    bind_cond(Pair(x4,x3)
-             ,liftM2_0(bind_m_f(bind_m_f(get(),liftM_0(find_key(x2)))
-                               ,memoM_0(x1)))) ->
-      bind_cond(bind_cond(liftM_0[2](find_key(x2),x4,x4),memoM_0(x1))
-               ,liftM2_1(x3))
+    bind_cond(Pair(x3,x2),liftM2_1(rec[plus_0](),x1)) -> Pair(x3
+                                                             ,plus_x[1](x1,x2))
     main(0()) -> S(0())
     main(S(0())) -> S(0())
     main(S(S(x1))) ->
-      evalState_cond(bind_cond(bind_cond(liftM_0[2](find_key(S(x1)),Nil(),Nil())
-                                        ,memoM_0(S(x1)))
-                              ,liftM2_0(bind_m_f(bind_m_f(get()
+      evalState_cond(bind_cond(bind_cond(Pair(Nil(),None())
+                                        ,memoM_0(rec[fibM_0](),S(x1)))
+                              ,liftM2_0(rec[plus_0]()
+                                       ,bind_m_f(bind_m_f(get()
                                                          ,liftM_0(find_key(x1)))
-                                                ,memoM_0(x1))))))
+                                                ,memoM_0(rec[fibM_0](),x1))))))
 

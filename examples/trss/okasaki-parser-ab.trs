@@ -8,7 +8,7 @@
     main(Nil()) -> ParseFail(0())
     main(Cons(A(),Nil())) -> ParseFail(S(0()))
     main(Cons(A(),Cons(A(),x1))) -> ParseFail(S(S(0())))
-    main(Cons(A(),Cons(B(),Nil()))) -> ParseSuccess()
+    main(Cons(A(),Cons(B(),Nil()))) -> ParseSuccess(Unit(),Nil())
     main(Cons(A(),Cons(B(),Cons(x2,x1)))) -> ParseFail(S(S(0())))
     main(Cons(A(),Cons(C(),x1))) -> ParseFail(S(S(0())))
     main(Cons(B(),x1)) -> ParseFail(S(0()))

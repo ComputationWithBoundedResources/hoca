@@ -3,9 +3,10 @@
     INNERMOST)
 
 (VAR
-    x2 x1 x5 x4 x3 x6 x7)
+    x3 x2 x1 x5 x4 x6 x7)
 (RULES
-    rpm_3[1](f_0(rec[x_0](f(x2))),x1) -> Leaf(f_0[1](rec[x_0](f(x2))))
+    rpm_3[1](f_0(rec[x_0](f(Node(x3,x2)))),x1) ->
+      Leaf(rpm_9[1](f_0(rec[x_0](f(Node(x3,x2)))),x3,x2,bot[11]()))
     rpm_8[1](f_0(rec[x_0](f(Node(x5,x4)))),Leaf(x3),Leaf(x2),x1) ->
       Node(rpm_3[1](f_0(rec[x_0](f(Node(x5,x4)))),bot[3]())
           ,rpm_3[1](f_0(rec[x_0](f(Node(x5,x4)))),bot[5]()))
@@ -30,12 +31,7 @@
     rpm_9[1](f_0(rec[x_0](f(Node(x7,x6)))),Node(x5,x4),Node(x3,x2),x1) ->
       min_a[1](rpm_9[1](f_0(rec[x_0](f(Node(x7,x6)))),x5,x4,bot[7]())
               ,rpm_9[1](f_0(rec[x_0](f(Node(x7,x6)))),x3,x2,bot[9]()))
-    f_0[1](rec[x_0](f(Leaf(x1)))) -> x1
-    f_0[1](rec[x_0](f(Node(x2,x1)))) -> rpm_9[1](f_0(rec[x_0](f(Node(x2,x1))))
-                                                ,x2
-                                                ,x1
-                                                ,bot[11]())
-    main(Leaf(x1)) -> rpm_3[1](f_0(rec[x_0](f(Leaf(x1)))),bot[13]())
+    main(Leaf(x1)) -> Leaf(x1)
     main(Node(x2,x1)) -> rpm_8[1](f_0(rec[x_0](f(Node(x2,x1))))
                                  ,x2
                                  ,x1

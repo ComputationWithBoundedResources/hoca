@@ -9,112 +9,193 @@
     max_x[1](S(x1),0()) -> S(x1)
     max_x[1](S(x2),S(x1)) -> S(max_x[1](x2,x1))
     alt_fail_0[1](runParser_1(),x2,x1) -> ParseFail(max_x[1](x2,x1))
-    alt_fail_0[1](alt_fail(x6,x5,x4,x3),x2,x1) -> alt_fail[1](x6
-                                                             ,x5
-                                                             ,x4
-                                                             ,x3
-                                                             ,max_x[1](x2,x1))
-    alt_fail[1](return_x(bind3_p_f(pas_2(x5))),x4,x3,x2,x1) ->
-      any_anonymous_2[1](bind_1(filter_0(eqChar_x(B())),bind3_1(pas_2(x5)))
-                        ,alt_fail_0(x4,x1)
-                        ,x3
-                        ,x2)
-    alt_fail[1](return_x(eos()),x3,Nil(),x2,x1) -> ParseSuccess()
-    alt_fail[1](return_x(eos()),x5,Cons(x4,x3),x2,x1) -> alt_fail_0[1](x5,x1,x2)
-    alt_anonymous_2[1](bind_p_f(bind_p_f(any(),filter_0(eqChar_x(A())))
-                               ,pas_1(bind3_p_f(pas_2(x5))))
-                      ,x4
+    alt_fail_0[1](alt_fail(x6,bind2_1(promote_0(),runParser_0()),x5,x4,x3)
+                 ,x2
+                 ,x1) -> alt_fail[1](x6
+                                    ,bind2_1(promote_0(),runParser_0())
+                                    ,x5
+                                    ,x4
+                                    ,x3
+                                    ,max_x[1](x2,x1))
+    alt_fail[1](return_x(eos())
+               ,bind2_1(promote_0(),runParser_0())
+               ,x3
+               ,Nil()
+               ,x2
+               ,x1) -> ParseSuccess(Unit(),Nil())
+    alt_fail[1](return_x(eos())
+               ,bind2_1(promote_0(),runParser_0())
+               ,x5
+               ,Cons(x4,x3)
+               ,x2
+               ,x1) -> alt_fail_0[1](x5,x1,x2)
+    alt_fail[1](return_x(bind3_p_f(bind_p_f(any(),filter_0(eqChar_x(B())))
+                                  ,pas_2(x5)))
+               ,bind2_1(promote_0(),runParser_0())
+               ,x4
+               ,x3
+               ,x2
+               ,x1) -> any_anonymous_2[1](bind_1(filter_0(eqChar_x(B()))
+                                                ,bind3_1(pas_2(x5)
+                                                        ,runParser_0()))
+                                         ,alt_fail_0(x4,x1)
+                                         ,x3
+                                         ,x2)
+    alt_anonymous_2[1](bind_p_f(bind_p_f(any()
+                                        ,filter_0(eqChar_x(A())))
+                               ,pas_1(bind3_p_f(bind_p_f(any()
+                                                        ,filter_0(eqChar_x(B())))
+                                               ,pas_2(x5))))
+                      ,return_x(bind3_p_f(bind_p_f(any()
+                                                  ,filter_0(eqChar_x(B())))
+                                         ,pas_2(x4)))
+                      ,bind2_1(promote_0(),runParser_0())
                       ,x3
                       ,x2
                       ,S(x1)) ->
       any_anonymous_2[1](bind_1(filter_0(eqChar_x(A()))
-                               ,bind_1(pas_1(bind3_p_f(pas_2(x5))),bind2_1()))
-                        ,alt_fail(x4,x3,x2,S(x1))
+                               ,bind_1(pas_1(bind3_p_f(bind_p_f(any()
+                                                               ,filter_0(eqChar_x(B())))
+                                                      ,pas_2(x5)))
+                                      ,bind2_1(promote_0(),runParser_0())))
+                        ,alt_fail(return_x(bind3_p_f(bind_p_f(any()
+                                                             ,filter_0(eqChar_x(B())))
+                                                    ,pas_2(x4)))
+                                 ,bind2_1(promote_0(),runParser_0())
+                                 ,x3
+                                 ,x2
+                                 ,S(x1))
                         ,x2
                         ,S(x1))
-    alt_anonymous_2[1](bind_p_f(bind_p_f(any(),filter_0(eqChar_x(A())))
-                               ,pas_1(eos()))
-                      ,return_x(eos())
-                      ,runParser_1()
-                      ,x1
-                      ,0()) -> any_anonymous_2[1](bind_1(filter_0(eqChar_x(A()))
-                                                        ,bind_1(pas_1(eos())
-                                                               ,bind2_1()))
-                                                 ,alt_fail(return_x(eos())
-                                                          ,runParser_1()
-                                                          ,x1
-                                                          ,0())
-                                                 ,x1
-                                                 ,0())
-    fail_anonymous_2[1](alt_fail(x5,x4,x3,x2),S(x1)) -> alt_fail[1](x5
-                                                                   ,x4
-                                                                   ,x3
-                                                                   ,x2
-                                                                   ,S(x1))
-    any_anonymous_2[1](bind_1(filter_0(eqChar_x(B())),bind3_1(pas_2(x4)))
+    fail_anonymous_2[1](alt_fail(x5,bind2_1(promote_0(),runParser_0()),x4,x3,x2)
+                       ,S(x1)) -> alt_fail[1](x5
+                                             ,bind2_1(promote_0(),runParser_0())
+                                             ,x4
+                                             ,x3
+                                             ,x2
+                                             ,S(x1))
+    any_anonymous_2[1](bind_1(filter_0(eqChar_x(B()))
+                             ,bind3_1(pas_2(x4),runParser_0()))
                       ,alt_fail_0(x3,x2)
                       ,Nil()
                       ,x1) -> alt_fail_0[1](x3,x2,x1)
     any_anonymous_2[1](bind_1(filter_0(eqChar_x(A())),x6)
-                      ,alt_fail(x5,x4,x3,x2)
+                      ,alt_fail(x5,bind2_1(promote_0(),runParser_0()),x4,x3,x2)
                       ,Nil()
-                      ,x1) -> alt_fail[1](x5,x4,x3,x2,x1)
-    any_anonymous_2[1](bind_1(filter_0(eqChar_x(B())),bind3_1(pas_2(x5)))
+                      ,x1) -> alt_fail[1](x5
+                                         ,bind2_1(promote_0(),runParser_0())
+                                         ,x4
+                                         ,x3
+                                         ,x2
+                                         ,x1)
+    any_anonymous_2[1](bind_1(filter_0(eqChar_x(B()))
+                             ,bind3_1(pas_2(x5),runParser_0()))
                       ,alt_fail_0(x4,x3)
                       ,Cons(A(),x2)
                       ,x1) -> alt_fail_0[1](x4,x3,S(x1))
     any_anonymous_2[1](bind_1(filter_0(eqChar_x(B()))
-                             ,bind3_1(pas_2(bind3_p_f(pas_2(x5)))))
+                             ,bind3_1(pas_2(bind3_p_f(bind_p_f(any()
+                                                              ,filter_0(eqChar_x(B())))
+                                                     ,pas_2(x5)))
+                                     ,runParser_0()))
                       ,alt_fail_0(x4,x3)
                       ,Cons(B(),x2)
                       ,x1) -> any_anonymous_2[1](bind_1(filter_0(eqChar_x(B()))
-                                                       ,bind3_1(pas_2(x5)))
+                                                       ,bind3_1(pas_2(x5)
+                                                               ,runParser_0()))
                                                 ,alt_fail_0(x4,x3)
                                                 ,x2
                                                 ,S(x1))
-    any_anonymous_2[1](bind_1(filter_0(eqChar_x(B())),bind3_1(pas_2(eos())))
+    any_anonymous_2[1](bind_1(filter_0(eqChar_x(B()))
+                             ,bind3_1(pas_2(eos()),runParser_0()))
                       ,alt_fail_0(x3,x2)
                       ,Cons(B(),Nil())
-                      ,x1) -> ParseSuccess()
-    any_anonymous_2[1](bind_1(filter_0(eqChar_x(B())),bind3_1(pas_2(eos())))
+                      ,x1) -> ParseSuccess(Unit(),Nil())
+    any_anonymous_2[1](bind_1(filter_0(eqChar_x(B()))
+                             ,bind3_1(pas_2(eos()),runParser_0()))
                       ,alt_fail_0(x5,x4)
                       ,Cons(B(),Cons(x3,x2))
                       ,x1) -> alt_fail_0[1](x5,x4,S(x1))
-    any_anonymous_2[1](bind_1(filter_0(eqChar_x(B())),bind3_1(pas_2(x5)))
+    any_anonymous_2[1](bind_1(filter_0(eqChar_x(B()))
+                             ,bind3_1(pas_2(x5),runParser_0()))
                       ,alt_fail_0(x4,x3)
                       ,Cons(C(),x2)
                       ,x1) -> alt_fail_0[1](x4,x3,S(x1))
     any_anonymous_2[1](bind_1(filter_0(eqChar_x(A()))
-                             ,bind_1(pas_1(bind3_p_f(pas_2(x7))),bind2_1()))
-                      ,alt_fail(x6,x5,x4,S(x3))
+                             ,bind_1(pas_1(bind3_p_f(bind_p_f(any()
+                                                             ,filter_0(eqChar_x(B())))
+                                                    ,pas_2(x7)))
+                                    ,bind2_1(promote_0(),runParser_0())))
+                      ,alt_fail(return_x(bind3_p_f(bind_p_f(any()
+                                                           ,filter_0(eqChar_x(B())))
+                                                  ,pas_2(x6)))
+                               ,bind2_1(promote_0(),runParser_0())
+                               ,x5
+                               ,x4
+                               ,S(x3))
                       ,Cons(A(),x2)
                       ,S(x1)) ->
-      alt_anonymous_2[1](bind_p_f(bind_p_f(any(),filter_0(eqChar_x(A())))
-                                 ,pas_1(bind3_p_f(pas_2(bind3_p_f(pas_2(x7))))))
-                        ,return_x(bind3_p_f(pas_2(bind3_p_f(pas_2(x7)))))
-                        ,alt_fail(x6,x5,x4,S(x3))
+      alt_anonymous_2[1](bind_p_f(bind_p_f(any()
+                                          ,filter_0(eqChar_x(A())))
+                                 ,pas_1(bind3_p_f(bind_p_f(any()
+                                                          ,filter_0(eqChar_x(B())))
+                                                 ,pas_2(bind3_p_f(bind_p_f(any()
+                                                                          ,filter_0(eqChar_x(B())))
+                                                                 ,pas_2(x7))))))
+                        ,return_x(bind3_p_f(bind_p_f(any()
+                                                    ,filter_0(eqChar_x(B())))
+                                           ,pas_2(bind3_p_f(bind_p_f(any()
+                                                                    ,filter_0(eqChar_x(B())))
+                                                           ,pas_2(x7)))))
+                        ,bind2_1(promote_0(),runParser_0())
+                        ,alt_fail(return_x(bind3_p_f(bind_p_f(any()
+                                                             ,filter_0(eqChar_x(B())))
+                                                    ,pas_2(x6)))
+                                 ,bind2_1(promote_0(),runParser_0())
+                                 ,x5
+                                 ,x4
+                                 ,S(x3))
                         ,x2
                         ,S(S(x1)))
     any_anonymous_2[1](bind_1(filter_0(eqChar_x(A()))
-                             ,bind_1(pas_1(eos()),bind2_1()))
-                      ,alt_fail(return_x(eos()),runParser_1(),x2,0())
+                             ,bind_1(pas_1(eos())
+                                    ,bind2_1(promote_0(),runParser_0())))
+                      ,alt_fail(return_x(eos())
+                               ,bind2_1(promote_0(),runParser_0())
+                               ,runParser_1()
+                               ,x2
+                               ,0())
                       ,Cons(A(),x1)
                       ,0()) ->
-      alt_anonymous_2[1](bind_p_f(bind_p_f(any(),filter_0(eqChar_x(A())))
-                                 ,pas_1(bind3_p_f(pas_2(eos()))))
-                        ,return_x(bind3_p_f(pas_2(eos())))
-                        ,alt_fail(return_x(eos()),runParser_1(),x2,0())
+      alt_anonymous_2[1](bind_p_f(bind_p_f(any()
+                                          ,filter_0(eqChar_x(A())))
+                                 ,pas_1(bind3_p_f(bind_p_f(any()
+                                                          ,filter_0(eqChar_x(B())))
+                                                 ,pas_2(eos()))))
+                        ,return_x(bind3_p_f(bind_p_f(any()
+                                                    ,filter_0(eqChar_x(B())))
+                                           ,pas_2(eos())))
+                        ,bind2_1(promote_0(),runParser_0())
+                        ,alt_fail(return_x(eos())
+                                 ,bind2_1(promote_0(),runParser_0())
+                                 ,runParser_1()
+                                 ,x2
+                                 ,0())
                         ,x1
                         ,S(0()))
     any_anonymous_2[1](bind_1(filter_0(eqChar_x(A())),x4),x3,Cons(B(),x2),x1) ->
       fail_anonymous_2[1](x3,S(x1))
     any_anonymous_2[1](bind_1(filter_0(eqChar_x(A())),x4),x3,Cons(C(),x2),x1) ->
       fail_anonymous_2[1](x3,S(x1))
-    main(x1) -> alt_anonymous_2[1](bind_p_f(bind_p_f(any()
-                                                    ,filter_0(eqChar_x(A())))
-                                           ,pas_1(eos()))
-                                  ,return_x(eos())
-                                  ,runParser_1()
+    main(x1) -> any_anonymous_2[1](bind_1(filter_0(eqChar_x(A()))
+                                         ,bind_1(pas_1(eos())
+                                                ,bind2_1(promote_0()
+                                                        ,runParser_0())))
+                                  ,alt_fail(return_x(eos())
+                                           ,bind2_1(promote_0(),runParser_0())
+                                           ,runParser_1()
+                                           ,x1
+                                           ,0())
                                   ,x1
                                   ,0()))
 

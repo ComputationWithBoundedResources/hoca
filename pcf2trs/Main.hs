@@ -169,34 +169,33 @@ n1 =
   --                   >=> logMsg "case-narrow"
 
 
-n2 :: Problem :~> Problem
-n2 = exhaustive $ 
-  narrow (sizeDecreasing || withRule leafRule || ruleDeleting)
-  >=> logMsg "decreasing"
+-- n2 :: Problem :~> Problem
+-- n2 = exhaustive $ 
+--   narrow (sizeDecreasing || withRule leafRule || ruleDeleting)
+--   >=> logMsg "decreasing"
 
-t1 :: Problem :~> Problem
-t1 = try cfa >=> logMsg "CFA" >=> try ur >=> try (exhaustive (n2 >=> try cfaur))
+-- t1 :: Problem :~> Problem
+-- t1 = try cfa >=> logMsg "CFA" >=> try ur >=> try (exhaustive (n2 >=> try cfaur))
 
-toTrs :: Problem :~> Problem
-toTrs =
-  uncurryRules >=> logMsg "UNCURRY"
-  >=> try cfaur
+-- toTrs :: Problem :~> Problem
+-- toTrs =
+--   uncurryRules >=> logMsg "UNCURRY"
+--   >=> try cfaur
 
-simplify :: Problem :~> Problem
-simplify = try n1 >=> try t1 >=> toTrs >=> try t1 >=> compress
+-- simplify :: Problem :~> Problem
+-- simplify = try n1 >=> try t1 >=> toTrs >=> try t1 >=> compress
 
 
--- simplify =
---    try n1
---    >=> logMsg "n1"
---    >=> try (exhaustive (((narrow (sizeDecreasing || withRule leafRule || ruleDeleting) >=> logMsg "NA") <=> (cfa >=> traced "CA"))
---                         >=> try usableRules) >=> logMsg "c1")
---    >=> toTRS
---    >=> try (exhaustive ((narrow (sizeDecreasing || withRule leafRule || ruleDeleting) <=> cfa)
---                         >=> try usableRules) >=> logMsg "c2")
---   where dfa = cfa
---         toTRS = try cfa >=> logMsg "C" >=> uncurryRules >=> logMsg "U" >=> try usableRules
-
+simplify =
+   try n1
+   >=> try (exhaustive (narrow (decreasing) <=> cfa)
+            >=> try usableRules)
+   >=> toTRS
+   >=> try (exhaustive (narrow (decreasing) <=> cfa)
+            >=> try usableRules)
+  where dfa = cfa
+        toTRS = try cfa >=> uncurryRules >=> try usableRules
+        decreasing = sizeDecreasing || withRule leafRule || ruleDeleting
 
 -- simplify :: Problem :~> Problem
 -- simplify =

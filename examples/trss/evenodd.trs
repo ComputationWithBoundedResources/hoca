@@ -1,0 +1,12 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x1)
+(RULES
+    even[1](0()) -> True()
+    even[1](S(0())) -> False()
+    even[1](S(S(x1))) -> even[1](x1)
+    main(x1) -> even[1](x1))
+

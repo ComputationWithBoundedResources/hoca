@@ -11,8 +11,7 @@
       comp_f_g[1](x5,x4,comp_f_g[1](x3,x2,x1))
     comp_f_g[1](comp_f_g(x4,x3),cons_x(x2),x1) -> comp_f_g[1](x4,x3,Cons(x2,x1))
     walk[1](Leaf(x1)) -> cons_x(x1)
-    walk[2](Leaf(x1)) -> Cons(x1,Nil())
     walk[1](Node(x2,x1)) -> comp_f_g(walk[1](x2),walk[1](x1))
-    walk[2](Node(x2,x1)) -> comp_f_g[1](walk[1](x2),walk[1](x1),Nil())
-    main(x1) -> walk[2](x1))
+    main(Leaf(x1)) -> Cons(x1,Nil())
+    main(Node(x2,x1)) -> comp_f_g[1](walk[1](x2),walk[1](x1),Nil()))
 

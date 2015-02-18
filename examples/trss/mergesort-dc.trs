@@ -3,15 +3,49 @@
     INNERMOST)
 
 (VAR
-    x2 x1 x3 x8 x7 x6 x5 x4)
+    x2 x1 x4 x3 x8 x7 x6 x5)
 (RULES
-    mapL_f[1](NilL()) -> NilL()
-    mapL_f[1](ConsL(x2,x1)) -> ConsL(rec[dc_0][1](x2),mapL_f[1](x1))
-    dc_cond(Cons(x3,Cons(x2,x1))) ->
-      combine[1](mapL_f[1](divide[1](Cons(x3,Cons(x2,x1)))))
-    rec[dc_0][1](Nil()) -> Nil()
-    rec[dc_0][1](Cons(x1,Nil())) -> Cons(x1,Nil())
-    rec[dc_0][1](Cons(x3,Cons(x2,x1))) -> dc_cond(Cons(x3,Cons(x2,x1)))
+    mapL_f[1](rec[dc_0](divisible(),mergesort_0(),divide(),const_f(combine()))
+             ,NilL()) -> NilL()
+    mapL_f[1](rec[dc_0](divisible(),mergesort_0(),divide(),const_f(combine()))
+             ,ConsL(Nil(),NilL())) -> ConsL(Nil(),NilL())
+    mapL_f[1](rec[dc_0](divisible(),mergesort_0(),divide(),const_f(combine()))
+             ,ConsL(Cons(x2,Nil()),x1)) ->
+      ConsL(Cons(x2,Nil())
+           ,mapL_f[1](rec[dc_0](divisible()
+                               ,mergesort_0()
+                               ,divide()
+                               ,const_f(combine()))
+                     ,x1))
+    mapL_f[1](rec[dc_0](divisible(),mergesort_0(),divide(),const_f(combine()))
+             ,ConsL(Cons(x4,Cons(x3,x2)),x1)) ->
+      ConsL(dc_cond(True()
+                   ,divisible()
+                   ,mergesort_0()
+                   ,divide()
+                   ,const_f(combine())
+                   ,Cons(x4,Cons(x3,x2)))
+           ,mapL_f[1](rec[dc_0](divisible()
+                               ,mergesort_0()
+                               ,divide()
+                               ,const_f(combine()))
+                     ,x1))
+    dc_cond(True()
+           ,divisible()
+           ,mergesort_0()
+           ,divide()
+           ,const_f(combine())
+           ,Cons(x3,Cons(x2,x1))) ->
+      combine[1](mapL_f[1](rec[dc_0](divisible()
+                                    ,mergesort_0()
+                                    ,divide()
+                                    ,const_f(combine()))
+                          ,ConsL(Cons(x3
+                                     ,take_n[1](halve[1](length[1](x1))
+                                               ,Cons(x2,x1)))
+                                ,ConsL(drop_n[1](halve[1](length[1](x1))
+                                                ,Cons(x2,x1))
+                                      ,NilL()))))
     take_n[1](0(),x1) -> Nil()
     take_n[1](S(0()),Nil()) -> Cons(Head_error_empty_list(),Nil())
     take_n[1](S(x3),Cons(x2,x1)) -> Cons(x2,take_n[1](x3,x1))
@@ -23,9 +57,6 @@
     drop_n[1](0(),x1) -> x1
     drop_n[1](S(0()),Nil()) -> Tail_error_empty_list()
     drop_n[1](S(x3),Cons(x2,x1)) -> drop_n[1](x3,x1)
-    divide[1](Cons(x3,Cons(x2,x1))) ->
-      ConsL(Cons(x3,take_n[1](halve[1](length[1](x1)),Cons(x2,x1)))
-           ,ConsL(drop_n[1](halve[1](length[1](x1)),Cons(x2,x1)),NilL()))
     merge_cond_2(True(),Cons(x8,x7),Cons(x6,x5),x4,x3,x2,x1) ->
       Cons(x4,merge_ys[1](x3,Cons(x6,x5)))
     merge_cond_2(False(),Cons(x8,x7),Cons(x6,x5),x4,x3,x2,x1) ->
@@ -33,7 +64,7 @@
     leq_x[1](0(),x1) -> True()
     leq_x[1](S(x1),0()) -> False()
     leq_x[1](S(x2),S(x1)) -> leq_x[1](x2,x1)
-    merge_ys[1](Nil(),x1) -> x1
+    merge_ys[1](Nil(),Cons(x2,x1)) -> Cons(x2,x1)
     merge_ys[1](Cons(x2,x1),Nil()) -> Cons(x2,x1)
     merge_ys[1](Cons(x4,x3),Cons(x2,x1)) -> merge_cond_2(leq_x[1](x4,x2)
                                                         ,Cons(x4,x3)
@@ -45,5 +76,10 @@
     combine[1](ConsL(x3,ConsL(x2,x1))) -> merge_ys[1](x3,x2)
     main(Nil()) -> Nil()
     main(Cons(x1,Nil())) -> Cons(x1,Nil())
-    main(Cons(x3,Cons(x2,x1))) -> dc_cond(Cons(x3,Cons(x2,x1))))
+    main(Cons(x3,Cons(x2,x1))) -> dc_cond(True()
+                                         ,divisible()
+                                         ,mergesort_0()
+                                         ,divide()
+                                         ,const_f(combine())
+                                         ,Cons(x3,Cons(x2,x1))))
 

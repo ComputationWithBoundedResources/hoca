@@ -5,11 +5,10 @@
 (VAR
     x1 x2)
 (RULES
-    iter_f_g[1](0()) -> id()
-    iter_f_g[2](0()) -> 0()
-    iter_f_g[1](S(x1)) -> compS_f(iter_f_g[1](x1))
-    iter_f_g[2](S(x1)) -> compS_f[1](iter_f_g[1](x1),0())
+    iter_f_g[1](compS(),id(),0()) -> id()
+    iter_f_g[1](compS(),id(),S(x1)) -> compS_f(iter_f_g[1](compS(),id(),x1))
     compS_f[1](compS_f(x2),x1) -> compS_f[1](x2,S(x1))
     compS_f[1](id(),x1) -> S(x1)
-    main(x1) -> iter_f_g[2](x1))
+    main(0()) -> 0()
+    main(S(x1)) -> compS_f[1](iter_f_g[1](compS(),id(),x1),0()))
 

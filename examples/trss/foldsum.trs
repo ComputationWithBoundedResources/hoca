@@ -5,17 +5,19 @@
 (VAR
     x2 x1 x3)
 (RULES
-    foldr_f_z[1](NilF()) -> id()
-    foldr_f_z[2](NilF()) -> 0()
-    foldr_f_z[1](ConsF(plus_x(x2),x1)) -> comp_f_g(plus_x(x2),foldr_f_z[1](x1))
-    foldr_f_z[2](ConsF(plus_x(x2),x1)) -> comp_f_g[1](plus_x(x2)
-                                                     ,foldr_f_z[1](x1))
-    comp_f_g[1](plus_x(x3),comp_f_g(plus_x(x2),x1)) ->
-      plus_x[1](x3,comp_f_g[1](plus_x(x2),x1))
-    comp_f_g[1](plus_x(x1),id()) -> plus_x[1](x1,0())
-    mapF_f[1](Nil()) -> NilF()
-    mapF_f[1](Cons(x2,x1)) -> ConsF(plus_x(x2),mapF_f[1](x1))
+    foldr_f_z[1](comp(),id(),NilF()) -> id()
+    foldr_f_z[2](comp(),id(),NilF(),0()) -> 0()
+    foldr_f_z[1](comp(),id(),ConsF(plus_x(x2),x1)) ->
+      comp_f_g(plus_x(x2),foldr_f_z[1](comp(),id(),x1))
+    foldr_f_z[2](comp(),id(),ConsF(plus_x(x2),x1),0()) ->
+      comp_f_g[1](plus_x(x2),foldr_f_z[1](comp(),id(),x1),0())
+    comp_f_g[1](plus_x(x3),comp_f_g(plus_x(x2),x1),0()) ->
+      plus_x[1](x3,comp_f_g[1](plus_x(x2),x1,0()))
+    comp_f_g[1](plus_x(x1),id(),0()) -> plus_x[1](x1,0())
+    mapF_f[1](rec[plus_0](),Nil()) -> NilF()
+    mapF_f[1](rec[plus_0](),Cons(x2,x1)) -> ConsF(plus_x(x2)
+                                                 ,mapF_f[1](rec[plus_0](),x1))
     plus_x[1](0(),x1) -> x1
     plus_x[1](S(x2),x1) -> S(plus_x[1](x2,x1))
-    main(x1) -> foldr_f_z[2](mapF_f[1](x1)))
+    main(x1) -> foldr_f_z[2](comp(),id(),mapF_f[1](rec[plus_0](),x1),0()))
 

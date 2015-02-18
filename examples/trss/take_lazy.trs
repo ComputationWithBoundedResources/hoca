@@ -5,8 +5,8 @@
 (VAR
     x1)
 (RULES
-    take_l_cond(0()) -> Nil()
-    take_l_cond(S(x1)) -> Cons(take_l_n[1](x1))
-    take_l_n[1](x1) -> take_l_cond(x1)
-    main(x1) -> take_l_n[1](x1))
+    take_l_n[1](0(),rec[zeros_0]()) -> Nil()
+    take_l_n[1](S(x1),rec[zeros_0]()) -> Cons(0()
+                                             ,take_l_n[1](x1,rec[zeros_0]()))
+    main(x1) -> take_l_n[1](x1,rec[zeros_0]()))
 

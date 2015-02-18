@@ -3,59 +3,14 @@
     INNERMOST)
 
 (VAR
-    x2 x1 x5 x4 x3)
+    x1 x2)
 (RULES
-    bind_1[4](bind'_0(eos()),runParser_0(),x2,Nil(),S(x1)) ->
-      ParseSuccess(Nil())
-    bind_1[4](bind'_0(eos())
-             ,bind_1(bind'_0(eos()),runParser_0())
-             ,x2
-             ,Nil()
-             ,S(x1)) -> ParseSuccess(Nil())
-    bind_1[4](bind'_0(eos()),x5,x4,Cons(x3,x2),S(x1)) -> ParseFail(S(x1))
-    bind_1[4](bind'_0(bind_p_f(bind_p_f(any(),filter_0(eqChar_x(B())))
-                              ,bind'_0(return_x())))
-             ,x4
-             ,x3
-             ,x2
-             ,S(x1)) -> any_anonymous[3](bind_1(filter_0(eqChar_x(B()))
-                                               ,bind_1(bind'_0(return_x()),x4))
-                                        ,x2
-                                        ,S(x1))
-    bind_1[4](bind'_0(return_x()),x4,x3,x2,S(x1)) -> return_0[4](Unit()
-                                                                ,x4
-                                                                ,x2
-                                                                ,S(x1))
-    bind_0[4](x1) ->
-      any_anonymous[3](bind_1(filter_0(eqChar_x(A()))
-                             ,bind_1(bind'_0(bind_p_f(bind_p_f(any()
-                                                              ,filter_0(eqChar_x(B())))
-                                                     ,bind'_0(return_x())))
-                                    ,bind_1(bind'_0(eos()),runParser_0())))
-                      ,x1
-                      ,0())
-    return_0[4](Unit(),runParser_0(),x2,S(x1)) -> ParseSuccess(x2)
-    return_0[4](x5,bind_1(x4,x3),x2,S(x1)) -> bind_1[4](x4,x3,x5,x2,S(x1))
-    any_anonymous_2[1](bind_1(filter_0(eqChar_x(x3)),x2),Nil(),x1) ->
-      ParseFail(x1)
-    any_anonymous_2[1](bind_1(filter_0(eqChar_x(A())),x3),Cons(A(),x2),x1) ->
-      return_0[4](A(),x3,x2,S(x1))
-    any_anonymous_2[1](bind_1(filter_0(eqChar_x(A())),x3),Cons(B(),x2),x1) ->
-      ParseFail(S(x1))
-    any_anonymous_2[1](bind_1(filter_0(eqChar_x(A())),x3),Cons(C(),x2),x1) ->
-      ParseFail(S(x1))
-    any_anonymous_2[1](bind_1(filter_0(eqChar_x(B())),x3),Cons(A(),x2),x1) ->
-      ParseFail(S(x1))
-    any_anonymous_2[1](bind_1(filter_0(eqChar_x(B())),x3),Cons(B(),x2),x1) ->
-      return_0[4](B(),x3,x2,S(x1))
-    any_anonymous_2[1](bind_1(filter_0(eqChar_x(B())),x3),Cons(C(),x2),x1) ->
-      ParseFail(S(x1))
-    any_anonymous_1[2](bind_1(filter_0(eqChar_x(x4)),x3),x2,x1) ->
-      any_anonymous_2[1](bind_1(filter_0(eqChar_x(x4)),x3),x2,x1)
-    any_anonymous[3](bind_1(filter_0(eqChar_x(x4)),x3),x2,x1) ->
-      any_anonymous_1[2](bind_1(filter_0(eqChar_x(x4)),x3),x2,x1)
-    string[6](x2,x1) -> bind_0[4](x1)
-    main(x1) -> string[6](bot[1](),x1)
-    main(x1) -> string[6](bot[3](),x1)
-    main(x1) -> string[6](bot[5](),x1))
+    main(Nil()) -> ParseFail(0())
+    main(Cons(A(),Nil())) -> ParseFail(S(0()))
+    main(Cons(A(),Cons(A(),x1))) -> ParseFail(S(S(0())))
+    main(Cons(A(),Cons(B(),Nil()))) -> ParseSuccess(Unit(),Nil())
+    main(Cons(A(),Cons(B(),Cons(x2,x1)))) -> ParseFail(S(S(0())))
+    main(Cons(A(),Cons(C(),x1))) -> ParseFail(S(S(0())))
+    main(Cons(B(),x1)) -> ParseFail(S(0()))
+    main(Cons(C(),x1)) -> ParseFail(S(0())))
 
