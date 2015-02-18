@@ -157,12 +157,19 @@ dfaInstantiate refineP prob =
   case ATRS.inferTypes rs of
    Left _ -> empty
    Right (sig,ers) -> Problem.replaceRulesM replace prob where
-     replace i _ _ = Just [(rl,succs) | rl <- rs', argumentNormalised rl] where
-       -- TODO
-       -- -| null vs && all (`elem` succs) (Problem.calleeIdxs prob i) = empty
-       -- -| otherwise 
+     replace i rl ss
+       | changed = Just replacements
+       | otherwise = Nothing
+       where
+         replacements = [(rl',succs) | rl' <- rs', argumentNormalised (R.lhs rl')] where
            (rs',succs) = mkRefinements i refineP'
            refineP' = maybe (const (const False)) (refineP . fst) (lookup i ers)
+           
+         changed =
+           case replacements of
+            [(rl',succs)] -> any (`notElem` succs) ss
+                             || (R.lhs rl) `properInstOf` (R.lhs rl') 
+            _ -> True
            
      initialDFA = TG.fromList (startRules ++ constructorRules) where
        startRules = 
@@ -174,10 +181,15 @@ dfaInstantiate refineP prob =
            
      mkRefinements = DFA.refinements rs initialDFA
 
-     argumentNormalised rl = all norm (T.properSubterms (R.lhs rl)) where
+     argumentNormalised t = all norm (T.properSubterms t) where
        norm (T.Var _) = True
        norm (ATRS.atermM -> Just (_ ATRS.:@ _)) = False
        norm li = all (isNothing . unify li) (RS.lhss (map snd rs))
+
+     T.Var {} `properInstOf` T.Fun {} = True
+     (T.Fun _ ts) `properInstOf` (T.Fun _ ss) = or (zipWith properInstOf ts ss)
+     _ `properInstOf` _ = False
+       
   where rs = Problem.rulesEnum prob
 
 uncurryRules :: Problem Symbol Int :~> Problem Symbol Int

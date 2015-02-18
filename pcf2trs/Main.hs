@@ -185,6 +185,19 @@ toTrs =
 simplify :: Problem :~> Problem
 simplify = try n1 >=> try t1 >=> toTrs >=> try t1 >=> compress
 
+
+-- simplify =
+--    try n1
+--    >=> logMsg "n1"
+--    >=> try (exhaustive (((narrow (sizeDecreasing || withRule leafRule || ruleDeleting) >=> logMsg "NA") <=> (cfa >=> traced "CA"))
+--                         >=> try usableRules) >=> logMsg "c1")
+--    >=> toTRS
+--    >=> try (exhaustive ((narrow (sizeDecreasing || withRule leafRule || ruleDeleting) <=> cfa)
+--                         >=> try usableRules) >=> logMsg "c2")
+--   where dfa = cfa
+--         toTRS = try cfa >=> logMsg "C" >=> uncurryRules >=> logMsg "U" >=> try usableRules
+
+
 -- simplify :: Problem :~> Problem
 -- simplify =
 --   try n1
