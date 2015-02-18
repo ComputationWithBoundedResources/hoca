@@ -59,18 +59,6 @@ instance Boolean b => Boolean (a -> b) where
   f || g = \ a -> (f a || g a)  
   not f = \ a -> not (f a)
 
-expressionFromArgs :: FilePath -> [String] -> IO (PCF.Exp FP.Context)
-expressionFromArgs fname args = do
-  r <- mk <$> readFile fname
-  case r of
-   Left e -> putErrLn e >> exitFailure
-   Right pcf -> return pcf
-  where
-    mk s = do
-      fun <- fromString fname s
-      foldM (\ p (i,si) -> PCF.App [] p <$> fromString ("argument " ++ show i) si)
-        fun (zip [(1::Int)..] args)
-    fromString src str = FP.expFromString src str >>= FP.toPCF
 
 cfa :: Problem :~> Problem
 cfa = dfaInstantiate abstractP where
@@ -85,8 +73,6 @@ cfa = dfaInstantiate abstractP where
 -- dfa :: PCF.Strategy m => Problem -> m Problem
 -- dfa = dfaInstantiate (R.vars . ATRS.unTypeRule)       
 
-size :: T.Term f v -> Int
-size = T.fold (const 1) (const ((+1) . sum))
 
 anyRule, caseRule, lambdaRule, fixRule, recursiveRule :: Problem -> Rule -> Bool
 caseRule _ rl =
@@ -116,10 +102,11 @@ oneOfIdx is p r = maybe False (`elem` is) (Problem.indexOf p r)
 leafRule :: Problem -> Rule -> Bool
 leafRule p r = maybe True (null . Problem.cgSuccs p) (Problem.indexOf p r)
 
--- branching  :: Problem -> Rule -> Bool
--- branching p n = length (Problem.callees p n) >= 1
-
 type NarrowedRule = N.NarrowedRule (ATRS.ASym Problem.Symbol) Int Int
+
+size :: T.Term f v -> Int
+size = T.fold (const 1) (const ((+1) . sum))
+
 
 sizeDecreasing :: Problem -> NarrowedRule -> Bool
 sizeDecreasing _ ns = all (\ n -> sz (N.narrowing n) < sz (N.narrowedRule ns)) (N.narrowings ns) where
@@ -129,16 +116,21 @@ sizeNonIncreasing :: Problem -> NarrowedRule -> Bool
 sizeNonIncreasing _ ns = all (\ n -> sz (N.narrowing n) <= sz (N.narrowedRule ns)) (N.narrowings ns) where
   sz rl = size (R.lhs rl) + size (R.rhs rl)
 
-
-
 branching :: Problem -> NarrowedRule -> Bool
 branching _ ns = length (N.narrowings ns) > 1
 
 selfInlining :: Problem -> NarrowedRule -> Bool
 selfInlining _ ns = N.narrowedRule ns `elem` map N.narrowedWith (N.narrowings ns)
 
-isBody :: Problem -> NarrowedRule -> Bool
-isBody p ns =
+-- edgeErasing :: Problem -> NarrowedRule -> Bool
+-- edgeErasing p ns = all (usableSucc . Problem.indexOf p . N.narrowedWith) (N.narrowings ns) where
+--   usableSucc Nothing = True
+--   usableSucc (Just i) = i /= j && (j `elem` us || i `notElem` us) where
+--     us = Problem.usableIdxs p (Problem.cgSuccs p i)
+--     j = fromJust (Problem.indexOf p (N.narrowedRule ns))
+
+ruleDeleting :: Problem -> NarrowedRule -> Bool
+ruleDeleting p ns =
   case nub (concatMap (Problem.cgPreds p) nwIds) of
    [i] -> i `notElem` nwIds
    _ -> False
@@ -149,58 +141,37 @@ withRule,onRule :: (Problem -> Rule -> Bool) -> Problem -> NarrowedRule -> Bool
 withRule p rs = all (p rs) . map N.narrowedWith . N.narrowings
 onRule p rs = p rs . N.narrowedRule
 
-narrowWith,narrowOn :: (Problem -> Rule -> Bool) -> Problem :~> Problem
+narrowWith,narrowOn,rewriteWith,rewriteOn :: (Problem -> Rule -> Bool) -> Problem :~> Problem
 narrowWith = narrow . withRule
 narrowOn = narrow . onRule
-
-
--- provided :: MonadPlus m => (Problem -> m Problem) -> (Problem -> Bool) -> Problem -> m Problem
--- provided t f p = do
---   p' <- t p
---   guard (f p')
---   return p
--- -- providedRel :: MonadPlus m => (Problem -> Problem -> m Problem) -> (Problem -> Bool) -> Problem -> m Problem
--- providedRel :: MonadPlus m => (Problem -> m Problem) -> (Problem -> Problem -> Bool) -> Problem -> m Problem
--- providedRel t f p = provided t (f p) p
-
-
-
--- n1 :: PCF.Strategy m => Problem -> m Problem
--- n1 = exhaustive ((narrow (withRule caseRule) >=> traceProblem "case narrowing")
---                  <=> (rewrite (withRule lambdaRule) >=> traceProblem "lambda rewrite"))
---      >=> exhaustive (rewrite (withRule fixRule) >=> traceProblem "fix rewrite")
---      >=> try usableRules >=> try neededRules          
---      >=> exhaustive (narrow (withRule (not recursiveRule)) >=> traceProblem "non-recursive narrowing")
---      >=> try usableRules >=> try neededRules
-
-
--- t1 :: PCF.Strategy m => Problem -> m Problem
--- t1 =
---   exhaustive ((narrow (withRule caseRule) >=> traceProblem "case narrowing")
---               <=> narrow sizeDecreasing >=> traceProblem "size-decreasing narrowing")
---   >=> cfa >=> try usableRules >=> try neededRules >=> traceProblem "CFA"
---   >=> try uncurryRules >=> try usableRules >=> try neededRules >=> traceProblem "uncurried"
---   >=> exhaustive (narrow sizeDecreasing >=> traceProblem "size-decreasing narrowing")
+rewriteWith = rewrite . withRule
+rewriteOn = rewrite . onRule
 
 ur :: Problem :~> Problem
 ur = usableRules >=> logMsg "USABLE"
 
 cfaur :: Problem :~> Problem
 cfaur =
-  cfa >=> logMsg "CFA"
-  >=> try ur
+  cfa >=> logMsg "CFA" >=> try ur
   
 n1 :: Problem :~> Problem
 n1 =
-  try (exhaustive (narrowWith caseRule >=> logMsg "case"))
+  try (exhaustive (narrow (withRule caseRule) >=> logMsg "case"))
   >=> try (exhaustive (rewrite (withRule lambdaRule) >=> logMsg "lambda"))  
-  >=> try (exhaustive (narrowWith fixRule >=> logMsg "fix"))
+  >=> try (exhaustive (narrow (withRule fixRule) >=> logMsg "fix"))
   >=> try ur
+  -- try (exhaustive (lambdaRewrite <=> caseNarrow))
+  -- >=> try (exhaustive (narrowWith fixRule) >=> logMsg "fix-narrow")
+  -- where
+  --   lambdaRewrite = rewrite (withRule lambdaRule && not (onRule fixRule))
+  --                   >=> logMsg "lambda-rewrite"
+  --   caseNarrow = rewrite (withRule caseRule && not (onRule fixRule))
+  --                   >=> logMsg "case-narrow"
+
 
 n2 :: Problem :~> Problem
 n2 = exhaustive $ 
-  narrow (sizeDecreasing
-              || withRule leafRule)
+  narrow (sizeDecreasing || withRule leafRule || ruleDeleting)
   >=> logMsg "decreasing"
 
 t1 :: Problem :~> Problem
@@ -213,45 +184,20 @@ toTrs =
 
 simplify :: Problem :~> Problem
 simplify = try n1 >=> try t1 >=> toTrs >=> try t1 >=> compress
-  
-  -- >=> try (cfa >=> traced "CFA")
-  -- >=> exhaustive ((narrow (withRule caseRule) >=> traced "case narrowing")
-  --                 <=> (rewrite (withRule lambdaRule) >=> traced "lambda rewrite"))
-  -- >=> exhaustive (rewrite (withRule fixRule) >=> traced "fix rewrite")
-  -- >=> try usableRules >=> try neededRules          
-  -- >=> exhaustive (narrow (withRule (not recursiveRule)) >=> traced "non-recursive narrowing")
-  -- >=> try usableRules >=> try neededRules
-  -- >=> try (uncurryRules >=> try usableRules >=> try neededRules >=> traced "uncurried")
-  -- >=> exhaustive (narrow (withRule (not recursiveRule)) >=> traced "non-recursive narrowing")
-  -- >=> try usableRules >=> try neededRules  
 
--- narrowConst :: Strategy
--- narrowConst =
---   narrow (\ _ ns -> all (decreasingConst (N.narrowSubterm ns) . N.narrowing) (N.narrowings ns))
---   >=> try usableRules >=> try neededRules
---   where
---     decreasingConst t (R.Rule _ r) =
---       T.isGround t
---       || (not (null as) && all (any (\ (li,ri) -> isConstantTerm li && isConstantTerm ri && size li > size ri)) as)
---       where
---         as = [ zip (ATRS.args t) (ATRS.args ri)
---              | ri <- T.subterms r, ATRS.headSymbol t == ATRS.headSymbol ri ]
---     -- decreasingConst t@(T.Fun f ts) (R.Rule l r) = T.isGround t 
---       -- null as || all (any (\ (li,ri) -> isConstantTerm li && isConstantTerm ri && size li > size ri)) as where
---       --   as = [ zip ts rs
---       --        | T.Fun g rs <- T.subterms r, f == g ]
-
---     isConstantTerm t = T.isGround t && all isConstructor (ATRS.funs t) where 
---       isConstructor Problem.Con{} = True
---       isConstructor _ = False
-
---     size = T.fold (const (1::Int)) (const (succ . sum))
---     -- T.Var {} `embeds` _ = False
---     -- s@(T.Fun f ss) `embeds` t@(T.Fun g ts) =
---     --   t `elem` (T.properSubterms s)
---     --   || (f == g && 
-
-
+-- simplify :: Problem :~> Problem
+-- simplify =
+--   try n1
+--   >=> try ur
+--   >=> try (exhaustive (narrow (sizeDecreasing || withRule leafRule) >=> logMsg "decreasing/leaf"
+--                        >=> try ur))
+--   >=> try cfaur
+--   >=> try toTRS
+--   >=> try (exhaustive
+--            (exhaustive (narrow (sizeDecreasing
+--                                 || withRule leafRule
+--                                 || not branching) >=> logMsg "decreasing/leaf/nb-er"))
+--            >=> try cfa >=> try ur)
 
 -- Interactive
 
@@ -289,6 +235,19 @@ modifyState :: (ST -> ST) -> IO ()
 modifyState f = do
   st <- getState
   putState (f st)
+
+expressionFromArgs :: FilePath -> [String] -> IO (PCF.Exp FP.Context)
+expressionFromArgs fname args = do
+  r <- mk <$> readFile fname
+  case r of
+   Left e -> putErrLn e >> exitFailure
+   Right pcf -> return pcf
+  where
+    mk s = do
+      fun <- fromString fname s
+      foldM (\ p (i,si) -> PCF.App [] p <$> fromString ("argument " ++ show i) si)
+        fun (zip [(1::Int)..] args)
+    fromString src str = FP.expFromString src str >>= FP.toPCF
 
 load' :: FilePath -> IO ()
 load' fn = do
