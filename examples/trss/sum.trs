@@ -3,12 +3,12 @@
     INNERMOST)
 
 (VAR
-    x2 x1)
+    x2 x1 x3)
 (RULES
-    fold_f_z[1](rec[plus_0](),0(),Nil()) -> 0()
-    fold_f_z[1](rec[plus_0](),0(),Cons(x2,x1)) ->
-      plus_x[1](x2,fold_f_z[1](rec[plus_0](),0(),x1))
-    plus_x[1](0(),x1) -> x1
-    plus_x[1](S(x2),x1) -> S(plus_x[1](x2,x1))
-    main(x1) -> fold_f_z[1](rec[plus_0](),0(),x1))
+    rec[fold_0][3](rec[plus_0](),0(),Nil()) -> 0()
+    rec[fold_0][3](rec[plus_0](),0(),Cons(x2,x1)) ->
+      rec[plus_0][2](x2,rec[fold_0][3](rec[plus_0](),0(),x1))
+    rec[plus_0][2](0(),x1) -> x1
+    rec[plus_0][2](S(x2),x1) -> S(rec[plus_0][2](x2,x1))
+    main(x3) -> rec[fold_0][3](rec[plus_0](),0(),x3))
 

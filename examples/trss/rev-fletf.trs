@@ -5,9 +5,9 @@
 (VAR
     x2 x1 x4 x3)
 (RULES
-    foldr_f_z[1](step(rev_0()),fleft_0(),Nil()) -> fleft_0()
-    foldr_f_z[1](step(rev_0()),fleft_0(),Cons(x2,x1)) ->
-      step_x_f(rev_0(),x2,foldr_f_z[1](step(rev_0()),fleft_0(),x1))
+    rec[foldr_0][3](step(rev_0()),fleft_0(),Nil()) -> fleft_0()
+    rec[foldr_0][3](step(rev_0()),fleft_0(),Cons(x2,x1)) ->
+      step_x_f(rev_0(),x2,rec[foldr_0][3](step(rev_0()),fleft_0(),x1))
     step_x_f[1](rev_0(),x4,step_x_f(rev_0(),x3,x2),x1) -> step_x_f[1](rev_0()
                                                                      ,x3
                                                                      ,x2
@@ -17,6 +17,6 @@
     main(Nil()) -> Nil()
     main(Cons(x2,x1)) -> step_x_f[1](rev_0()
                                     ,x2
-                                    ,foldr_f_z[1](step(rev_0()),fleft_0(),x1)
+                                    ,rec[foldr_0][3](step(rev_0()),fleft_0(),x1)
                                     ,Nil()))
 

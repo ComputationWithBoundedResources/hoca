@@ -3,14 +3,128 @@
     INNERMOST)
 
 (VAR
-    x1 x2)
+    x5 x4 x3 x2 x1 x6)
 (RULES
-    main(Nil()) -> ParseFail(0())
-    main(Cons(A(),Nil())) -> ParseFail(S(0()))
-    main(Cons(A(),Cons(A(),x1))) -> ParseFail(S(S(0())))
-    main(Cons(A(),Cons(B(),Nil()))) -> ParseSuccess(Unit(),Nil())
-    main(Cons(A(),Cons(B(),Cons(x2,x1)))) -> ParseFail(S(S(0())))
-    main(Cons(A(),Cons(C(),x1))) -> ParseFail(S(S(0())))
-    main(Cons(B(),x1)) -> ParseFail(S(0()))
-    main(Cons(C(),x1)) -> ParseFail(S(0())))
+    bind_1[4](bind'_0(x5),x4,x3,runParser_1(),x2,S(x1)) ->
+      bind'_0[6](x5,x3,bot[2](),x4,runParser_1(),x2,S(x1))
+    bind_1[4](bind'_0(x5),x4,x3,runParser_1(),x2,S(x1)) ->
+      bind'_0[6](x5,x3,bot[4](),x4,runParser_1(),x2,S(x1))
+    bind'_0[6](eos(),x3,x2,runParser_0(),runParser_1(),Nil(),S(x1)) ->
+      ParseSuccess(Unit(),Nil())
+    bind'_0[6](eos()
+              ,x3
+              ,x2
+              ,bind_1(bind'_0(eos()),runParser_0())
+              ,runParser_1()
+              ,Nil()
+              ,S(x1)) -> bind_1[4](bind'_0(eos())
+                                  ,runParser_0()
+                                  ,Unit()
+                                  ,runParser_1()
+                                  ,Nil()
+                                  ,S(x1))
+    bind'_0[6](eos(),x6,x5,x4,runParser_1(),Cons(x3,x2),S(x1)) ->
+      ParseFail(S(x1))
+    bind'_0[6](bind_p_f(bind_p_f(any(),filter_0(eqChar_x(B())))
+                       ,bind'_0(return_x(Unit())))
+              ,x4
+              ,x3
+              ,x2
+              ,runParser_1()
+              ,Nil()
+              ,S(x1)) -> ParseFail(S(x1))
+    bind'_0[6](bind_p_f(bind_p_f(any(),filter_0(eqChar_x(B())))
+                       ,bind'_0(return_x(Unit())))
+              ,x5
+              ,x4
+              ,x3
+              ,runParser_1()
+              ,Cons(A(),x2)
+              ,S(x1)) -> ParseFail(S(S(x1)))
+    bind'_0[6](bind_p_f(bind_p_f(any(),filter_0(eqChar_x(B())))
+                       ,bind'_0(return_x(Unit())))
+              ,x5
+              ,x4
+              ,x3
+              ,runParser_1()
+              ,Cons(B(),x2)
+              ,S(x1)) -> bind_1[4](bind'_0(return_x(Unit()))
+                                  ,x3
+                                  ,B()
+                                  ,runParser_1()
+                                  ,x2
+                                  ,S(S(x1)))
+    bind'_0[6](bind_p_f(bind_p_f(any(),filter_0(eqChar_x(B())))
+                       ,bind'_0(return_x(Unit())))
+              ,x5
+              ,x4
+              ,x3
+              ,runParser_1()
+              ,Cons(C(),x2)
+              ,S(x1)) -> ParseFail(S(S(x1)))
+    bind'_0[6](return_x(Unit()),x4,x3,runParser_0(),runParser_1(),x2,S(x1)) ->
+      ParseSuccess(Unit(),x2)
+    bind'_0[6](return_x(Unit())
+              ,x4
+              ,x3
+              ,bind_1(bind'_0(eos()),runParser_0())
+              ,runParser_1()
+              ,x2
+              ,S(x1)) -> bind_1[4](bind'_0(eos())
+                                  ,runParser_0()
+                                  ,Unit()
+                                  ,runParser_1()
+                                  ,x2
+                                  ,S(x1))
+    bind_1[4](bind'_0(x5),x4,x3,runParser_1(),x2,S(x1)) ->
+      bind'_0[6](x5,x3,bot[6](),x4,runParser_1(),x2,S(x1))
+    rec[string_0][6](Cons(A(),Cons(B(),Nil()))
+                    ,x1
+                    ,bind_1(bind'_0(eos()),runParser_0())
+                    ,runParser_1()
+                    ,Nil()
+                    ,0()) -> ParseFail(0())
+    rec[string_0][6](Cons(A(),Cons(B(),Nil()))
+                    ,x2
+                    ,bind_1(bind'_0(eos()),runParser_0())
+                    ,runParser_1()
+                    ,Cons(A(),x1)
+                    ,0()) ->
+      bind_1[4](bind'_0(bind_p_f(bind_p_f(any(),filter_0(eqChar_x(B())))
+                                ,bind'_0(return_x(Unit()))))
+               ,bind_1(bind'_0(eos()),runParser_0())
+               ,A()
+               ,runParser_1()
+               ,x1
+               ,S(0()))
+    rec[string_0][6](Cons(A(),Cons(B(),Nil()))
+                    ,x2
+                    ,bind_1(bind'_0(eos()),runParser_0())
+                    ,runParser_1()
+                    ,Cons(B(),x1)
+                    ,0()) -> ParseFail(S(0()))
+    rec[string_0][6](Cons(A(),Cons(B(),Nil()))
+                    ,x2
+                    ,bind_1(bind'_0(eos()),runParser_0())
+                    ,runParser_1()
+                    ,Cons(C(),x1)
+                    ,0()) -> ParseFail(S(0()))
+    main(x3) -> rec[string_0][6](Cons(A(),Cons(B(),Nil()))
+                                ,bot[1]()
+                                ,bind_1(bind'_0(eos()),runParser_0())
+                                ,runParser_1()
+                                ,x3
+                                ,0())
+    main(x3) -> rec[string_0][6](Cons(A(),Cons(B(),Nil()))
+                                ,bot[3]()
+                                ,bind_1(bind'_0(eos()),runParser_0())
+                                ,runParser_1()
+                                ,x3
+                                ,0())
+    main(x3) -> rec[string_0][6](Cons(A(),Cons(B(),Nil()))
+                                ,bot[5]()
+                                ,bind_1(bind'_0(eos()),runParser_0())
+                                ,runParser_1()
+                                ,x3
+                                ,0()))
 

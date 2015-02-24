@@ -3,10 +3,10 @@
     INNERMOST)
 
 (VAR
-    x1)
+    x1 x3)
 (RULES
-    take_l_n[1](0(),rec[zeros_0]()) -> Nil()
-    take_l_n[1](S(x1),rec[zeros_0]()) -> Cons(0()
-                                             ,take_l_n[1](x1,rec[zeros_0]()))
-    main(x1) -> take_l_n[1](x1,rec[zeros_0]()))
+    rec[take_l_0][2](0(),rec[zeros_0]()) -> Nil()
+    rec[take_l_0][2](S(x1),rec[zeros_0]()) ->
+      Cons(0(),rec[take_l_0][2](x1,rec[zeros_0]()))
+    main(x3) -> rec[take_l_0][2](x3,rec[zeros_0]()))
 

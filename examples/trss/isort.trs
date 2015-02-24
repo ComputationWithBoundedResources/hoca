@@ -3,23 +3,19 @@
     INNERMOST)
 
 (VAR
-    x3 x2 x1)
+    x7 x5 x3 x1 x2)
 (RULES
-    insert_cond_1(True(),rec[leq_0](),x3,x2,x1) -> Cons(x3,Cons(x2,x1))
-    insert_cond_1(False(),rec[leq_0](),x3,x2,x1) ->
-      Cons(x2,insert_ord_x[1](rec[leq_0](),x3,x1))
-    insert_ord_x[1](rec[leq_0](),x1,Nil()) -> Cons(x1,Nil())
-    insert_ord_x[1](rec[leq_0](),x3,Cons(x2,x1)) -> insert_cond_1(leq_x[1](x3
-                                                                          ,x2)
-                                                                 ,rec[leq_0]()
-                                                                 ,x3
-                                                                 ,x2
-                                                                 ,x1)
-    sort_ord[1](rec[leq_0](),Nil()) -> Nil()
-    sort_ord[1](rec[leq_0](),Cons(x2,x1)) ->
-      insert_ord_x[1](rec[leq_0](),x2,sort_ord[1](rec[leq_0](),x1))
-    leq_x[1](0(),x1) -> True()
-    leq_x[1](S(x1),0()) -> False()
-    leq_x[1](S(x2),S(x1)) -> leq_x[1](x2,x1)
-    main(x1) -> sort_ord[1](rec[leq_0](),x1))
+    insert_cond_1(True(),rec[leq_0](),x7,x5,x3) -> Cons(x7,Cons(x5,x3))
+    insert_cond_1(False(),rec[leq_0](),x7,x5,x3) ->
+      Cons(x5,rec[insert_0][3](rec[leq_0](),x7,x3))
+    rec[insert_0][3](rec[leq_0](),x1,Nil()) -> Cons(x1,Nil())
+    rec[insert_0][3](rec[leq_0](),x3,Cons(x2,x1)) ->
+      insert_cond_1(rec[leq_0][2](x3,x2),rec[leq_0](),x3,x2,x1)
+    rec[sort_0][2](rec[leq_0](),Nil()) -> Nil()
+    rec[sort_0][2](rec[leq_0](),Cons(x2,x1)) ->
+      rec[insert_0][3](rec[leq_0](),x2,rec[sort_0][2](rec[leq_0](),x1))
+    rec[leq_0][2](0(),x1) -> True()
+    rec[leq_0][2](S(x1),0()) -> False()
+    rec[leq_0][2](S(x2),S(x1)) -> rec[leq_0][2](x2,x1)
+    main(x3) -> rec[sort_0][2](rec[leq_0](),x3))
 
