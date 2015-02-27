@@ -73,6 +73,7 @@ cfa = dfaInstantiate abstractP where
 -- dfa :: PCF.Strategy m => Problem -> m Problem
 -- dfa = dfaInstantiate (R.vars . ATRS.unTypeRule)       
 
+cfa' = dfaInstantiate (\ _ _ _ -> False)
 
 anyRule, caseRule, lambdaRule, fixRule, recursiveRule :: Problem -> Rule -> Bool
 caseRule _ rl =
@@ -110,7 +111,7 @@ size = T.fold (const 1) (const ((+1) . sum))
 
 sizeDecreasing :: Problem -> NarrowedRule -> Bool
 sizeDecreasing _ ns = all (\ n -> sz (N.narrowing n) < sz (N.narrowedRule ns)) (N.narrowings ns) where
-  sz rl = size (R.lhs rl) + size (R.rhs rl)
+  sz rl = size (R.rhs rl)
 
 sizeNonIncreasing :: Problem -> NarrowedRule -> Bool
 sizeNonIncreasing _ ns = all (\ n -> sz (N.narrowing n) <= sz (N.narrowedRule ns)) (N.narrowings ns) where
@@ -156,9 +157,8 @@ cfaur =
   
 n1 :: Problem :~> Problem
 n1 =
-  try (exhaustive (narrow (withRule caseRule) >=> logMsg "case"))
-  >=> try (exhaustive (rewrite (withRule lambdaRule) >=> logMsg "lambda"))  
-  >=> try (exhaustive (narrow (withRule fixRule) >=> logMsg "fix"))
+  try (exhaustive (rewrite (withRule lambdaRule) >=> logMsg "lambda"))
+  >=> try (exhaustive (narrow (withRule caseRule) >=> logMsg "case"))
   >=> try ur
   -- try (exhaustive (lambdaRewrite <=> caseNarrow))
   -- >=> try (exhaustive (narrowWith fixRule) >=> logMsg "fix-narrow")
@@ -188,14 +188,12 @@ n1 =
 
 simplify =
    try n1
-   >=> try (exhaustive (narrow (decreasing) <=> cfa)
-            >=> try usableRules)
    >=> toTRS
-   >=> try (exhaustive (narrow (decreasing) <=> cfa)
-            >=> try usableRules)
-  where dfa = cfa
-        toTRS = try cfa >=> uncurryRules >=> try usableRules
-        decreasing = sizeDecreasing || withRule leafRule || ruleDeleting
+   >=> try (exhaustive (narrow (withRule leafRule)) >=> try usableRules)     
+   >=> try (exhaustive ((narrow (sizeDecreasing || ruleDeleting) <=> cfa)
+                        >=> try usableRules))
+   >=> try compress
+toTRS = try cfa >=> try usableRules >=> uncurryRules >=> try usableRules
 
 -- simplify :: Problem :~> Problem
 -- simplify =
