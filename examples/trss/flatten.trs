@@ -3,18 +3,24 @@
     INNERMOST)
 
 (VAR
-    x4 x3 x2 x1 x5)
+    x2 x1 x4 x3 x5)
 (RULES
-    comp_f_g[1](cons_x(x4),comp_f_g(x3,x2),x1) -> Cons(x4,comp_f_g[1](x3,x2,x1))
-    comp_f_g[1](cons_x(x3),cons_x(x2),x1) -> Cons(x3,Cons(x2,x1))
+    cons_x[1](x2,x1) -> Cons(x2,x1)
+    comp_f_g[1](cons_x(x4),comp_f_g(x3,x2),x1) -> cons_x[1](x4
+                                                           ,comp_f_g[1](x3
+                                                                       ,x2
+                                                                       ,x1))
+    comp_f_g[1](cons_x(x3),cons_x(x2),x1) -> cons_x[1](x3,cons_x[1](x2,x1))
     comp_f_g[1](comp_f_g(x5,x4),comp_f_g(x3,x2),x1) ->
       comp_f_g[1](x5,x4,comp_f_g[1](x3,x2,x1))
-    comp_f_g[1](comp_f_g(x4,x3),cons_x(x2),x1) -> comp_f_g[1](x4,x3,Cons(x2,x1))
+    comp_f_g[1](comp_f_g(x4,x3),cons_x(x2),x1) -> comp_f_g[1](x4
+                                                             ,x3
+                                                             ,cons_x[1](x2,x1))
     rec[walk_0][1](Leaf(x1)) -> cons_x(x1)
     rec[walk_0][1](Node(x2,x1)) -> comp_f_g(rec[walk_0][1](x2)
                                            ,rec[walk_0][1](x1))
-    main(Leaf(x1)) -> Cons(x1,Nil())
-    main(Node(x2,x1)) -> comp_f_g[1](rec[walk_0][1](x2)
-                                    ,rec[walk_0][1](x1)
+    main(Leaf(x2)) -> cons_x[1](x2,Nil())
+    main(Node(x4,x2)) -> comp_f_g[1](rec[walk_0][1](x4)
+                                    ,rec[walk_0][1](x2)
                                     ,Nil()))
 

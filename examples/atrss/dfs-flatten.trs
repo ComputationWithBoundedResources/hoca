@@ -1,0 +1,26 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x3 x4 x5 x2 x0 x6 x1)
+(RULES
+    revApp_cond(Nil(),x3) -> x3
+    revApp_cond(Cons(x4,x5),x3) -> @(@(rec[revApp_0](),x5),Cons(x4,x3))
+    @(revApp_l(x2),x3) -> revApp_cond(x2,x3)
+    @(revApp(),x2) -> revApp_l(x2)
+    @(rec[revApp_0](),x0) -> @(revApp(),x0)
+    dfsAcc_cond(Leaf(x5),x2,x4) -> @(@(x2,x5),x4)
+    dfsAcc_cond(Node(x5,x6),x2,x4) -> @(@(@(rec[dfsAcc_0](),x2),x6)
+                                       ,@(@(@(rec[dfsAcc_0](),x2),x5),x4))
+    @(dfsAcc_g_t(x2,x3),x4) -> dfsAcc_cond(x3,x2,x4)
+    @(dfsAcc_g(x2),x3) -> dfsAcc_g_t(x2,x3)
+    @(dfsAcc(),x2) -> dfsAcc_g(x2)
+    @(rec[dfsAcc_0](),x0) -> @(dfsAcc(),x0)
+    @(cons_x(x2),x3) -> Cons(x2,x3)
+    @(cons(),x2) -> cons_x(x2)
+    @(flatten(),x1) -> @(@(rec[revApp_0]()
+                          ,@(@(@(rec[dfsAcc_0](),cons()),x1),Nil()))
+                        ,Nil())
+    main(x0) -> @(flatten(),x0))
+

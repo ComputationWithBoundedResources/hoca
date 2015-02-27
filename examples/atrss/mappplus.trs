@@ -1,0 +1,19 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x2 x4 x5 x3 x0 x1)
+(RULES
+    map_cond(Nil(),x2) -> Nil()
+    map_cond(Cons(x4,x5),x2) -> Cons(@(x2,x4),@(@(rec[map_0](),x2),x5))
+    @(map_f(x2),x3) -> map_cond(x3,x2)
+    @(map(),x2) -> map_f(x2)
+    @(rec[map_0](),x0) -> @(map(),x0)
+    plus_cond(0(),x3) -> x3
+    plus_cond(S(x4),x3) -> S(@(@(rec[plus_0](),x4),x3))
+    @(plus_x(x2),x3) -> plus_cond(x2,x3)
+    @(plus(),x2) -> plus_x(x2)
+    @(rec[plus_0](),x0) -> @(plus(),x0)
+    main(x0,x1) -> @(@(rec[map_0](),@(rec[plus_0](),x1)),x0))
+

@@ -1,0 +1,19 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x3 x4 x2 x5 x6 x1 x0)
+(RULES
+    @(cons_x(x3),x4) -> Cons(x3,x4)
+    @(cons(),x3) -> cons_x(x3)
+    walk_cond(Leaf(x2)) -> @(cons(),x2)
+    @(comp_f_g(x4,x5),x6) -> @(x4,@(x5,x6))
+    @(comp_f(x4),x5) -> comp_f_g(x4,x5)
+    @(comp(),x4) -> comp_f(x4)
+    walk_cond(Node(x2,x3)) -> @(@(comp(),@(rec[walk_0](),x2))
+                               ,@(rec[walk_0](),x3))
+    @(walk(),x1) -> walk_cond(x1)
+    @(rec[walk_0](),x0) -> @(walk(),x0)
+    main(x0) -> @(@(rec[walk_0](),x0),Nil()))
+

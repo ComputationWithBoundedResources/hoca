@@ -1,0 +1,26 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x4 x5 x7 x8 x6 x0 x1 x2 x3)
+(RULES
+    foldr_cond(Nil(),x4,x5) -> x5
+    foldr_cond(Cons(x7,x8),x4,x5) -> @(@(x4,x7)
+                                      ,@(@(@(rec[foldr_0](),x4),x5),x8))
+    @(foldr_f_z(x4,x5),x6) -> foldr_cond(x6,x4,x5)
+    @(foldr_f(x4),x5) -> foldr_f_z(x4,x5)
+    @(foldr(),x4) -> foldr_f(x4)
+    @(rec[foldr_0](),x0) -> @(foldr(),x0)
+    @(step_x_f(x1,x4,x5),x6) -> @(x5,@(@(x1,x6),x4))
+    @(step_x(x1,x4),x5) -> step_x_f(x1,x4,x5)
+    @(step(x1),x4) -> step_x(x1,x4)
+    @(fleft_0(),x4) -> x4
+    @(fleft_op_e(x1,x2),x3) -> @(@(@(@(rec[foldr_0](),step(x1)),fleft_0()),x3)
+                                ,x2)
+    @(fleft_op(x1),x2) -> fleft_op_e(x1,x2)
+    @(fleft(),x1) -> fleft_op(x1)
+    @(rev_anonymous(x1),x2) -> Cons(x2,x1)
+    @(rev_0(),x1) -> rev_anonymous(x1)
+    main(x0) -> @(@(@(fleft(),rev_0()),Nil()),x0))
+

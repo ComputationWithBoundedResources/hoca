@@ -3,12 +3,11 @@
     INNERMOST)
 
 (VAR
-    x2 x1 x3)
+    x10 x6 x18 x3)
 (RULES
-    rec[fold_0][3](rec[plus_0](),0(),Nil()) -> 0()
-    rec[fold_0][3](rec[plus_0](),0(),Cons(x2,x1)) ->
-      rec[plus_0][2](x2,rec[fold_0][3](rec[plus_0](),0(),x1))
-    rec[plus_0][2](0(),x1) -> x1
-    rec[plus_0][2](S(x2),x1) -> S(rec[plus_0][2](x2,x1))
-    main(x3) -> rec[fold_0][3](rec[plus_0](),0(),x3))
+    rec[fold_0][3](Nil()) -> 0()
+    rec[fold_0][3](Cons(x10,x6)) -> rec[plus_0][2](x10,rec[fold_0][3](x6))
+    rec[plus_0][2](0(),x18) -> x18
+    rec[plus_0][2](S(x10),x6) -> S(rec[plus_0][2](x10,x6))
+    main(x3) -> rec[fold_0][3](x3))
 

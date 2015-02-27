@@ -1,0 +1,12 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x2 x1 x0)
+(RULES
+    pred_cond(S(x2)) -> x2
+    pred_cond(0()) -> 0()
+    @(pred(),x1) -> pred_cond(x1)
+    main(x0) -> @(pred(),x0))
+

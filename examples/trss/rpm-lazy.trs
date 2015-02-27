@@ -3,115 +3,35 @@
     INNERMOST)
 
 (VAR
-    x9 x8 x7 x6 x4 x5 x3 x2 x1 x10 x11)
+    x10 x7 x3 x2 x1 x6 x5 x4 x82 x90)
 (RULES
-    fst_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x9,x8)))),Leaf(x7),Leaf(x6))
-                 ,rpm_9(f_0(rec[x_0](f(Node(x4,x5)))),x3,x2))
-               ,x1) -> Node(Leaf(snd_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x9
-                                                                        ,x8))))
-                                                    ,x9
-                                                    ,x8)
-                                              ,rpm_9(f_0(rec[x_0](f(Node(x9
-                                                                        ,x8))))
-                                                    ,x9
-                                                    ,x8))
-                                            ,bot[11]()))
-                           ,Leaf(snd_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x9
-                                                                        ,x8))))
-                                                    ,x9
-                                                    ,x8)
-                                              ,rpm_9(f_0(rec[x_0](f(Node(x9
-                                                                        ,x8))))
-                                                    ,x9
-                                                    ,x8))
-                                            ,bot[11]())))
-    fst_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x10,x9)))),Leaf(x8),Node(x7,x6))
-                 ,rpm_9(f_0(rec[x_0](f(Node(x4,x5)))),x3,x2))
-               ,x1) -> Node(Leaf(snd_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x10
-                                                                        ,x9))))
-                                                    ,x10
-                                                    ,x9)
-                                              ,rpm_9(f_0(rec[x_0](f(Node(x10
-                                                                        ,x9))))
-                                                    ,x10
-                                                    ,x9))
-                                            ,bot[11]()))
-                           ,fst_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x10,x9))))
-                                               ,x7
-                                               ,x6)
-                                         ,rpm_9(f_0(rec[x_0](f(Node(x10,x9))))
-                                               ,x7
-                                               ,x6))
-                                       ,bot[5]()))
-    fst_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x10,x9)))),Node(x8,x7),Leaf(x6))
-                 ,rpm_9(f_0(rec[x_0](f(Node(x4,x5)))),x3,x2))
-               ,x1) -> Node(fst_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x10,x9))))
-                                               ,x8
-                                               ,x7)
-                                         ,rpm_9(f_0(rec[x_0](f(Node(x10,x9))))
-                                               ,x8
-                                               ,x7))
+    rec[x_0][1](f(x10),x7) -> rec[rpm_0][3](x10,f_0(rec[x_0](f(x10))),bot[0]())
+    fst_cond[1](P(rpm_3(f_0(rec[x_0](f(x3)))),rpm_4(x2)),x1) ->
+      Leaf(snd_cond[1](rec[x_0][1](f(x3),bot[10]()),bot[11]()))
+    fst_cond[1](P(rpm_8(f_0(rec[x_0](f(x7))),x6,x5)
+                 ,rpm_9(f_0(rec[x_0](f(x4))),x3,x2))
+               ,x1) -> Node(fst_cond[1](rec[rpm_0][3](x6
+                                                     ,f_0(rec[x_0](f(x7)))
+                                                     ,bot[2]())
                                        ,bot[3]())
-                           ,Leaf(snd_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x10
-                                                                        ,x9))))
-                                                    ,x10
-                                                    ,x9)
-                                              ,rpm_9(f_0(rec[x_0](f(Node(x10
-                                                                        ,x9))))
-                                                    ,x10
-                                                    ,x9))
-                                            ,bot[11]())))
-    fst_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x11,x10)))),Node(x9,x8),Node(x7,x6))
-                 ,rpm_9(f_0(rec[x_0](f(Node(x4,x5)))),x3,x2))
-               ,x1) -> Node(fst_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x11,x10))))
-                                               ,x9
-                                               ,x8)
-                                         ,rpm_9(f_0(rec[x_0](f(Node(x11,x10))))
-                                               ,x9
-                                               ,x8))
-                                       ,bot[3]())
-                           ,fst_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x11,x10))))
-                                               ,x7
-                                               ,x6)
-                                         ,rpm_9(f_0(rec[x_0](f(Node(x11,x10))))
-                                               ,x7
-                                               ,x6))
+                           ,fst_cond[1](rec[rpm_0][3](x5
+                                                     ,f_0(rec[x_0](f(x7)))
+                                                     ,bot[4]())
                                        ,bot[5]()))
-    rec[min_0][2](0(),x1) -> 0()
-    rec[min_0][2](S(x1),0()) -> 0()
-    rec[min_0][2](S(x2),S(x1)) -> S(rec[min_0][2](x2,x1))
-    snd_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x8,x9)))),x7,x6)
-                 ,rpm_9(f_0(rec[x_0](f(Node(x5,x4)))),Leaf(x3),Leaf(x2)))
-               ,x1) -> rec[min_0][2](x3,x2)
-    snd_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x9,x10)))),x8,x7)
-                 ,rpm_9(f_0(rec[x_0](f(Node(x6,x5)))),Leaf(x4),Node(x3,x2)))
+    rec[min_0][2](0(),x82) -> 0()
+    rec[min_0][2](S(x90),0()) -> 0()
+    rec[min_0][2](S(x10),S(x6)) -> S(rec[min_0][2](x10,x6))
+    rec[rpm_0][3](Leaf(x3),f_0(rec[x_0](f(x2))),x1) ->
+      P(rpm_3(f_0(rec[x_0](f(x2)))),rpm_4(x3))
+    rec[rpm_0][3](Node(x4,x3),f_0(rec[x_0](f(x2))),x1) ->
+      P(rpm_8(f_0(rec[x_0](f(x2))),x4,x3),rpm_9(f_0(rec[x_0](f(x2))),x4,x3))
+    snd_cond[1](P(rpm_3(f_0(rec[x_0](f(x3)))),rpm_4(x2)),x1) -> x2
+    snd_cond[1](P(rpm_8(f_0(rec[x_0](f(x7))),x6,x5)
+                 ,rpm_9(f_0(rec[x_0](f(x4))),x3,x2))
                ,x1) ->
-      rec[min_0][2](x4
-                   ,snd_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x6,x5)))),x3,x2)
-                                 ,rpm_9(f_0(rec[x_0](f(Node(x6,x5)))),x3,x2))
-                               ,bot[9]()))
-    snd_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x9,x10)))),x8,x7)
-                 ,rpm_9(f_0(rec[x_0](f(Node(x6,x5)))),Node(x4,x3),Leaf(x2)))
-               ,x1) ->
-      rec[min_0][2](snd_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x6,x5)))),x4,x3)
-                                 ,rpm_9(f_0(rec[x_0](f(Node(x6,x5)))),x4,x3))
+      rec[min_0][2](snd_cond[1](rec[rpm_0][3](x3,f_0(rec[x_0](f(x4))),bot[6]())
                                ,bot[7]())
-                   ,x2)
-    snd_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x10,x11)))),x9,x8)
-                 ,rpm_9(f_0(rec[x_0](f(Node(x7,x6)))),Node(x5,x4),Node(x3,x2)))
-               ,x1) ->
-      rec[min_0][2](snd_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x7,x6)))),x5,x4)
-                                 ,rpm_9(f_0(rec[x_0](f(Node(x7,x6)))),x5,x4))
-                               ,bot[7]())
-                   ,snd_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x7,x6)))),x3,x2)
-                                 ,rpm_9(f_0(rec[x_0](f(Node(x7,x6)))),x3,x2))
+                   ,snd_cond[1](rec[rpm_0][3](x2,f_0(rec[x_0](f(x4))),bot[8]())
                                ,bot[9]()))
-    main(Leaf(x1)) -> Leaf(x1)
-    main(Node(x2,x1)) -> fst_cond[1](P(rpm_8(f_0(rec[x_0](f(Node(x2,x1))))
-                                            ,x2
-                                            ,x1)
-                                      ,rpm_9(f_0(rec[x_0](f(Node(x2,x1))))
-                                            ,x2
-                                            ,x1))
-                                    ,bot[13]()))
+    main(x3) -> fst_cond[1](rec[x_0][1](f(x3),bot[12]()),bot[13]()))
 

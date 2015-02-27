@@ -3,14 +3,14 @@
     INNERMOST)
 
 (VAR
-    x1 x2)
+    x112 x120 x88 x14)
 (RULES
     main(Nil()) -> ParseFail(0())
     main(Cons(A(),Nil())) -> ParseFail(S(0()))
-    main(Cons(A(),Cons(A(),x1))) -> ParseFail(S(S(0())))
-    main(Cons(A(),Cons(B(),Nil()))) -> ParseSuccess(Unit(),Nil())
-    main(Cons(A(),Cons(B(),Cons(x2,x1)))) -> ParseFail(S(S(0())))
-    main(Cons(A(),Cons(C(),x1))) -> ParseFail(S(S(0())))
-    main(Cons(B(),x1)) -> ParseFail(S(0()))
-    main(Cons(C(),x1)) -> ParseFail(S(0())))
+    main(Cons(A(),Cons(A(),x112))) -> ParseFail(S(S(0())))
+    main(Cons(A(),Cons(B(),Nil()))) -> ParseSuccess()
+    main(Cons(A(),Cons(B(),Cons(x120,x88)))) -> ParseFail(S(S(0())))
+    main(Cons(A(),Cons(C(),x112))) -> ParseFail(S(S(0())))
+    main(Cons(B(),x14)) -> ParseFail(S(0()))
+    main(Cons(C(),x14)) -> ParseFail(S(0())))
 

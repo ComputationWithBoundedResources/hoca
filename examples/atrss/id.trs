@@ -1,0 +1,18 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x1 x2 x4 x3 x0)
+(RULES
+    iter_cond(0(),x1,x2) -> x2
+    iter_cond(S(x4),x1,x2) -> @(x1,@(@(@(rec[iter_0](),x1),x2),x4))
+    @(iter_f_g(x1,x2),x3) -> iter_cond(x3,x1,x2)
+    @(iter_f(x1),x2) -> iter_f_g(x1,x2)
+    @(iter(),x1) -> iter_f(x1)
+    @(rec[iter_0](),x0) -> @(iter(),x0)
+    @(compS_f(x1),x2) -> @(x1,S(x2))
+    @(compS(),x1) -> compS_f(x1)
+    @(id(),x1) -> x1
+    main(x0) -> @(@(@(@(rec[iter_0](),compS()),id()),x0),0()))
+

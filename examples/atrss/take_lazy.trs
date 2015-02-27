@@ -1,0 +1,18 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x1 x3 x4 x5 x2 x0)
+(RULES
+    take_l_cond(NilL(),x1) -> Nil()
+    take_l_cond_1(0(),x3,x4) -> Nil()
+    take_l_cond_1(S(x5),x3,x4) -> Cons(x3,@(@(rec[take_l_0](),x5),x4))
+    take_l_cond(ConsL(x3,x4),x1) -> take_l_cond_1(x1,x3,x4)
+    @(take_l_n(x1),x2) -> take_l_cond(@(x2,bot[0]()),x1)
+    @(take_l(),x1) -> take_l_n(x1)
+    @(rec[take_l_0](),x0) -> @(take_l(),x0)
+    @(zeros(),x1) -> ConsL(0(),rec[zeros_0]())
+    @(rec[zeros_0](),x0) -> @(zeros(),x0)
+    main(x0) -> @(@(rec[take_l_0](),x0),rec[zeros_0]()))
+

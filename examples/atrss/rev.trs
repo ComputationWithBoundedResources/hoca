@@ -1,0 +1,19 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x5 x6 x7 x4 x0 x2 x3 x1)
+(RULES
+    rev_cond(Nil()) -> Nil()
+    append_cond(Nil(),x5) -> x5
+    append_cond(Cons(x6,x7),x5) -> Cons(x6,@(@(rec[append_0](),x7),x5))
+    @(append_xs(x4),x5) -> append_cond(x4,x5)
+    @(append(),x4) -> append_xs(x4)
+    @(rec[append_0](),x0) -> @(append(),x0)
+    rev_cond(Cons(x2,x3)) -> @(@(rec[append_0](),@(rec[rev_0](),x3))
+                              ,Cons(x2,Nil()))
+    @(rev(),x1) -> rev_cond(x1)
+    @(rec[rev_0](),x0) -> @(rev(),x0)
+    main(x0) -> @(rec[rev_0](),x0))
+

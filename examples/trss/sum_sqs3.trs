@@ -1,0 +1,22 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x50 x10 x6 x5 x3 x13 x34 x1)
+(RULES
+    rec[plus_0][2](0(),x50) -> x50
+    rec[plus_0][2](S(x10),x6) -> S(rec[plus_0][2](x10,x6))
+    rec[sum_0][1](Nil()) -> 0()
+    rec[sum_0][1](Cons(x5,x3)) -> rec[plus_0][2](x5,rec[sum_0][1](x3))
+    rec[map_0][2](Nil()) -> Nil()
+    rec[map_0][2](Cons(x6,x13)) -> Cons(rec[mult_0][2](x6,x6)
+                                       ,rec[map_0][2](x13))
+    rec[mult_0][2](0(),x34) -> 0()
+    rec[mult_0][2](S(x10),x6) -> rec[plus_0][2](x6,rec[mult_0][2](x10,x6))
+    rec[unfoldr_0][2](0()) -> Nil()
+    rec[unfoldr_0][2](S(x6)) -> Cons(x6,rec[unfoldr_0][2](x6))
+    main(0()) -> 0()
+    main(S(x1)) -> rec[sum_0][1](rec[map_0][2](Cons(S(x1)
+                                                   ,rec[unfoldr_0][2](S(x1))))))
+

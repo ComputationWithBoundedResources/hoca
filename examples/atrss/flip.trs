@@ -1,0 +1,14 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x2 x1 x0)
+(RULES
+    flip_cond(E()) -> E()
+    flip_cond(Z(x2)) -> O(@(rec[flip_0](),x2))
+    flip_cond(O(x2)) -> Z(@(rec[flip_0](),x2))
+    @(flip(),x1) -> flip_cond(x1)
+    @(rec[flip_0](),x0) -> @(flip(),x0)
+    main(x0) -> @(rec[flip_0](),x0))
+

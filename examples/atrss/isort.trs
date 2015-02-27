@@ -1,0 +1,32 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x1 x5 x6 x8 x9 x7 x0 x3 x4 x2)
+(RULES
+    sort_cond(Nil(),x1) -> Nil()
+    insert_cond(Nil(),x5,x6) -> Cons(x6,Nil())
+    insert_cond_1(True(),x5,x6,x8,x9) -> Cons(x6,Cons(x8,x9))
+    insert_cond_1(False(),x5,x6,x8,x9) -> Cons(x8
+                                              ,@(@(@(rec[insert_0](),x5),x6)
+                                                ,x9))
+    insert_cond(Cons(x8,x9),x5,x6) -> insert_cond_1(@(@(x5,x6),x8),x5,x6,x8,x9)
+    @(insert_ord_x(x5,x6),x7) -> insert_cond(x7,x5,x6)
+    @(insert_ord(x5),x6) -> insert_ord_x(x5,x6)
+    @(insert(),x5) -> insert_ord(x5)
+    @(rec[insert_0](),x0) -> @(insert(),x0)
+    sort_cond(Cons(x3,x4),x1) -> @(@(@(rec[insert_0](),x1),x3)
+                                  ,@(@(rec[sort_0](),x1),x4))
+    @(sort_ord(x1),x2) -> sort_cond(x2,x1)
+    @(sort(),x1) -> sort_ord(x1)
+    @(rec[sort_0](),x0) -> @(sort(),x0)
+    leq_cond(0(),x2) -> True()
+    leq_cond_1(0(),x3) -> False()
+    leq_cond_1(S(x4),x3) -> @(@(rec[leq_0](),x3),x4)
+    leq_cond(S(x3),x2) -> leq_cond_1(x2,x3)
+    @(leq_x(x1),x2) -> leq_cond(x1,x2)
+    @(leq(),x1) -> leq_x(x1)
+    @(rec[leq_0](),x0) -> @(leq(),x0)
+    main(x0) -> @(@(rec[sort_0](),rec[leq_0]()),x0))
+

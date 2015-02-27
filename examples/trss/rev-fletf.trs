@@ -3,20 +3,13 @@
     INNERMOST)
 
 (VAR
-    x2 x1 x4 x3)
+    x40 x14 x4 x3 x2 x1 x11 x7 x6 x10 x20 x25)
 (RULES
-    rec[foldr_0][3](step(rev_0()),fleft_0(),Nil()) -> fleft_0()
-    rec[foldr_0][3](step(rev_0()),fleft_0(),Cons(x2,x1)) ->
-      step_x_f(rev_0(),x2,rec[foldr_0][3](step(rev_0()),fleft_0(),x1))
-    step_x_f[1](rev_0(),x4,step_x_f(rev_0(),x3,x2),x1) -> step_x_f[1](rev_0()
-                                                                     ,x3
-                                                                     ,x2
-                                                                     ,Cons(x4
-                                                                          ,x1))
-    step_x_f[1](rev_0(),x2,fleft_0(),x1) -> Cons(x2,x1)
+    rec[foldr_0][3](Nil()) -> fleft_0()
+    rec[foldr_0][3](Cons(x40,x14)) -> step_x_f(x40,rec[foldr_0][3](x14))
+    step_x_f[1](x4,step_x_f(x3,x2),x1) -> step_x_f[1](x3,x2,rev_0[2](x1,x4))
+    step_x_f[1](x11,fleft_0(),x7) -> rev_0[2](x7,x11)
+    rev_0[2](x6,x10) -> Cons(x10,x6)
     main(Nil()) -> Nil()
-    main(Cons(x2,x1)) -> step_x_f[1](rev_0()
-                                    ,x2
-                                    ,rec[foldr_0][3](step(rev_0()),fleft_0(),x1)
-                                    ,Nil()))
+    main(Cons(x20,x25)) -> step_x_f[1](x20,rec[foldr_0][3](x25),Nil()))
 

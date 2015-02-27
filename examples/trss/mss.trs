@@ -3,33 +3,29 @@
     INNERMOST)
 
 (VAR
-    x1 x3 x2)
+    x6 x14 x10 x26 x34 x23 x2 x1 x20 x47 x12 x70 x58 x66)
 (RULES
-    rec[foldl_0][3](rec[max_0](),x1,Nil()) -> x1
-    rec[foldl_0][3](rec[max_0](),x3,Cons(x2,x1)) ->
-      rec[foldl_0][3](rec[max_0](),rec[max_0][2](x3,x2),x1)
-    rec[max_0][2](0(),x1) -> x1
-    rec[max_0][2](S(x1),0()) -> S(x1)
-    rec[max_0][2](S(x2),S(x1)) -> S(rec[max_0][2](x2,x1))
-    scanr_cond_1(Cons(0(),x1),rec[f_0](),0()) -> Cons(0(),Cons(0(),x1))
-    scanr_cond_1(Cons(S(x2),x1),rec[f_0](),0()) -> Cons(S(x2),Cons(S(x2),x1))
-    scanr_cond_1(Cons(0(),x2),rec[f_0](),M(x1)) -> Cons(0(),Cons(0(),x2))
-    scanr_cond_1(Cons(S(x3),x2),rec[f_0](),M(x1)) -> Cons(rec[minus_0][2](S(x3)
-                                                                         ,x1)
-                                                         ,Cons(S(x3),x2))
-    scanr_cond_1(Cons(0(),x2),rec[f_0](),S(x1)) -> Cons(S(x1),Cons(0(),x2))
-    scanr_cond_1(Cons(S(x3),x2),rec[f_0](),S(x1)) -> Cons(rec[plus_0][2](S(x1)
-                                                                        ,S(x3))
-                                                         ,Cons(S(x3),x2))
-    rec[scanr_0][3](rec[f_0](),0(),Nil()) -> Cons(0(),Nil())
-    rec[scanr_0][3](rec[f_0](),0(),Cons(x2,x1)) ->
-      scanr_cond_1(rec[scanr_0][3](rec[f_0](),0(),x1),rec[f_0](),x2)
-    rec[minus_0][2](0(),x1) -> 0()
-    rec[minus_0][2](S(x1),0()) -> S(x1)
-    rec[minus_0][2](S(x2),S(x1)) -> rec[minus_0][2](x2,x1)
-    rec[plus_0][2](0(),S(x1)) -> S(x1)
-    rec[plus_0][2](S(x2),S(x1)) -> S(rec[plus_0][2](x2,S(x1)))
-    main(x1) -> rec[foldl_0][3](rec[max_0]()
-                               ,0()
-                               ,rec[scanr_0][3](rec[f_0](),0(),x1)))
+    rec[foldl_0][3](x6,Nil()) -> x6
+    rec[foldl_0][3](x14,Cons(x10,x6)) -> rec[foldl_0][3](rec[max_0][2](x14,x10)
+                                                        ,x6)
+    rec[max_0][2](0(),x26) -> x26
+    rec[max_0][2](S(x34),0()) -> S(x34)
+    rec[max_0][2](S(x10),S(x6)) -> S(rec[max_0][2](x10,x6))
+    scanr_cond_1(Cons(0(),x23),0()) -> Cons(0(),Cons(0(),x23))
+    scanr_cond_1(Cons(S(x34),x23),0()) -> Cons(S(x34),Cons(S(x34),x23))
+    scanr_cond_1(Cons(0(),x23),M(x34)) -> Cons(0(),Cons(0(),x23))
+    scanr_cond_1(Cons(S(x2),x1),M(0())) -> Cons(S(x2),Cons(S(x2),x1))
+    scanr_cond_1(Cons(S(x20),x47),M(S(x12))) -> Cons(rec[minus_0][2](x20,x12)
+                                                    ,Cons(S(x20),x47))
+    scanr_cond_1(Cons(0(),x23),S(x70)) -> Cons(S(x70),Cons(0(),x23))
+    scanr_cond_1(Cons(S(x6),x23),S(x10)) -> Cons(rec[plus_0][2](S(x10),S(x6))
+                                                ,Cons(S(x6),x23))
+    rec[scanr_0][3](Nil()) -> Cons(0(),Nil())
+    rec[scanr_0][3](Cons(x10,x6)) -> scanr_cond_1(rec[scanr_0][3](x6),x10)
+    rec[minus_0][2](0(),x58) -> 0()
+    rec[minus_0][2](S(x66),0()) -> S(x66)
+    rec[minus_0][2](S(x10),S(x6)) -> rec[minus_0][2](x10,x6)
+    rec[plus_0][2](0(),S(x6)) -> S(x6)
+    rec[plus_0][2](S(x10),S(x6)) -> S(rec[plus_0][2](x10,S(x6)))
+    main(x1) -> rec[foldl_0][3](0(),rec[scanr_0][3](x1)))
 

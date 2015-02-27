@@ -1,0 +1,18 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x1 x2 x4 x5 x3 x0)
+(RULES
+    foldl_cond(Nil(),x1,x2) -> x2
+    foldl_cond(Cons(x4,x5),x1,x2) -> @(@(@(rec[foldl_0](),x1),@(@(x1,x2),x4))
+                                      ,x5)
+    @(foldl_f_z(x1,x2),x3) -> foldl_cond(x3,x1,x2)
+    @(foldl_f(x1),x2) -> foldl_f_z(x1,x2)
+    @(foldl(),x1) -> foldl_f(x1)
+    @(rec[foldl_0](),x0) -> @(foldl(),x0)
+    @(prefix_xs(x1),x2) -> Cons(x2,x1)
+    @(prefix(),x1) -> prefix_xs(x1)
+    main(x0) -> @(@(@(rec[foldl_0](),prefix()),Nil()),x0))
+

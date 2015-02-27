@@ -1,0 +1,20 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x1 x2 x4 x5 x3 x0)
+(RULES
+    fold_cond(Nil(),x1,x2) -> x2
+    fold_cond(Cons(x4,x5),x1,x2) -> @(@(x1,x4),@(@(@(rec[fold_0](),x1),x2),x5))
+    @(fold_f_z(x1,x2),x3) -> fold_cond(x3,x1,x2)
+    @(fold_f(x1),x2) -> fold_f_z(x1,x2)
+    @(fold(),x1) -> fold_f(x1)
+    @(rec[fold_0](),x0) -> @(fold(),x0)
+    plus_cond(0(),x2) -> x2
+    plus_cond(S(x3),x2) -> S(@(@(rec[plus_0](),x3),x2))
+    @(plus_x(x1),x2) -> plus_cond(x1,x2)
+    @(plus(),x1) -> plus_x(x1)
+    @(rec[plus_0](),x0) -> @(plus(),x0)
+    main(x0) -> @(@(@(rec[fold_0](),rec[plus_0]()),0()),x0))
+

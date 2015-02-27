@@ -3,21 +3,19 @@
     INNERMOST)
 
 (VAR
-    x2 x1 x7 x5 x3)
+    x2 x1 x7 x5 x3 x4 x11 x8 x6 x14 x10 x18 x26)
 (RULES
-    rec[fold_0][3](insert_ord(rec[leq_0]()),Nil(),Nil()) -> Nil()
-    rec[fold_0][3](insert_ord(rec[leq_0]()),Nil(),Cons(x2,x1)) ->
-      insert_ord[2](rec[leq_0]()
-                   ,x2
-                   ,rec[fold_0][3](insert_ord(rec[leq_0]()),Nil(),x1))
-    insert_cond_1(True(),rec[leq_0](),x7,x5,x3) -> Cons(x7,Cons(x5,x3))
-    insert_cond_1(False(),rec[leq_0](),x3,x2,x1) ->
-      Cons(x2,insert_ord[2](rec[leq_0](),x3,x1))
-    insert_ord[2](rec[leq_0](),x1,Nil()) -> Cons(x1,Nil())
-    insert_ord[2](rec[leq_0](),x3,Cons(x2,x1)) ->
-      insert_cond_1(rec[leq_0][2](x3,x2),rec[leq_0](),x3,x2,x1)
-    rec[leq_0][2](0(),x1) -> True()
-    rec[leq_0][2](S(x1),0()) -> False()
-    rec[leq_0][2](S(x2),S(x1)) -> rec[leq_0][2](x2,x1)
-    main(x1) -> rec[fold_0][3](insert_ord(rec[leq_0]()),Nil(),x1))
+    rec[fold_0][3](Nil()) -> Nil()
+    rec[fold_0][3](Cons(x2,x1)) -> insert_ord[2](x2,rec[fold_0][3](x1))
+    insert_cond_1(True(),x7,x5,x3) -> Cons(x7,Cons(x5,x3))
+    insert_cond_1(False(),x4,x11,x8) -> Cons(x11,insert_ord[2](x4,x8))
+    insert_ord[2](x6,Nil()) -> Cons(x6,Nil())
+    insert_ord[2](x14,Cons(x10,x6)) -> insert_cond_1(rec[leq_0][2](x14,x10)
+                                                    ,x14
+                                                    ,x10
+                                                    ,x6)
+    rec[leq_0][2](0(),x18) -> True()
+    rec[leq_0][2](S(x26),0()) -> False()
+    rec[leq_0][2](S(x10),S(x6)) -> rec[leq_0][2](x10,x6)
+    main(x7) -> rec[fold_0][3](x7))
 

@@ -1,0 +1,46 @@
+
+(STRATEGY
+    INNERMOST)
+
+(VAR
+    x1 x3 x4 x5 x2 x0 x7 x8 x9 x10 x6)
+(RULES
+    take_l_cond(NilL(),x1) -> Nil()
+    take_l_cond_1(0(),x3,x4) -> Nil()
+    take_l_cond_1(S(x5),x3,x4) -> Cons(x3,@(@(rec[take_l_0](),x5),x4))
+    take_l_cond(ConsL(x3,x4),x1) -> take_l_cond_1(x1,x3,x4)
+    @(take_l_n(x1),x2) -> take_l_cond(@(x2,bot[0]()),x1)
+    @(take_l(),x1) -> take_l_n(x1)
+    @(rec[take_l_0](),x0) -> @(take_l(),x0)
+    zipwith_l_cond(NilL(),x3,x5) -> NilL()
+    zipwith_l_cond_1(NilL(),x3,x7,x8) -> NilL()
+    zipwith_l_cond_1(ConsL(x9,x10),x3,x7,x8) -> ConsL(@(@(x3,x7),x9)
+                                                     ,@(@(@(rec[zipwith_l_0]()
+                                                           ,x3)
+                                                         ,x8)
+                                                       ,x10))
+    zipwith_l_cond(ConsL(x7,x8),x3,x5) -> zipwith_l_cond_1(@(x5,bot[1]())
+                                                          ,x3
+                                                          ,x7
+                                                          ,x8)
+    @(zipwith_l_f_xs_ys(x3,x4,x5),x6) -> zipwith_l_cond(@(x4,bot[2]()),x3,x5)
+    @(zipwith_l_f_xs(x3,x4),x5) -> zipwith_l_f_xs_ys(x3,x4,x5)
+    @(zipwith_l_f(x3),x4) -> zipwith_l_f_xs(x3,x4)
+    @(zipwith_l(),x3) -> zipwith_l_f(x3)
+    @(rec[zipwith_l_0](),x0) -> @(zipwith_l(),x0)
+    plus_cond(0(),x4) -> x4
+    plus_cond(S(x5),x4) -> S(@(@(rec[plus_0](),x5),x4))
+    @(plus_x(x3),x4) -> plus_cond(x3,x4)
+    @(plus(),x3) -> plus_x(x3)
+    @(rec[plus_0](),x0) -> @(plus(),x0)
+    tail_l_cond(NilL()) -> Error_empty_list()
+    tail_l_cond(ConsL(x4,x5)) -> x5
+    @(tail_l(),x3) -> tail_l_cond(@(x3,bot[3]()))
+    @(fibs_1(),x2) -> ConsL(S(0())
+                           ,@(@(@(rec[zipwith_l_0](),rec[plus_0]())
+                               ,rec[fibs_0]())
+                             ,@(tail_l(),rec[fibs_0]())))
+    @(fibs(),x1) -> ConsL(0(),fibs_1())
+    @(rec[fibs_0](),x0) -> @(fibs(),x0)
+    main(x0) -> @(@(rec[take_l_0](),x0),rec[fibs_0]()))
+
