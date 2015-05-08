@@ -70,7 +70,7 @@ instance PP.Pretty (Exp l) where
   pretty (App _ e1 e2) =
     PP.parens (PP.pretty e1 // PP.pretty e2)
   pretty (Fix i es) =
-    PP.parens (PP.bold (PP.text "fix_" PP.<> PP.int i) $$ PP.brackets (PP.vcat (intersperse (PP.text ",") [ (PP.pretty e) | e <- es])))
+    PP.parens (PP.bold (PP.text "fix_" PP.<> PP.int i) $$ PP.brackets (PP.vcat (intersperse (PP.text ",") [ PP.pretty e | e <- es])))
   pretty (Cond _ e cs) =
     PP.parens ((PP.bold (PP.text "case") PP.<+> PP.pretty e PP.<+> PP.bold (PP.text "of"))
                $$ PP.vsep [ PP.pretty g PP.<+> PP.text "->" PP.<+> PP.pretty e'
@@ -238,3 +238,5 @@ cbvCtxtClosure stp e = ctxt e <||> stp e
 
 cbv :: (Alternative m, Monad m, Choice m) => Exp l -> m (Exp l)
 cbv = cbvCtxtClosure (\ e -> beta e <|> fixCBV e <|> cond e)
+
+

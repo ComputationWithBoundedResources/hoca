@@ -43,11 +43,12 @@ import qualified Data.Rewriting.Substitution as S
 import qualified Data.Rewriting.Substitution.Type as ST
 import           Data.Rewriting.Substitution.Unify (unify)
 
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, isNothing)
 import qualified Data.Map as Map
 import           Control.Monad.RWS
 import Control.Applicative (Applicative,(<$>),(<*>))
 import Data.List (nub)
+import Control.Arrow (first)
 import Control.Monad.Error (MonadError, throwError)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import qualified Control.Monad.State as State
@@ -77,7 +78,7 @@ app :: Term f v -> Term f v -> Term f v
 app t1 t2 = T.Fun App [t1,t2]
 
 fun :: f -> [Term f v] -> Term f v
-fun f ts = T.Fun (Sym f) ts
+fun f = T.Fun (Sym f)
 
 var :: v -> Term f v
 var = T.Var
@@ -126,7 +127,7 @@ instance PP.Pretty Type where
   pretty = pp False
     where
       pp _ (BT bt) = PP.text ( names !! bt)
-        where names = (\ c -> [c]) `map` ['A'..'Z'] ++ [show i | i <- [(1::Int)..]]
+        where names = (:[]) `map` ['A'..'Z'] ++ [show i | i <- [(1::Int)..]]
       pp paren (ta :~> tb) = encl (pp True ta PP.<+> PP.text "->" PP.<+> pp False tb)
         where encl d | paren = PP.lparen PP.<+> d PP.<+> PP.rparen
                      | otherwise = d
@@ -220,7 +221,7 @@ inferTypes rs = do
       mapM_ (\(i,ti) -> e |- (ti, inTypeVar f i)) (zip [0..] ts)
     _ |- _ = throwError "non-applicative term trs given"  
 
-    typeRuleM (_,(R.Rule lhs rhs)) = do
+    typeRuleM (_,R.Rule lhs rhs) = do
       let vs = nub (T.vars lhs)
       e <- foldM (\e v -> Map.insert v <$> freshM <*> return e) Map.empty vs
       tl <- freshVar
@@ -241,12 +242,12 @@ inferTypes rs = do
       case Map.lookup v env of
        Nothing ->
          case Map.lookup v assign of
-          mt | mt == Nothing || mt == Just (T.Var v) -> do
+          mt | isNothing mt || mt == Just (T.Var v) -> do
                  State.put (Map.insert v (BT fresh) env, fresh+1)
                  return (BT fresh)
           mt -> do
             tp <- toTypeM assign (fromJust mt)
-            State.modify (\ (e, f) -> (Map.insert v tp e, f))
+            State.modify (first (Map.insert v tp))
             return tp
        Just tp -> return tp
     toTypeM _ (T.Fun (TBase bt) _) = return (BT bt)
@@ -263,7 +264,7 @@ inferTypes rs = do
       
     mkSignature assign =
       foldM (\ sig (f,ar) -> do
-                ins <- mapM (\ i -> toTypeM assign (inTypeVar f i)) [0..ar-1]
+                ins <- mapM (toTypeM assign . inTypeVar f) [0..ar-1]
                 out <- toTypeM assign (outTypeVar f)
                 return (Map.insert f (TypeDecl ins out) sig))       
       Map.empty fs

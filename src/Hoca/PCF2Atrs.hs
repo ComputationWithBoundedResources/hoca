@@ -76,7 +76,6 @@ label expr = State.evalState (labelM expr) (Map.empty,[])
         name' _ = maybeFresh (Name [])
         fromCtx (FP.LetBdy fn vs _: _) = maybeFresh (Name [LString v | v <- vs ++ [fn]])
         fromCtx (FP.LetRecBdy fn vs _: _) = maybeFresh (Name [LInt (length vs), LString fn])
---        fromCtx (FP.LetIn fn _ : ctx') = LString fn : fromCtx ctx'
         fromCtx (FP.LambdaBdy _ : ctx') = withSurroundingLet ctx' (LString "anonymous")
         fromCtx ctx' = withSurroundingLet ctx' (LInt 0)
     

@@ -10,6 +10,7 @@ import Control.Applicative ((<$>), (<*>))
 import Control.Monad.Reader (runReaderT, ask, local)
 import Control.Monad.Error (throwError)
 import Control.Monad (void)
+import Control.Arrow (first, second)
 import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 
@@ -115,9 +116,9 @@ toPCF expr = runReaderT (pcf (close expr)) ([],[])
     environment = fst <$> ask
     context = snd <$> ask
 
-    withVar v = local (\ (env,ctx) -> (newEnv env, ctx)) where
+    withVar v = local (first newEnv) where
       newEnv env = (v, 0::Int) : [(v',i+1) | (v',i) <- env]
-    withContext ctx = local (\ (env,ctx') -> (env, ctx ++ ctx'))
+    withContext ctx = local (second (ctx ++))
 
     lambda v m = PCF.Abs (Just v) <$> context <*> withVar v m
     anonymous m = PCF.Abs Nothing <$> context <*> withVar "" m    
@@ -152,7 +153,7 @@ toPCF expr = runReaderT (pcf (close expr)) ([],[])
     pcf e@(Force _ f) =
       PCF.App <$> context
        <*> withContext [ForceBdy e] (pcf f)
-       <*> (return PCF.Bot)
+       <*> return PCF.Bot
 
     pcf e@(Cond _ gexp cs) = 
       PCF.Cond <$> context
