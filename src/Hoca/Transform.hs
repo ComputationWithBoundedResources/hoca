@@ -168,7 +168,7 @@ dfaInstantiate refineP prob =
          changed =
            case replacements of
             [(rl',succs)] -> any (`notElem` succs) ss
-                             || (R.lhs rl) `properInstOf` (R.lhs rl') 
+                             || R.lhs rl `properInstOf` R.lhs rl'
             _ -> True
            
      initialDFA = TG.fromList (startRules ++ constructorRules) where
@@ -238,7 +238,7 @@ arglabel p
          withLabel (ti:ts') f =
            case aterm ti of
             Fun g _ -> Problem.Labeled (Problem.LSym g) (withLabel ts' f)
-            _ -> error ("Hoca.Transform.argLabel match failure")
+            _ -> error "Hoca.Transform.argLabel match failure"
 
     labelTerm (aterm -> t1 :@ t2) = labelTerm t1 `ATRS.app` labelTerm t2
     labelTerm t = t

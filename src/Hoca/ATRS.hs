@@ -1,4 +1,5 @@
--- | 
+-- | Applicative Term Rewrite Systems, modeled as term rewrite systems over a signature
+-- of type @'ASym' f@. 
 
 module Hoca.ATRS
        (
@@ -11,10 +12,13 @@ module Hoca.ATRS
        , aterm
        , app
        , fun
-       , args
-       , function
        , var
-         -- * operations on terms
+         -- * Operations on Terms
+       , wellformed
+       , aform
+       , hd         
+       , args
+
        , headSymbol
        , headVars
        , funsDL
@@ -33,6 +37,8 @@ module Hoca.ATRS
        , unTypeRule
        , unTypeRules
        , getType
+
+       , module T
        )
 where
 
@@ -53,61 +59,126 @@ import Control.Monad.Error (MonadError, throwError)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import qualified Control.Monad.State as State
 
-data ASym f = Sym f | App deriving (Ord, Eq, Show)
+--------------------------------------------------------------------------------
+-- applicative terms
+--------------------------------------------------------------------------------
+
+
+data ASym f = Sym f -- ^ n-ary function symbol
+            | App   -- ^ binary application symbol
+            deriving (Ord, Eq, Show)
 
 type Term f v = T.Term (ASym f) v
 type Rule f v = R.Rule (ASym f) v
 
-data AView f v = Var v | Fun f [Term f v] | Term f v :@ Term f v
+-- constructors
+
+-- | a term is well-formed if all occurrences of the application symbol 'App' are binary
+--
+-- >>> wellformed (T.Fun App [T.Var 'x', T.Var 'y'])
+-- True
+--
+-- >>> wellformed (T.Fun App [T.Var 'x'])
+-- False
+wellformed :: Term f v -> Bool
+wellformed = T.fold (const True) wf where
+  wf App wfs@[_,_] = and wfs
+  wf (Sym _) wfs = and wfs
+  wf _ _ = False
+
+-- | constructor for application
+app :: Term f v -> Term f v -> Term f v
+app t1 t2 = T.Fun App [t1,t2]
+
+-- | constructor for n-ary function symbols
+fun :: f -> [Term f v] -> Term f v
+fun f = T.Fun (Sym f)
+
+-- | constructor for variables
+var :: v -> Term f v
+var = T.Var
 
 instance PP.Pretty f => PP.Pretty (ASym f) where
   pretty App = PP.text "@"
   pretty (Sym f) = PP.pretty f
 
+
+-- applicative view of term
+
+-- | View for applicative terms
+data AView f v = Var v -- ^ Variable
+               | Fun f [Term f v] -- ^ n-ary function application 
+               | Term f v :@ Term f v -- ^ application
+
+
+-- | constructs applicative view of a term, returns 'Nothing' iff the given term is not 'wellformed'
 atermM :: Term f v -> Maybe (AView f v)
 atermM (T.Var v) = Just (Var v)
 atermM (T.Fun App [t1,t2]) = Just (t1 :@ t2)
 atermM (T.Fun (Sym f) ts) = Just (Fun f ts)
 atermM _ = Nothing
 
+-- | partial version of 'atermM', total on 'wellformed' terms
 aterm :: Term f v -> AView f v
 aterm = fromJust . atermM
 
+-- | translates an applicative term @s t1 ... tn@ into
+-- the pair @(s,[t1 ... tn])@ provided the given term is 'wellformed'.
+-- The functions 'hd' and 'args' return @s@ and the list @[t1 ... tn]@, respectively.
+--
+-- prop> wellformed t ==> isJust (aform t)
+--
+-- prop> aform t == Just (s,ts)  ==>  hd t == Just s && args t == ts
+aform :: Term f v -> Maybe (Term f v, [Term f v])
+aform (atermM -> Nothing) = Nothing
+aform (atermM -> Just (t1 :@ t2)) = do
+  (c,as) <- aform t1
+  return (c, as ++ [t2])
+aform t = return (t,[])
 
-app :: Term f v -> Term f v -> Term f v
-app t1 t2 = T.Fun App [t1,t2]
+-- | Returns the head of an applicative term, see 'aform'
+hd :: Term f v -> Maybe (Term f v)
+hd t = fst <$> aform t
 
-fun :: f -> [Term f v] -> Term f v
-fun f = T.Fun (Sym f)
+-- | Returns the arguments of an applicative term, see 'aform'
+args :: Term f v -> Maybe [Term f v]
+args t = snd <$> aform t
 
-var :: v -> Term f v
-var = T.Var
-
+-- | Returns the root symbol of the head term, if existing
+--
+-- prop> hd t == Just (T.Fun f ts)  <==>  headSymbol t == Just f
 headSymbol :: Term f v -> Maybe f
 headSymbol (atermM -> Just (Fun f _)) = Just f
 headSymbol (atermM -> Just (t1 :@ _)) = headSymbol t1
 headSymbol _ = Nothing
 
+-- | Returns all variables in head position
+--
+-- >>> headVars (T.Var 'x')
+-- []
+--
+-- >>> headVars (T.Fun App [Var 'x', T.Var 'y'])
+-- ['x']
+--
+-- >>> headVars (T.Fun App [Var 'x', (T.Fun App [Var 'x', T.Var 'y'])])
+-- ['x','x']
+-- 
+-- >>> headVars (T.Fun (Sym 'f') [T.Fun App [Var 'x', Var 'y']]
+-- ['x']
 headVars :: Term f v -> [v]
 headVars (atermM -> Just (T.Var v :@ t2)) = v : headVars t2
 headVars (T.Var _) = []
 headVars (T.Fun _ ts) = concatMap headVars ts
 
-funsDL :: Term f v -> [f] -> [f]
-funsDL t l = [f | (Sym f) <- T.funsDL t (map Sym l)]
-
+-- | returns all function symbols occurring in the given term
 funs :: Term f v -> [f]
 funs t = funsDL t []
 
-function :: Term f v -> Maybe (Term f v)
-function (atermM -> Just (t1 :@ _)) = function t1
-function (atermM -> Just (Var v)) = Just (T.Var v)
-function (atermM -> Just (Fun f ts)) = Just (T.Fun (Sym f) ts)
-function _ = Nothing
+-- | difference list version of 'funs'
+funsDL :: Term f v -> [f] -> [f]
+funsDL t l = [f | (Sym f) <- T.funsDL t (map Sym l)]
 
-args :: Term f v -> [Term f v]
-args (atermM -> Just (t1 :@ t2)) = args t1 ++ [t2]
-args _ = []
+
 
 -- typing
 

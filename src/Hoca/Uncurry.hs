@@ -20,7 +20,6 @@ etaSaturateTyped = concatMap (etaSaturateRule 1 . ren) where
   ren = R.rename (\ (v,tp) -> (Left v,tp))
 
 -- TODO check that head-variable free
-
 uncurryRules :: (Monad m, Alternative m) => [TypedRule f v] -> m [ATRS.Rule (f,Int) v]
 uncurryRules = mapM (uncurryRuleM . ATRS.unTypeRule) where
   uncurryRuleM rl = 
@@ -28,10 +27,9 @@ uncurryRules = mapM (uncurryRuleM . ATRS.unTypeRule) where
            <*> uncurryTermM (R.rhs rl)
   uncurryTermM (T.Var v) = return (T.Var v)
   uncurryTermM t =
-    case ATRS.function t of
-     Just (T.Fun (ATRS.Sym f) ts) ->
+    case ATRS.aform t of
+     Just (T.Fun (ATRS.Sym f) ts, as) ->
        ATRS.fun (f,length as) <$> mapM uncurryTermM (ts ++ as) where 
-         as = ATRS.args t
      _ -> empty
      
 uncurried :: (Monad m, Alternative m) => [ATRS.Rule Problem.Symbol Int] -> m [ATRS.Rule Problem.Symbol Int]
