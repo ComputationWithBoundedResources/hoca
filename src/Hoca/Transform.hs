@@ -6,7 +6,7 @@ module Hoca.Transform (
   , usableRules
   , neededRules
   , uncurryRules
-  , etaSaturateRules
+  -- , etaSaturateRules
   , compress
   , arglabel
   , dfaInstantiate
@@ -19,20 +19,22 @@ module Hoca.Transform (
        where
 
 import           Control.Applicative (empty, pure, (<$>))
-import qualified Data.Map as Map
 import           Data.List (nub)
+import qualified Data.Map as Map
 import           Data.Maybe (listToMaybe, isNothing, fromMaybe)
 import qualified Data.MultiSet as MS
-import qualified Data.Rewriting.Rule as R
-import qualified Data.Rewriting.Rules as RS
+
 import           Data.Rewriting.Substitution (unify, apply)
-import qualified Data.Rewriting.Term as T
-import qualified Hoca.ATRS as ATRS
-import Hoca.ATRS (aterm, AView (..))
+import           Data.Rewriting.Applicative.Term (aterm, atermM, AView (..), ASym (..), fun, app)
+import qualified Data.Rewriting.Applicative.SimpleTypes as ST
+import qualified Data.Rewriting.Applicative.Term  as T
+import qualified Data.Rewriting.Applicative.Rule as R
+import qualified Data.Rewriting.Applicative.Rules as RS
+import qualified Data.Rewriting.Term  as Term
+
 import qualified Hoca.TreeGrammar as TG
 import qualified Hoca.DFA as DFA
 import qualified Hoca.FP as FP
-import qualified Hoca.Utils (tracePretty)
 import qualified Hoca.Narrowing as N
 import qualified Hoca.Uncurry as UC
 import           Hoca.PCF (Exp)
@@ -50,10 +52,10 @@ import Data.List (intersect)
 pcfToTrs :: Exp FP.Context :~> Problem Symbol Int
 pcfToTrs = pure . PCF2Atrs.toProblem
 
-reducibleVars :: (Ord f, Ord v) => Problem f v -> N.Narrowing (ATRS.ASym f) v v -> [v]
+reducibleVars :: (Ord f, Ord v) => Problem f v -> N.Narrowing (ASym f) v v -> [v]
 reducibleVars p n =
   [ v | v <- nub (T.vars (R.lhs rl))
-      , any isCall (T.subterms ( mgu `apply` T.Var (Right v))) ]
+      , any isCall (T.subterms ( mgu `apply` T.var (Right v))) ]
       -- , null (UR.usableRules [mgu `apply` T.Var (Right v)] rules) ]
   where
     rl = N.narrowedWith n    
@@ -64,32 +66,25 @@ reducibleVars p n =
     isCall _ = error "Hoca.Transform.normalisedVars match failure"
     ds = [ f | Fun f _ <- map aterm (RS.lhss (Problem.rules p)) ]
     
-complexityReflecting :: (Ord f, Ord v) => Problem f v -> N.NarrowedRule (ATRS.ASym f) v v -> Bool
+complexityReflecting :: (Ord f, Ord v) => Problem f v -> N.NarrowedRule (ASym f) v v -> Bool
 complexityReflecting p nr = all redexPreserving (N.narrowings nr) where
   redexPreserving n = varsMS (R.lhs rl) == varsMS (R.rhs rl) where
     rl = N.narrowedWith n
     varsMS = MS.fromList . filter (`elem` withCall) . T.vars
     withCall = reducibleVars p n
 
-complexityPreserving :: (Ord f, Ord v) => Problem f v -> N.NarrowedRule (ATRS.ASym f) v v -> Bool
+complexityPreserving :: (Ord f, Ord v) => Problem f v -> N.NarrowedRule (ASym f) v v -> Bool
 complexityPreserving p nr = all redexReflecting (N.narrowings nr) where
   redexReflecting n = varsMS (R.rhs rl) `MS.isSubsetOf` varsMS (R.lhs rl) where
     rl = N.narrowedWith n
     varsMS = MS.fromList . filter (`elem` withCall) . T.vars
     withCall = reducibleVars p n
 
-narrow :: (Ord f, Ord v, Num v) => (Problem f v -> N.NarrowedRule (ATRS.ASym f) v v -> Bool) -> Problem f v :~> Problem f v
+narrow :: (Ord f, Ord v, Num v) => (Problem f v -> N.NarrowedRule (ASym f) v v -> Bool) -> Problem f v :~> Problem f v
 narrow sensible p = Problem.replaceRulesM narrowRule p where
-  
-  -- renameRule rl = R.rename f rl where
-  --   f = either (\ v -> fromJust (lookup v lvs)) id
-  --   lhs = R.lhs rl
-  --   lvs = foldl insrt [(v,v) | Right v <- T.vars lhs] [v | Left v <- T.vars lhs]
-  --   insrt vs v = (v, head (dropWhile (`elem` map snd vs) [v..])):vs
-
-  renameRule = R.map (T.fold var T.Fun) where
-     var (Left v) = T.Var (v * 2 + 1)
-     var (Right v) = T.Var (v * 2)
+  renameRule = R.rename ren where
+     ren (Left v) = v * 2 + 1
+     ren (Right v) = v * 2
   
   narrowRule i rl ss = 
     case listToMaybe [ ni | ni <- N.narrow rl rules, complexityReflecting p ni, sensible p ni ] of
@@ -102,33 +97,8 @@ narrow sensible p = Problem.replaceRulesM narrowRule p where
      where 
        rulesE = [ (rl',j) | j <- Problem.cgSuccs p i, Just rl' <- [Problem.rule p j] ]
        rules = map fst rulesE
-  -- rules = Problem.rules p
 
--- narrow sensible = withInput $ \ p -> choice (map (Problem.replaceRulesM . applyNarrowing p) (narrowings p)) where
---   applyNarrowing p (i,n,nss) j _ ss
---     | i /= j = empty
---     | otherwise =
---         return [ (renameRule (N.narrowing ni) , ss ++ succs ni )
---                | ni <- N.narrowings n ] where
---           succs ni =
---             case lookup (N.narrowedWith ni) nss of
---              Nothing -> error "narrow rule id not found"
---              Just k -> Problem.cgSuccs p k
---   narrowings p =
---     [ (i,n,nss)
---     | (i,rl) <- rulesE
---     , let nss = [ (rl',j) | j <- Problem.cgSuccs p i, Just rl' <- [Problem.rule p j] ]
---     , n <- N.narrow rl (map fst nss)
---     , complexityReflecting p n
---     , sensible p n ]
---     where rulesE = Problem.rulesEnum p
-
---   renameRule = R.map (T.fold var T.Fun) where
---      var (Left v) = T.Var (v * 2 + 1)
---      var (Right v) = T.Var (v * 2)
-
--- [ (rl',j) | j <- Problem.cgSuccs p i, Just rl' <- [Problem.rule p j] ]
-rewrite :: (Ord f, Ord v, Num v) => (Problem f v -> N.NarrowedRule (ATRS.ASym f) v v -> Bool) -> Problem f v :~> Problem f v
+rewrite :: (Ord f, Ord v, Num v) => (Problem f v -> N.NarrowedRule (ASym f) v v -> Bool) -> Problem f v :~> Problem f v
 rewrite sensible = narrow sensible' where
   sensible' rs nr = all (\ nw -> R.lhs (N.narrowedRule nr) `T.isVariantOf` R.lhs (N.narrowing nw)) (N.narrowings nr)
                     && sensible rs nr
@@ -146,15 +116,15 @@ usableRules p
 neededRules :: Ord v => Problem Symbol v :~> Problem Symbol v
 neededRules p = Problem.replaceRulesM (\ _ rl _ -> if needed rl then empty else pure []) p where
   needed rl =
-    case ATRS.headSymbol (R.lhs rl) of
+    case T.headSymbol (R.lhs rl) of
      Just (l@Lambda {}) -> l `elem` createdFuns
      Just (l@Fix {}) -> l `elem` createdFuns
      _ -> True
-  createdFuns = foldr ATRS.funsDL [] (RS.rhss (Problem.rules p))
+  createdFuns = foldr T.funsDL [] (RS.rhss (Problem.rules p))
 
-dfaInstantiate :: (ATRS.TypedRule Symbol Int -> Int -> [ATRS.Term Symbol ()] -> Bool) -> Problem Symbol Int :~> Problem Symbol Int
+dfaInstantiate :: (ST.ATypedRule Symbol Int -> Int -> [T.ATerm Symbol ()] -> Bool) -> Problem Symbol Int :~> Problem Symbol Int
 dfaInstantiate refineP prob = 
-  case ATRS.inferTypes rs of
+  case ST.inferTypes rs of
    Left _ -> empty
    Right (sig,ers) -> Problem.replaceRulesM replace prob where
      replace i rl ss
@@ -173,21 +143,21 @@ dfaInstantiate refineP prob =
            
      initialDFA = TG.fromList (startRules ++ constructorRules) where
        startRules = 
-         [ TG.Production DFA.startNonTerminal (TG.Terminal (ATRS.Sym f) [TG.NonTerminal (DFA.auxNonTerminal t) | t <- ATRS.inputTypes td])
+         [ TG.Production DFA.startNonTerminal (TG.Terminal (Sym f) [TG.NonTerminal (DFA.auxNonTerminal t) | t <- ST.inputTypes td])
          | (f, td) <- Map.toList sig, Problem.isMainSym f]
        constructorRules = 
-         [ TG.Production (DFA.auxNonTerminal (ATRS.outputType td)) (TG.Terminal (ATRS.Sym c) [TG.NonTerminal (DFA.auxNonTerminal t) | t <- ATRS.inputTypes td])
+         [ TG.Production (DFA.auxNonTerminal (ST.outputType td)) (TG.Terminal (Sym c) [TG.NonTerminal (DFA.auxNonTerminal t) | t <- ST.inputTypes td])
          | (c, td) <- Map.toList sig, Problem.isConstructor c ]
            
      mkRefinements = DFA.refinements rs initialDFA
 
      argumentNormalised t = all norm (T.properSubterms t) where
-       norm (T.Var _) = True
-       norm (ATRS.atermM -> Just (_ ATRS.:@ _)) = False
+       norm (atermM -> Just (T.Var _)) = True
+       norm (atermM -> Just (_ :@ _)) = False
        norm li = all (isNothing . unify li) (RS.lhss (map snd rs))
 
-     T.Var {} `properInstOf` T.Fun {} = True
-     (T.Fun _ ts) `properInstOf` (T.Fun _ ss) = or (zipWith properInstOf ts ss)
+     Term.Var {} `properInstOf` Term.Fun {} = True
+     (Term.Fun _ ts) `properInstOf` (Term.Fun _ ss) = or (zipWith properInstOf ts ss)
      _ `properInstOf` _ = False
        
   where rs = Problem.rulesEnum prob
@@ -195,17 +165,17 @@ dfaInstantiate refineP prob =
 uncurryRules :: Problem Symbol Int :~> Problem Symbol Int
 uncurryRules p = Problem.fromRules <$> UC.uncurried (Problem.rules p)
 
-etaSaturateRules :: Problem Symbol Int :~> Problem Symbol Int
-etaSaturateRules p = Problem.fromRules <$> UC.etaSaturate (Problem.rules p)
+-- etaSaturateRules :: Problem Symbol Int :~> Problem Symbol Int
+-- etaSaturateRules p = Problem.fromRules <$> UC.etaSaturate (Problem.rules p)
 
 compress :: Problem Symbol Int :~> Problem Symbol Int
 compress p = Problem.replaceRulesM replace p where
-  replace _ rl ss = Just [(R.map compressTerm rl,ss)]
+  replace _ rl ss = Just [(R.mapRule compressTerm rl,ss)]
   compressTerm (aterm -> Fun f ts) =
     case Map.lookup f cm of
-     Just as -> ATRS.fun f (catMaybes (zipWith cti as ts))
-     Nothing -> ATRS.fun f (map compressTerm ts)
-  compressTerm (aterm -> t1 :@ t2) = compressTerm t1 `ATRS.app` compressTerm t2
+     Just as -> fun f (catMaybes (zipWith cti as ts))
+     Nothing -> fun f (map compressTerm ts)
+  compressTerm (aterm -> t1 :@ t2) = compressTerm t1 `app` compressTerm t2
   compressTerm t = t
   cti Nothing    ti = Just (compressTerm ti)
   cti (Just _) _ = Nothing 
@@ -228,11 +198,11 @@ arglabel p
   | Map.null cl = empty
   | otherwise = Problem.replaceRulesM replace p
   where
-    replace _ rl ss = Just [(R.map labelTerm rl,ss)]
+    replace _ rl ss = Just [(R.mapRule labelTerm rl,ss)]
     labelTerm (aterm -> Fun f ts) =
       case Map.lookup f cl of
-       Just is -> ATRS.fun (withLabel [ts!!i | i <- is] f) (map labelTerm ts)
-       Nothing -> ATRS.fun f (map labelTerm ts)
+       Just is -> fun (withLabel [ts!!i | i <- is] f) (map labelTerm ts)
+       Nothing -> fun f (map labelTerm ts)
        where
          withLabel [] f = f
          withLabel (ti:ts') f =
@@ -240,7 +210,7 @@ arglabel p
             Fun g _ -> Problem.Labeled (Problem.LSym g) (withLabel ts' f)
             _ -> error "Hoca.Transform.argLabel match failure"
 
-    labelTerm (aterm -> t1 :@ t2) = labelTerm t1 `ATRS.app` labelTerm t2
+    labelTerm (aterm -> t1 :@ t2) = labelTerm t1 `app` labelTerm t2
     labelTerm t = t
   
     cl = foldl ins Map.empty (concatMap T.subterms (lhss ++ rhss)) where

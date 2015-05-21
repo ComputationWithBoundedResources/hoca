@@ -1,4 +1,4 @@
--- | 
+-- | Usable Replacement Maps for applicative rules
 
 module Hoca.URM (
   URM
@@ -12,9 +12,9 @@ module Hoca.URM (
 import qualified Data.Map as Map
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
-import qualified Data.Rewriting.Term as T
-import qualified Data.Rewriting.Rules as RS
-import Hoca.ATRS (aterm, AView (..), Rule, Term, var, fun, app)
+import Data.Rewriting.Applicative.Term
+import Data.Rewriting.Applicative.Rule hiding (map)
+import Data.Rewriting.Applicative.Rules (lhss, rhss)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Control.Monad.Writer (execWriter, tell)
 
@@ -39,7 +39,7 @@ insert (URM m) f i = URM (Map.alter ins f m) where
 fromList :: Ord f => [(f,Int)] -> URM f
 fromList = foldl (uncurry . insert) empty
 
-urm :: Ord f => [Rule f v] -> [Term f v] -> URM f
+urm :: Ord f => [ARule f v] -> [ATerm f v] -> URM f
 urm rs calls = fromList (execWriter (mapM upos calls)) where
   upos (aterm -> t1 :@ t2) = upos t1 >> upos t2 >> return True
   upos (aterm -> Fun f ts) = do
@@ -47,18 +47,18 @@ urm rs calls = fromList (execWriter (mapM upos calls)) where
     tell [(f,i) | (i,True) <- zip [0..] reds]
     return (or reds || f `elem` ds)
   upos _ = return False
-  ds = [f | Fun f _ <- map aterm (RS.lhss rs)]
+  ds = [f | Fun f _ <- map aterm (lhss rs)]
 
 -- ^ approximation of usable replacement maps without unification, looking at roots only
-fromRules :: Ord f => [Rule f v] -> URM f
-fromRules rs = urm rs (RS.rhss rs) where
+fromRules :: Ord f => [ARule f v] -> URM f
+fromRules rs = urm rs (rhss rs) where
 
-  
-filterTerm :: Ord f => URM f -> Term f v -> Term f v
-filterTerm _   (aterm -> Var v) =  var v
-filterTerm urm (aterm -> t1 :@ t2) = filterTerm urm t1 `app` filterTerm urm t2
-filterTerm urm (aterm -> Fun f ts) = fun f [ti | (i,ti) <- zip [0..] ts, i `elem` uargs]
-  where uargs = usable urm f
+-- ^ removes non-usable positions from applicative terms  
+filterTerm :: Ord f => URM f -> ATerm f v -> ATerm f v
+filterTerm _ (aterm -> Var v) =  var v
+filterTerm u (aterm -> t1 :@ t2) = filterTerm u t1 `app` filterTerm u t2
+filterTerm u (aterm -> Fun f ts) = fun f [ti | (i,ti) <- zip [0..] ts, i `elem` uargs]
+  where uargs = usable u f
 filterTerm _ _ = error "Hoca.URM.filterTerm pattern match failure"
 
 instance PP.Pretty f => PP.Pretty (URM f) where

@@ -11,7 +11,11 @@ import qualified Hoca.FP as FP
 import qualified Hoca.PCF as PCF
 import qualified Hoca.Narrowing as N
 import qualified Hoca.Problem as Problem
-import qualified Hoca.ATRS as ATRS
+import qualified Data.Rewriting.Applicative.Rule as R
+import qualified Data.Rewriting.Applicative.Term as T
+import Data.Rewriting.Applicative.SimpleTypes (Type (..))
+import qualified Data.Rewriting.Applicative.SimpleTypes as ST
+import qualified Data.Rewriting.Term as Term
 import           Hoca.Utils (putDocLn, writeDocFile, render)
 import           Hoca.Transform
 import Hoca.Strategy
@@ -21,8 +25,6 @@ import GHC.IO (unsafePerformIO)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Data.Maybe (fromJust, isJust)
-import qualified Data.Rewriting.Rule as R
-import qualified Data.Rewriting.Term as T
 import System.Exit (exitSuccess,exitFailure)
 import Data.GraphViz.Commands
 import Data.Graph (flattenSCC, stronglyConnCompR)
@@ -38,7 +40,7 @@ import Control.Monad (forM)
 
 
 type Problem = Problem.Problem Problem.Symbol Int
-type Rule = ATRS.Rule Problem.Symbol Int
+type Rule = R.ARule Problem.Symbol Int
 
 
 class Boolean a where
@@ -65,8 +67,8 @@ cfa = dfaInstantiate abstractP where
   abstractP _ _ [_] = True
   abstractP trl v _ =
     case R.rhs trl of
-     T.Var (w, _ ATRS.:~> _) -> v == w
-     rhs -> v `elem` ATRS.headVars (ATRS.unType rhs)
+     Term.Var (w, _ :~> _) -> v == w
+     rhs -> v `elem` T.headVars (ST.unType rhs)
   --   (R.rhs -> T.Var (w, _ ATRS.:~> _)) v _ = 
   -- abstractP trl v _ =  v `elem` ATRS.headVars (R.rhs (ATRS.unTypeRule trl))
 
@@ -77,15 +79,15 @@ cfa' = dfaInstantiate (\ _ _ _ -> False)
 
 anyRule, caseRule, lambdaRule, fixRule, recursiveRule :: Problem -> Rule -> Bool
 caseRule _ rl =
-  case Problem.unlabeled <$> ATRS.headSymbol (R.lhs rl) of
+  case Problem.unlabeled <$> T.headSymbol (R.lhs rl) of
    Just Problem.Cond {} -> True
    _ -> False
 lambdaRule _ rl = 
-  case Problem.unlabeled <$> ATRS.headSymbol (R.lhs rl) of
+  case Problem.unlabeled <$> T.headSymbol (R.lhs rl) of
    Just Problem.Lambda {} -> True
    _ -> False
 fixRule _ rl = 
-  case Problem.unlabeled <$> ATRS.headSymbol (R.lhs rl) of
+  case Problem.unlabeled <$> T.headSymbol (R.lhs rl) of
    Just Problem.Fix {} -> True
    _ -> False
 anyRule _ _ = True  
@@ -93,7 +95,7 @@ recursiveRule p = Problem.isRecursive p
 
 definingRule :: String -> Problem -> Rule -> Bool
 definingRule name _ rl =
-  case ATRS.headSymbol (R.lhs rl) of
+  case T.headSymbol (R.lhs rl) of
    Just f -> render f == name
    _ -> False
 
@@ -103,9 +105,9 @@ oneOfIdx is p r = maybe False (`elem` is) (Problem.indexOf p r)
 leafRule :: Problem -> Rule -> Bool
 leafRule p r = maybe True (null . Problem.cgSuccs p) (Problem.indexOf p r)
 
-type NarrowedRule = N.NarrowedRule (ATRS.ASym Problem.Symbol) Int Int
+type NarrowedRule = N.NarrowedRule (T.ASym Problem.Symbol) Int Int
 
-size :: T.Term f v -> Int
+size :: T.ATerm f v -> Int
 size = T.fold (const 1) (const ((+1) . sum))
 
 
@@ -308,7 +310,7 @@ dotCallGraph hl = withProblem mkGraph where
                        
       mkNode (i,r) = GV.node i nAttribs
         where nAttribs =
-                shapeFor (ATRS.headSymbol (R.lhs r))
+                shapeFor (T.headSymbol (R.lhs r))
                 ++ highlighting
                 ++ [ GVattribs.toLabel i, GVattribsc.Tooltip (pack (showRule r)) ]
               shapeFor (Just f)
@@ -332,9 +334,11 @@ dotCallGraph hl = withProblem mkGraph where
                     [GVattribs.color GVSVG.RoyalBlue] ++ [ GVattribs.style GVattribs.dashed | j `notElem` reachSelectedNodes]
                 | otherwise = []
      -- legendM = GV.graphAttrs [GVattribs.toLabel (concatMap (\ (i,r) -> show i ++ ": " ++ showRule r) rs) ]
-      showRule (R.Rule lhs rhs) =
+      showRule rl =
         PP.displayS (PP.renderSmart 1.0 80 (ppTerm lhs PP.<+> PP.text "->" PP.<+> ppTerm rhs)) []
         where
+          lhs = R.lhs rl
+          rhs = R.rhs rl
           ppTerm = T.prettyTerm PP.pretty ppVar
           ppVar i = PP.text "x" PP.<> PP.int i
 

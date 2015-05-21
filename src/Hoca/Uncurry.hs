@@ -1,59 +1,50 @@
--- | 
+-- | Type directed uncurrying for head-variable free rewrite rules
 
-module Hoca.Uncurry where
+module Hoca.Uncurry ( uncurried ) where
 
-import Hoca.ATRS (Type(..), TypedRule)
-import qualified Hoca.ATRS as ATRS
+import qualified Data.Rewriting.Applicative.SimpleTypes as ST
+import Data.Rewriting.Applicative.SimpleTypes (Type (..))
 import qualified Hoca.Problem as Problem
-import qualified Data.Rewriting.Term as T
-import qualified Data.Rewriting.Rule as R
+
+import qualified Data.Rewriting.Applicative.Term as T
+import qualified Data.Rewriting.Applicative.Rule as R
+import qualified Data.Rewriting.Rule as Rule
+
+import Control.Monad (foldM)
 import Control.Applicative (Alternative, (<$>),(<*>), empty)
 
-etaSaturateTyped :: [TypedRule f v] -> [TypedRule f (Either v Int)]
-etaSaturateTyped = concatMap (etaSaturateRule 1 . ren) where
-  etaSaturateRule i rl =
-    case ATRS.getType (R.lhs rl) of
-     tp1 :~> tp2 ->
-       rl : etaSaturateRule (i + 1) (R.map saturate rl) where
-         saturate t = T.Fun (ATRS.App, tp2) [t, T.Var (Right i,tp1)]
-     _ -> [rl]
+etaSaturateTyped :: (Monad m, Alternative m) => [ST.ATypedRule f v] -> m [ST.ATypedRule f (Either v Int)]
+etaSaturateTyped rs = foldM (etaSaturateRule 1) [] (map ren rs) where
+  etaSaturateRule i rs' rl =
+    case ST.getType (R.lhs rl) of
+     tp1 :~> _ -> do
+       let v = ST.var tp1 (Right i)
+       rl' <- Rule.Rule <$> (R.lhs rl `ST.app` v) <*> (R.rhs rl `ST.app` v)
+       etaSaturateRule (i+1) (rl:rs') rl'
+     _ -> return (rl : rs' )
   ren = R.rename (\ (v,tp) -> (Left v,tp))
 
 -- TODO check that head-variable free
-uncurryRules :: (Monad m, Alternative m) => [TypedRule f v] -> m [ATRS.Rule (f,Int) v]
-uncurryRules = mapM (uncurryRuleM . ATRS.unTypeRule) where
+uncurryRules :: (Monad m, Alternative m) => [ST.ATypedRule f v] -> m [R.ARule (f,Int) v]
+uncurryRules = mapM (uncurryRuleM . ST.unTypeRule) where
   uncurryRuleM rl = 
-    R.Rule <$> uncurryTermM (R.lhs rl)
+    R.rule <$> uncurryTermM (R.lhs rl)
            <*> uncurryTermM (R.rhs rl)
-  uncurryTermM (T.Var v) = return (T.Var v)
-  uncurryTermM t =
-    case ATRS.aform t of
-     Just (T.Fun (ATRS.Sym f) ts, as) ->
-       ATRS.fun (f,length as) <$> mapM uncurryTermM (ts ++ as) where 
-     _ -> empty
+  uncurryTermM (T.atermM -> Just (T.Var v)) = return (T.var v)
+  uncurryTermM (T.aform -> Just (T.atermM -> Just (T.Fun f ts), as)) =
+       T.fun (f,length as) <$> mapM uncurryTermM (ts ++ as)
+  uncurryTermM _ = empty
      
-uncurried :: (Monad m, Alternative m) => [ATRS.Rule Problem.Symbol Int] -> m [ATRS.Rule Problem.Symbol Int]
+uncurried :: (Monad m, Alternative m) => [R.ARule Problem.Symbol Int] -> m [R.ARule Problem.Symbol Int]
 uncurried rs =
-  case ATRS.inferTypes (zip [1..] rs) of
+  case ST.inferTypes (zip [1..] rs) of
    Left _ -> empty
    Right (_, map (fst . snd) -> rs') -> 
-     map ren <$> uncurryRules (etaSaturateTyped rs')
+     map ren <$> (etaSaturateTyped rs' >>= uncurryRules)
    where
-     ren = R.map (T.fold var fun)
-     var (Left v) = T.Var (v * 2 + 1)
-     var (Right v) = T.Var (v * 2)
-     fun (ATRS.Sym (f,i)) as = ATRS.fun (Problem.Labeled (Problem.LInt i) f) as
+     ren = R.mapRule (T.fold var fun)
+     var (Left v) = T.var (v * 2 + 1)
+     var (Right v) = T.var (v * 2)
+     fun (T.Sym (f,i)) as = T.fun (Problem.Labeled (Problem.LInt i) f) as
      fun _ _ = error "uncurried: TRS contains application symbol"
      
--- etaSaturate :: (Monad m, Alternative m) => [ATRS.Rule Problem.Symbol Int] -> m [ATRS.Rule Problem.Symbol Int]
-etaSaturate :: (Monad m, Alternative m) => [ATRS.Rule Problem.Symbol Int] -> m [ATRS.Rule Problem.Symbol Int]
-etaSaturate rs =
-  case ATRS.inferTypes (zip [1..] rs) of
-   Left _ -> empty
-   Right (_, map (fst . snd) -> rs') -> return (map ren (ATRS.unTypeRules (etaSaturateTyped rs'))) where
-     ren = R.map (T.fold var fun)
-     var (Left v) = T.Var (v * 2 + 1)
-     var (Right v) = T.Var (v * 2)
-     fun f as = T.Fun f as
-      
-    
