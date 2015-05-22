@@ -45,4 +45,5 @@ let rec take_l n xs =
 let rec fibs = lazy ConsL(0, lazy ConsL(S(0), zipwith_l plus fibs (tail_l fibs)))
 ;; 
 
-take_l n fibs  
+let fib n = take_l n fibs
+;;  

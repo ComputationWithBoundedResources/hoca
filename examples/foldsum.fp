@@ -21,5 +21,6 @@ let comp f g z = f (g z)
 
 let id x = x
 ;;
-		   
-(foldr comp id (mapF plus l)) 0
+
+let foldsum l = foldr comp id (mapF plus l) 0
+;;

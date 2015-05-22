@@ -3,19 +3,19 @@
     INNERMOST)
 
 (VAR
-    x7 x5 x3 x6 x14 x10 x18 x26)
+    x3 x10 x6 x26 x18 x14 x7 x5)
 (RULES
-    insert_cond_1(True(),x7,x5,x3) -> Cons(x7,Cons(x5,x3))
-    insert_cond_1(False(),x7,x5,x3) -> Cons(x5,rec[insert_0][3](x7,x3))
-    rec[insert_0][3](x6,Nil()) -> Cons(x6,Nil())
+    main(x3) -> rec[sort_0][2](x3)
+    rec[leq_0][2](S(x10),S(x6)) -> rec[leq_0][2](x10,x6)
+    rec[leq_0][2](S(x26),0()) -> False()
+    rec[leq_0][2](0(),x18) -> True()
     rec[insert_0][3](x14,Cons(x10,x6)) -> insert_cond_1(rec[leq_0][2](x14,x10)
                                                        ,x14
                                                        ,x10
                                                        ,x6)
-    rec[sort_0][2](Nil()) -> Nil()
+    rec[insert_0][3](x6,Nil()) -> Cons(x6,Nil())
+    insert_cond_1(False(),x7,x5,x3) -> Cons(x5,rec[insert_0][3](x7,x3))
+    insert_cond_1(True(),x7,x5,x3) -> Cons(x7,Cons(x5,x3))
     rec[sort_0][2](Cons(x10,x6)) -> rec[insert_0][3](x10,rec[sort_0][2](x6))
-    rec[leq_0][2](0(),x18) -> True()
-    rec[leq_0][2](S(x26),0()) -> False()
-    rec[leq_0][2](S(x10),S(x6)) -> rec[leq_0][2](x10,x6)
-    main(x3) -> rec[sort_0][2](x3))
+    rec[sort_0][2](Nil()) -> Nil())
 

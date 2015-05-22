@@ -10,6 +10,4 @@ let rev l =
        comp (walk xs') (fun ys -> Cons(x,ys))
   in walk l Nil
 ;;	  
-
-  rev l
 	  

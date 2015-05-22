@@ -3,24 +3,29 @@
     INNERMOST)
 
 (VAR
-    x1 x2 x4 x5 x3 x0)
+    x0 x4 x1 x2 x3 x6 x7 x5)
 (RULES
-    fold_cond(Nil(),x1,x2) -> x2
-    fold_cond(Cons(x4,x5),x1,x2) -> @(@(x1,x4),@(@(@(rec[fold_0](),x1),x2),x5))
-    @(fold_f_z(x1,x2),x3) -> fold_cond(x3,x1,x2)
-    @(fold_f(x1),x2) -> fold_f_z(x1,x2)
-    @(fold(),x1) -> fold_f(x1)
+    @(main_4(x0),x4) -> @(x4,x0)
+    @(isort(x1,x2,x3),x4) -> @(@(@(x3,@(x2,x1)),Nil()),x4)
+    @(main_3(x0,x1,x2),x3) -> @(main_4(x0),isort(x1,x2,x3))
+    fold_cond(Nil(),x3,x4) -> x4
+    fold_cond(Cons(x6,x7),x3,x4) -> @(@(x3,x6),@(@(@(rec[fold_0](),x3),x4),x7))
+    @(fold_f_z(x3,x4),x5) -> fold_cond(x5,x3,x4)
+    @(fold_f(x3),x4) -> fold_f_z(x3,x4)
+    @(fold(),x3) -> fold_f(x3)
     @(rec[fold_0](),x0) -> @(fold(),x0)
-    insert_cond(Nil(),x1,x2) -> Cons(x2,Nil())
-    insert_cond_1(True(),x1,x2,x4,x5) -> Cons(x2,Cons(x4,x5))
-    insert_cond_1(False(),x1,x2,x4,x5) -> Cons(x4
-                                              ,@(@(@(rec[insert_0](),x1),x2)
-                                                ,x5))
-    insert_cond(Cons(x4,x5),x1,x2) -> insert_cond_1(@(@(x1,x2),x4),x1,x2,x4,x5)
-    @(insert_ord_x(x1,x2),x3) -> insert_cond(x3,x1,x2)
-    @(insert_ord(x1),x2) -> insert_ord_x(x1,x2)
-    @(insert(),x1) -> insert_ord(x1)
+    @(main_2(x0,x1),x2) -> @(main_3(x0,x1,x2),rec[fold_0]())
+    insert_cond(Nil(),x2,x3) -> Cons(x3,Nil())
+    insert_cond_1(True(),x2,x3,x5,x6) -> Cons(x3,Cons(x5,x6))
+    insert_cond_1(False(),x2,x3,x5,x6) -> Cons(x5
+                                              ,@(@(@(rec[insert_0](),x2),x3)
+                                                ,x6))
+    insert_cond(Cons(x5,x6),x2,x3) -> insert_cond_1(@(@(x2,x3),x5),x2,x3,x5,x6)
+    @(insert_ord_x(x2,x3),x4) -> insert_cond(x4,x2,x3)
+    @(insert_ord(x2),x3) -> insert_ord_x(x2,x3)
+    @(insert(),x2) -> insert_ord(x2)
     @(rec[insert_0](),x0) -> @(insert(),x0)
+    @(main_1(x0),x1) -> @(main_2(x0,x1),rec[insert_0]())
     leq_cond(0(),x2) -> True()
     leq_cond_1(0(),x3) -> False()
     leq_cond_1(S(x4),x3) -> @(@(rec[leq_0](),x3),x4)
@@ -28,5 +33,5 @@
     @(leq_x(x1),x2) -> leq_cond(x1,x2)
     @(leq(),x1) -> leq_x(x1)
     @(rec[leq_0](),x0) -> @(leq(),x0)
-    main(x0) -> @(@(@(rec[fold_0](),@(rec[insert_0](),rec[leq_0]())),Nil()),x0))
+    main(x0) -> @(main_1(x0),rec[leq_0]()))
 

@@ -3,17 +3,18 @@
     INNERMOST)
 
 (VAR
-    x5 x6 x7 x4 x0 x2 x3 x1)
+    x0 x2 x1 x3 x4)
 (RULES
-    rev_cond(Nil()) -> Nil()
-    append_cond(Nil(),x5) -> x5
-    append_cond(Cons(x6,x7),x5) -> Cons(x6,@(@(rec[append_0](),x7),x5))
-    @(append_xs(x4),x5) -> append_cond(x4,x5)
-    @(append(),x4) -> append_xs(x4)
+    @(main_2(x0),x2) -> @(x2,x0)
+    rev_cond(Nil(),x1) -> Nil()
+    rev_cond(Cons(x3,x4),x1) -> @(@(x1,@(rec[rev_0](x1),x4)),Cons(x3,Nil()))
+    @(rev(x1),x2) -> rev_cond(x2,x1)
+    @(rec[rev_0](x1),x2) -> @(rev(x1),x2)
+    @(main_1(x0),x1) -> @(main_2(x0),rec[rev_0](x1))
+    append_cond(Nil(),x2) -> x2
+    append_cond(Cons(x3,x4),x2) -> Cons(x3,@(@(rec[append_0](),x4),x2))
+    @(append_xs(x1),x2) -> append_cond(x1,x2)
+    @(append(),x1) -> append_xs(x1)
     @(rec[append_0](),x0) -> @(append(),x0)
-    rev_cond(Cons(x2,x3)) -> @(@(rec[append_0](),@(rec[rev_0](),x3))
-                              ,Cons(x2,Nil()))
-    @(rev(),x1) -> rev_cond(x1)
-    @(rec[rev_0](),x0) -> @(rev(),x0)
-    main(x0) -> @(rec[rev_0](),x0))
+    main(x0) -> @(main_1(x0),rec[append_0]()))
 

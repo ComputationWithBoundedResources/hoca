@@ -101,3 +101,13 @@ render d = PP.displayS (PP.renderSmart 1.0 80 (PP.pretty d)) ""
 
 writeDocFile :: PP.Pretty e => FilePath -> e -> IO ()
 writeDocFile fn = writeFile fn . render
+
+($$) :: PP.Doc -> PP.Doc -> PP.Doc
+pa $$ pb = PP.align (pa PP.<$> PP.indent 1 pb)
+
+(//) :: PP.Doc -> PP.Doc -> PP.Doc
+pa // pb = PP.align (pa PP.</> pb)
+
+ppSeq :: PP.Doc -> [PP.Doc] -> PP.Doc
+ppSeq sep = PP.align . PP.cat . PP.punctuate sep
+

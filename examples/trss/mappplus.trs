@@ -3,13 +3,13 @@
     INNERMOST)
 
 (VAR
-    x6 x14 x10 x13 x18 x4 x11)
+    x11 x26 x14 x10 x6 x4 x17)
 (RULES
-    rec[map_0][2](plus_x(x6),Nil()) -> Nil()
+    main(x11,x26) -> rec[map_0][2](plus_x(x26),x11)
     rec[map_0][2](plus_x(x14),Cons(x10,x6)) -> Cons(plus_x[1](x14,x10)
                                                    ,rec[map_0][2](plus_x(x14)
                                                                  ,x6))
-    plus_x[1](0(),x13) -> x13
-    plus_x[1](S(x18),x4) -> S(plus_x[1](x18,x4))
-    main(x11,x18) -> rec[map_0][2](plus_x(x18),x11))
+    rec[map_0][2](plus_x(x6),Nil()) -> Nil()
+    plus_x[1](S(x26),x4) -> S(plus_x[1](x26,x4))
+    plus_x[1](0(),x17) -> x17)
 

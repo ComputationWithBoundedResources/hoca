@@ -3,10 +3,11 @@
     INNERMOST)
 
 (VAR
-    x2 x1 x0)
+    x0 x1 x2)
 (RULES
+    @(main_1(x0),x1) -> @(x1,x0)
     pred_cond(S(x2)) -> x2
     pred_cond(0()) -> 0()
     @(pred(),x1) -> pred_cond(x1)
-    main(x0) -> @(pred(),x0))
+    main(x0) -> @(main_1(x0),pred()))
 

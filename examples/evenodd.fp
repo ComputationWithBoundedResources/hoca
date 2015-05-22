@@ -6,4 +6,7 @@ and odd x =
   match x with
   | 0 -> False
   | S(x') -> even x'
-in even x
+;;
+
+let main x = even x ;;
+  

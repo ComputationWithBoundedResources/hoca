@@ -3,8 +3,14 @@
     INNERMOST)
 
 (VAR
-    x1 x2 x4 x5 x3 x0)
+    x0 x3 x1 x2 x4 x5)
 (RULES
+    @(main_3(x0),x3) -> @(x3,x0)
+    @(rev(x1,x2),x3) -> @(@(@(x1,x2),Nil()),x3)
+    @(main_2(x0,x1),x2) -> @(main_3(x0),rev(x1,x2))
+    @(prefix_xs(x2),x3) -> Cons(x3,x2)
+    @(prefix(),x2) -> prefix_xs(x2)
+    @(main_1(x0),x1) -> @(main_2(x0,x1),prefix())
     foldl_cond(Nil(),x1,x2) -> x2
     foldl_cond(Cons(x4,x5),x1,x2) -> @(@(@(rec[foldl_0](),x1),@(@(x1,x2),x4))
                                       ,x5)
@@ -12,7 +18,5 @@
     @(foldl_f(x1),x2) -> foldl_f_z(x1,x2)
     @(foldl(),x1) -> foldl_f(x1)
     @(rec[foldl_0](),x0) -> @(foldl(),x0)
-    @(prefix_xs(x1),x2) -> Cons(x2,x1)
-    @(prefix(),x1) -> prefix_xs(x1)
-    main(x0) -> @(@(@(rec[foldl_0](),prefix()),Nil()),x0))
+    main(x0) -> @(main_1(x0),rec[foldl_0]()))
 

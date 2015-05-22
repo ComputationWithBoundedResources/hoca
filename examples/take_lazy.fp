@@ -10,4 +10,5 @@ let rec take_l n xs =
 let rec zeros = lazy ConsL(0, zeros)
 ;;		     
 
-  take_l n zeros		     
+let take_lazy n = take_l n zeros
+;;  

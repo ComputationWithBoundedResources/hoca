@@ -3,24 +3,23 @@
     INNERMOST)
 
 (VAR
-    x2 x1 x4 x3 x5)
+    x21 x13 x12 x6 x10 x11 x15 x7 x19 x9 x5 x3)
 (RULES
-    cons_x[1](x2,x1) -> Cons(x2,x1)
-    comp_f_g[1](cons_x(x4),comp_f_g(x3,x2),x1) -> cons_x[1](x4
-                                                           ,comp_f_g[1](x3
-                                                                       ,x2
-                                                                       ,x1))
-    comp_f_g[1](cons_x(x3),cons_x(x2),x1) -> cons_x[1](x3,cons_x[1](x2,x1))
-    comp_f_g[1](comp_f_g(x5,x4),comp_f_g(x3,x2),x1) ->
-      comp_f_g[1](x5,x4,comp_f_g[1](x3,x2,x1))
-    comp_f_g[1](comp_f_g(x4,x3),cons_x(x2),x1) -> comp_f_g[1](x4
-                                                             ,x3
-                                                             ,cons_x[1](x2,x1))
-    rec[walk_0][1](Leaf(x1)) -> cons_x(x1)
-    rec[walk_0][1](Node(x2,x1)) -> comp_f_g(rec[walk_0][1](x2)
-                                           ,rec[walk_0][1](x1))
-    main(Leaf(x2)) -> cons_x[1](x2,Nil())
-    main(Node(x4,x2)) -> comp_f_g[1](rec[walk_0][1](x4)
-                                    ,rec[walk_0][1](x2)
-                                    ,Nil()))
+    main(Node(x21,x13)) -> comp_f_g[1](rec[walk_0][1](x21)
+                                      ,rec[walk_0][1](x13)
+                                      ,Nil())
+    main(Leaf(x12)) -> Cons(x12,Nil())
+    comp_f_g[1](cons_x(x13),cons_x(x6),x10) -> Cons(x13,Cons(x6,x10))
+    comp_f_g[1](cons_x(x6),comp_f_g(x11,x15),x7) -> Cons(x6
+                                                        ,comp_f_g[1](x11
+                                                                    ,x15
+                                                                    ,x7))
+    comp_f_g[1](comp_f_g(x15,x19),cons_x(x6),x10) -> comp_f_g[1](x15
+                                                                ,x19
+                                                                ,Cons(x6,x10))
+    comp_f_g[1](comp_f_g(x9,x11),comp_f_g(x5,x7),x3) ->
+      comp_f_g[1](x9,x11,comp_f_g[1](x5,x7,x3))
+    rec[walk_0][1](Node(x11,x7)) -> comp_f_g(rec[walk_0][1](x11)
+                                            ,rec[walk_0][1](x7))
+    rec[walk_0][1](Leaf(x6)) -> cons_x(x6))
 

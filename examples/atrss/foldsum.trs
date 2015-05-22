@@ -3,8 +3,29 @@
     INNERMOST)
 
 (VAR
-    x1 x2 x4 x5 x3 x0)
+    x0 x6 x1 x2 x3 x4 x5)
 (RULES
+    @(main_6(x0),x6) -> @(x6,x0)
+    @(foldsum(x1,x2,x3,x4,x5),x6) -> @(@(@(@(x1,x4),x5),@(@(x3,x2),x6)),0())
+    @(main_5(x0,x1,x2,x3,x4),x5) -> @(main_6(x0),foldsum(x1,x2,x3,x4,x5))
+    @(id(),x5) -> x5
+    @(main_4(x0,x1,x2,x3),x4) -> @(main_5(x0,x1,x2,x3,x4),id())
+    @(comp_f_g(x4,x5),x6) -> @(x4,@(x5,x6))
+    @(comp_f(x4),x5) -> comp_f_g(x4,x5)
+    @(comp(),x4) -> comp_f(x4)
+    @(main_3(x0,x1,x2),x3) -> @(main_4(x0,x1,x2,x3),comp())
+    mapF_cond(Nil(),x3) -> NilF()
+    mapF_cond(Cons(x5,x6),x3) -> ConsF(@(x3,x5),@(@(rec[mapF_0](),x3),x6))
+    @(mapF_f(x3),x4) -> mapF_cond(x4,x3)
+    @(mapF(),x3) -> mapF_f(x3)
+    @(rec[mapF_0](),x0) -> @(mapF(),x0)
+    @(main_2(x0,x1),x2) -> @(main_3(x0,x1,x2),rec[mapF_0]())
+    plus_cond(0(),x3) -> x3
+    plus_cond(S(x4),x3) -> S(@(@(rec[plus_0](),x4),x3))
+    @(plus_x(x2),x3) -> plus_cond(x2,x3)
+    @(plus(),x2) -> plus_x(x2)
+    @(rec[plus_0](),x0) -> @(plus(),x0)
+    @(main_1(x0),x1) -> @(main_2(x0,x1),rec[plus_0]())
     foldr_cond(NilF(),x1,x2) -> x2
     foldr_cond(ConsF(x4,x5),x1,x2) -> @(@(x1,x4)
                                        ,@(@(@(rec[foldr_0](),x1),x2),x5))
@@ -12,21 +33,5 @@
     @(foldr_f(x1),x2) -> foldr_f_z(x1,x2)
     @(foldr(),x1) -> foldr_f(x1)
     @(rec[foldr_0](),x0) -> @(foldr(),x0)
-    @(comp_f_g(x1,x2),x3) -> @(x1,@(x2,x3))
-    @(comp_f(x1),x2) -> comp_f_g(x1,x2)
-    @(comp(),x1) -> comp_f(x1)
-    @(id(),x1) -> x1
-    mapF_cond(Nil(),x1) -> NilF()
-    mapF_cond(Cons(x3,x4),x1) -> ConsF(@(x1,x3),@(@(rec[mapF_0](),x1),x4))
-    @(mapF_f(x1),x2) -> mapF_cond(x2,x1)
-    @(mapF(),x1) -> mapF_f(x1)
-    @(rec[mapF_0](),x0) -> @(mapF(),x0)
-    plus_cond(0(),x2) -> x2
-    plus_cond(S(x3),x2) -> S(@(@(rec[plus_0](),x3),x2))
-    @(plus_x(x1),x2) -> plus_cond(x1,x2)
-    @(plus(),x1) -> plus_x(x1)
-    @(rec[plus_0](),x0) -> @(plus(),x0)
-    main(x0) -> @(@(@(@(rec[foldr_0](),comp()),id())
-                   ,@(@(rec[mapF_0](),rec[plus_0]()),x0))
-                 ,0()))
+    main(x0) -> @(main_1(x0),rec[foldr_0]()))
 

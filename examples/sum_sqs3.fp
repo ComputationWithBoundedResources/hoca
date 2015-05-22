@@ -45,5 +45,3 @@ let rec sum xs =
   
 let sum_sqs n = sum (map square (enum n))
 ;;
-
-  sum_sqs n

@@ -8,7 +8,7 @@ module Hoca.Transform (
   , uncurryRules
   -- , etaSaturateRules
   , compress
-  , arglabel
+  -- , arglabel
   , dfaInstantiate
     -- ** Rule Narrowing
   , narrow
@@ -34,10 +34,10 @@ import qualified Data.Rewriting.Term  as Term
 
 import qualified Hoca.TreeGrammar as TG
 import qualified Hoca.DFA as DFA
-import qualified Hoca.FP as FP
+import Hoca.PCF.Sugar.Types (Context)
 import qualified Hoca.Narrowing as N
 import qualified Hoca.Uncurry as UC
-import           Hoca.PCF (Exp)
+import           Hoca.PCF.Core (Exp)
 import qualified Hoca.PCF2Atrs as PCF2Atrs
 import           Hoca.Problem (Symbol (..), Problem)
 import qualified Hoca.Problem as Problem
@@ -49,14 +49,13 @@ import Data.List (intersect)
 
 -- Transformations
 
-pcfToTrs :: Exp FP.Context :~> Problem Symbol Int
+pcfToTrs :: Exp Context :~> Problem Symbol Int
 pcfToTrs = pure . PCF2Atrs.toProblem
 
 reducibleVars :: (Ord f, Ord v) => Problem f v -> N.Narrowing (ASym f) v v -> [v]
 reducibleVars p n =
   [ v | v <- nub (T.vars (R.lhs rl))
       , any isCall (T.subterms ( mgu `apply` T.var (Right v))) ]
-      -- , null (UR.usableRules [mgu `apply` T.Var (Right v)] rules) ]
   where
     rl = N.narrowedWith n    
     mgu = N.narrowingMgu n
@@ -165,9 +164,6 @@ dfaInstantiate refineP prob =
 uncurryRules :: Problem Symbol Int :~> Problem Symbol Int
 uncurryRules p = Problem.fromRules <$> UC.uncurried (Problem.rules p)
 
--- etaSaturateRules :: Problem Symbol Int :~> Problem Symbol Int
--- etaSaturateRules p = Problem.fromRules <$> UC.etaSaturate (Problem.rules p)
-
 compress :: Problem Symbol Int :~> Problem Symbol Int
 compress p = Problem.replaceRulesM replace p where
   replace _ rl ss = Just [(R.mapRule compressTerm rl,ss)]
@@ -193,34 +189,34 @@ compress p = Problem.replaceRulesM replace p where
   rs = Problem.rules p
 
 -- todo check abort conditions
-arglabel :: Problem Symbol Int :~> Problem Symbol Int
-arglabel p
-  | Map.null cl = empty
-  | otherwise = Problem.replaceRulesM replace p
-  where
-    replace _ rl ss = Just [(R.mapRule labelTerm rl,ss)]
-    labelTerm (aterm -> Fun f ts) =
-      case Map.lookup f cl of
-       Just is -> fun (withLabel [ts!!i | i <- is] f) (map labelTerm ts)
-       Nothing -> fun f (map labelTerm ts)
-       where
-         withLabel [] f = f
-         withLabel (ti:ts') f =
-           case aterm ti of
-            Fun g _ -> Problem.Labeled (Problem.LSym g) (withLabel ts' f)
-            _ -> error "Hoca.Transform.argLabel match failure"
+-- arglabel :: Problem Symbol Int :~> Problem Symbol Int
+-- arglabel p
+--   | Map.null cl = empty
+--   | otherwise = Problem.replaceRulesM replace p
+--   where
+--     replace _ rl ss = Just [(R.mapRule labelTerm rl,ss)]
+--     labelTerm (aterm -> Fun f ts) =
+--       case Map.lookup f cl of
+--        Just is -> fun (withLabel [ts!!i | i <- is] f) (map labelTerm ts)
+--        Nothing -> fun f (map labelTerm ts)
+--        where
+--          withLabel [] f = f
+--          withLabel (ti:ts') f =
+--            case aterm ti of
+--             Fun g _ -> Problem.Labeled g (withLabel ts' f)
+--             _ -> error ("Hoca.Transform.argLabel match failure")
 
-    labelTerm (aterm -> t1 :@ t2) = labelTerm t1 `app` labelTerm t2
-    labelTerm t = t
+--     labelTerm (aterm -> t1 :@ t2) = labelTerm t1 `app` labelTerm t2
+--     labelTerm t = t
   
-    cl = foldl ins Map.empty (concatMap T.subterms (lhss ++ rhss)) where
-      ins m (aterm -> Fun f ts) = Map.insertWith intersect f poss m where
-            poss = [ i | (i,ti) <- zip [0..] ts, constructorRoot ti]
-      ins m _ = m
+--     cl = foldl ins Map.empty (concatMap T.subterms (lhss ++ rhss)) where
+--       ins m (aterm -> Fun f ts) = Map.insertWith intersect f poss m where
+--             poss = [ i | (i,ti) <- zip [0..] ts, constructorRoot ti]
+--       ins m _ = m
     
-      rs = Problem.rules p      
-      lhss = RS.lhss rs
-      rhss = RS.rhss rs
-      constructorRoot (aterm -> Fun f _) = f `notElem` ds
-      constructorRoot _ = False
-      ds = [ f | Fun f _ <- map aterm lhss ]
+--       rs = Problem.rules p      
+--       lhss = RS.lhss rs
+--       rhss = RS.rhss rs
+--       constructorRoot (aterm -> Fun f _) = f `notElem` ds
+--       constructorRoot _ = False
+--       ds = [ f | Fun f _ <- map aterm lhss ]

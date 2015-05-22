@@ -3,40 +3,45 @@
 {-# LANGUAGE TypeOperators #-}
 
 module Main where
-import Prelude hiding ((&&),(||), not)
+
+
+import qualified Data.GraphViz.Attributes as GVattribs
+import qualified Data.GraphViz.Attributes.Colors.SVG as GVSVG
+import qualified Data.GraphViz.Attributes.Complete as GVattribsc
+import           Data.GraphViz.Commands
+import           Data.GraphViz.Types.Generalised (DotGraph)
+import qualified Data.GraphViz.Types.Monadic as GV
+
+import qualified Data.Rewriting.Applicative.Rule as R
+import           Data.Rewriting.Applicative.SimpleTypes (Type (..))
+import qualified Data.Rewriting.Applicative.SimpleTypes as ST
+import qualified Data.Rewriting.Applicative.Term as T
+import qualified Data.Rewriting.Term as Term
+
 import qualified Prelude as Prelude
+import           Prelude hiding ((&&),(||), not)
+import           System.Environment (getArgs)
+import           System.Exit (exitSuccess,exitFailure)
+import           System.IO (hPutStrLn, stderr)
+import qualified Text.PrettyPrint.ANSI.Leijen as PP
+import           Data.Graph (flattenSCC, stronglyConnCompR)
 import           Control.Applicative ((<$>))
-import           Control.Monad (foldM, void)
-import qualified Hoca.FP as FP
-import qualified Hoca.PCF as PCF
+import           Control.Monad (foldM, void, forM)
+import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import           Data.List (nub)
+import           Data.Either (either)
+import           Data.Maybe (catMaybes, fromJust, isJust)
+import           Data.Text.Lazy (pack)
+import           GHC.IO (unsafePerformIO)
+
 import qualified Hoca.Narrowing as N
 import qualified Hoca.Problem as Problem
-import qualified Data.Rewriting.Applicative.Rule as R
-import qualified Data.Rewriting.Applicative.Term as T
-import Data.Rewriting.Applicative.SimpleTypes (Type (..))
-import qualified Data.Rewriting.Applicative.SimpleTypes as ST
-import qualified Data.Rewriting.Term as Term
-import           Hoca.Utils (putDocLn, writeDocFile, render)
+import           Hoca.Strategy
 import           Hoca.Transform
-import Hoca.Strategy
-import           System.Environment (getArgs)
-import           System.IO (hPutStrLn, stderr)
-import GHC.IO (unsafePerformIO)
-import Data.IORef (IORef, newIORef, readIORef, writeIORef)
-import qualified Text.PrettyPrint.ANSI.Leijen as PP
-import Data.Maybe (fromJust, isJust)
-import System.Exit (exitSuccess,exitFailure)
-import Data.GraphViz.Commands
-import Data.Graph (flattenSCC, stronglyConnCompR)
-import qualified Data.GraphViz.Types.Monadic as GV
-import Data.GraphViz.Types.Generalised (DotGraph)
-import qualified Data.GraphViz.Attributes as GVattribs
-import qualified Data.GraphViz.Attributes.Complete as GVattribsc
-import Data.Text.Lazy (pack)
-import qualified Data.GraphViz.Attributes.Colors.SVG as GVSVG
-import Data.Maybe (catMaybes)
-import Data.List (nub)
-import Control.Monad (forM)
+import           Hoca.Utils (putDocLn, writeDocFile, render)
+import qualified Hoca.PCF.Core as PCF
+import Hoca.PCF.Sugar (programFromString, expressionFromString, Context, Exp)
+import Hoca.PCF.Desugar (desugar, desugarExpression)
 
 
 type Problem = Problem.Problem Problem.Symbol Int
@@ -69,12 +74,8 @@ cfa = dfaInstantiate abstractP where
     case R.rhs trl of
      Term.Var (w, _ :~> _) -> v == w
      rhs -> v `elem` T.headVars (ST.unType rhs)
-  --   (R.rhs -> T.Var (w, _ ATRS.:~> _)) v _ = 
-  -- abstractP trl v _ =  v `elem` ATRS.headVars (R.rhs (ATRS.unTypeRule trl))
 
--- dfa :: PCF.Strategy m => Problem -> m Problem
--- dfa = dfaInstantiate (R.vars . ATRS.unTypeRule)       
-
+cfa' :: Problem :~> Problem
 cfa' = dfaInstantiate (\ _ _ _ -> False)
 
 anyRule, caseRule, lambdaRule, fixRule, recursiveRule :: Problem -> Rule -> Bool
@@ -125,13 +126,6 @@ branching _ ns = length (N.narrowings ns) > 1
 selfInlining :: Problem -> NarrowedRule -> Bool
 selfInlining _ ns = N.narrowedRule ns `elem` map N.narrowedWith (N.narrowings ns)
 
--- edgeErasing :: Problem -> NarrowedRule -> Bool
--- edgeErasing p ns = all (usableSucc . Problem.indexOf p . N.narrowedWith) (N.narrowings ns) where
---   usableSucc Nothing = True
---   usableSucc (Just i) = i /= j && (j `elem` us || i `notElem` us) where
---     us = Problem.usableIdxs p (Problem.cgSuccs p i)
---     j = fromJust (Problem.indexOf p (N.narrowedRule ns))
-
 ruleDeleting :: Problem -> NarrowedRule -> Bool
 ruleDeleting p ns =
   case nub (concatMap (Problem.cgPreds p) nwIds) of
@@ -162,32 +156,8 @@ n1 =
   try (exhaustive (rewrite (withRule lambdaRule) >=> logMsg "lambda"))
   >=> try (exhaustive (narrow (withRule caseRule) >=> logMsg "case"))
   >=> try ur
-  -- try (exhaustive (lambdaRewrite <=> caseNarrow))
-  -- >=> try (exhaustive (narrowWith fixRule) >=> logMsg "fix-narrow")
-  -- where
-  --   lambdaRewrite = rewrite (withRule lambdaRule && not (onRule fixRule))
-  --                   >=> logMsg "lambda-rewrite"
-  --   caseNarrow = rewrite (withRule caseRule && not (onRule fixRule))
-  --                   >=> logMsg "case-narrow"
 
-
--- n2 :: Problem :~> Problem
--- n2 = exhaustive $ 
---   narrow (sizeDecreasing || withRule leafRule || ruleDeleting)
---   >=> logMsg "decreasing"
-
--- t1 :: Problem :~> Problem
--- t1 = try cfa >=> logMsg "CFA" >=> try ur >=> try (exhaustive (n2 >=> try cfaur))
-
--- toTrs :: Problem :~> Problem
--- toTrs =
---   uncurryRules >=> logMsg "UNCURRY"
---   >=> try cfaur
-
--- simplify :: Problem :~> Problem
--- simplify = try n1 >=> try t1 >=> toTrs >=> try t1 >=> compress
-
-
+simplify :: Problem :~> Problem
 simplify =
    try n1
    >=> toTRS
@@ -195,21 +165,10 @@ simplify =
    >=> try (exhaustive ((narrow (sizeDecreasing || ruleDeleting) <=> cfa)
                         >=> try usableRules))
    >=> try compress
+
+toTRS :: Problem :~> Problem   
 toTRS = try cfa >=> try usableRules >=> uncurryRules >=> try usableRules
 
--- simplify :: Problem :~> Problem
--- simplify =
---   try n1
---   >=> try ur
---   >=> try (exhaustive (narrow (sizeDecreasing || withRule leafRule) >=> logMsg "decreasing/leaf"
---                        >=> try ur))
---   >=> try cfaur
---   >=> try toTRS
---   >=> try (exhaustive
---            (exhaustive (narrow (sizeDecreasing
---                                 || withRule leafRule
---                                 || not branching) >=> logMsg "decreasing/leaf/nb-er"))
---            >=> try cfa >=> try ur)
 
 -- Interactive
 
@@ -248,22 +207,19 @@ modifyState f = do
   st <- getState
   putState (f st)
 
-expressionFromArgs :: FilePath -> [String] -> IO (PCF.Exp FP.Context)
-expressionFromArgs fname args = do
-  r <- mk <$> readFile fname
-  case r of
-   Left e -> putErrLn e >> exitFailure
-   Right pcf -> return pcf
-  where
-    mk s = do
-      fun <- fromString fname s
-      foldM (\ p (i,si) -> PCF.App [] p <$> fromString ("argument " ++ show i) si)
-        fun (zip [(1::Int)..] args)
-    fromString src str = FP.expFromString src str >>= FP.toPCF
-
+expressionFromArgs :: FilePath -> Maybe String -> [String] -> IO (PCF.Exp Context)
+expressionFromArgs fname mname args = do
+  r <- parseDesugared <$> readFile fname
+  either (\e -> putErrLn e >> exitFailure) return r where
+    parseDesugared s = do
+      fun <- programFromString fname s >>= desugar mname
+      as <- sequence [ expressionFromString ("argument " ++ show i) ai >>= desugarExpression
+                     | (i,ai) <- zip [(1::Int)..] args]
+      return (foldl (PCF.App []) fun as)
+      
 load' :: FilePath -> IO ()
 load' fn = do
-  e <- expressionFromArgs fn []
+  e <- expressionFromArgs fn Nothing []
   case run pcfToTrs e of
    Nothing -> putDocLn "Loading of problem failed."
    Just p -> writeIORef stateRef (STATE (Loaded p) [] (Just p))
@@ -301,7 +257,9 @@ dotCallGraph hl = withProblem mkGraph where
       rs = Problem.rulesEnum p
       selectedNodes = [ i | (i,r) <- rs, maybe False (\ hl' -> hl' p r) hl]
       usableNodes = Problem.usableIdxs p selectedNodes
-      reachSelectedNodes = [ j | (j,_) <- rs, let us = Problem.usableIdxs p [j], any (`elem` us) selectedNodes ]
+      reachSelectedNodes = [ j | (j,_) <- rs
+                               , let us = Problem.usableIdxs p [j]
+                               , any (`elem` us) selectedNodes ]
       highlightedNodes = selectedNodes ++ usableNodes
 
       mkSCC (k,scc) =
@@ -404,21 +362,27 @@ main = do
   case args of
    "--help" : _ -> putStrLn helpMsg
    "--eval" : fname : as -> do
-     e <- expressionFromArgs fname as
+     e <- expressionFromArgs fname Nothing as
      putDocLn (PP.pretty (fromJust (PCF.nf PCF.cbv e)))
-   "--pcf" : fname : as -> do
-     e <- expressionFromArgs fname as
+   "--eval" : _ -> putStrLn helpMsg
+   "--pcf" : fname : [] -> do
+     e <- expressionFromArgs fname Nothing []
      putDocLn (PP.pretty e)
-     -- putDocLn (PP.pretty (fromJust (PCF.nf (PCF.ctxtClosure PCF.beta) e)))
-   "--no-simp" : fname : as -> 
-     transform False fname as
-   fname : as ->
-     transform True fname as     
+   "--pcf" : _ -> putStrLn helpMsg     
+   "--no-simp" : fname : [] -> 
+     transform False fname Nothing
+   "--no-simp" : fname : name : [] -> 
+     transform False fname (Just name)
+   "--no-simp" : _ -> putStrLn helpMsg          
+   fname : []  ->
+     transform True fname Nothing
+   fname : name : []  ->
+     transform True fname (Just name)
    _ -> error helpMsg
   exitSuccess
   where
-    transform doSimp fname as = do
-      e <- expressionFromArgs fname as  
+    transform doSimp fname mname = do
+      e <- expressionFromArgs fname mname []
       case run tr e of
        Just prob -> putDocLn (Problem.prettyWST prob)
        Nothing -> do

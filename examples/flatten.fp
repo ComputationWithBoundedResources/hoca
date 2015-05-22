@@ -8,5 +8,6 @@ let rec walk t =
   | Node(t1,t2) -> comp (walk t1) (walk t2)
 ;;
 
-walk t Nil
+let flatten t = walk t Nil
+;;  
 

@@ -8,7 +8,5 @@ let rec foldl f z xs =
 
 let prefix xs x = Cons(x,xs);;
   
-let rev = foldl prefix Nil;;
-
-  rev l
+let rev l = foldl prefix Nil l;;
     

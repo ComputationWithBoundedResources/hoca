@@ -5,6 +5,6 @@
 (VAR
     x1)
 (RULES
-    main(S(x1)) -> x1
-    main(0()) -> 0())
+    main(0()) -> 0()
+    main(S(x1)) -> x1)
 

@@ -5,8 +5,8 @@
 (VAR
     x1)
 (RULES
-    rec[flip_0][1](E()) -> E()
-    rec[flip_0][1](Z(x1)) -> O(rec[flip_0][1](x1))
+    main(x1) -> rec[flip_0][1](x1)
     rec[flip_0][1](O(x1)) -> Z(rec[flip_0][1](x1))
-    main(x1) -> rec[flip_0][1](x1))
+    rec[flip_0][1](Z(x1)) -> O(rec[flip_0][1](x1))
+    rec[flip_0][1](E()) -> E())
 

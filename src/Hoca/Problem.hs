@@ -8,7 +8,7 @@ import qualified Data.Rewriting.Applicative.SimpleTypes as ST
 import qualified Data.Rewriting.Problem as P
 import qualified Data.Rewriting.Rules as RS
 
-import qualified Hoca.PCF as PCF
+import qualified Hoca.PCF.Core as PCF
 import           Hoca.Utils (runVarSupplyT, fresh)
 
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
@@ -34,7 +34,7 @@ data Symbol =
   | Cond Name
   | Fix Name
   | Main
-  | Labeled Lbl Symbol
+  | Labeled Int Symbol
   deriving (Show, Eq, Ord)
 
 instance PP.Pretty Lbl where
@@ -55,8 +55,8 @@ instance PP.Pretty Symbol where
   pretty (Fix l) = PP.text "rec" PP.<> PP.brackets (PP.pretty l)
   pretty (Bot l) = PP.text "bot" PP.<> PP.brackets (PP.pretty l)      
   pretty Main = PP.text "main"
-  pretty (Labeled (LInt 0) s) = PP.pretty s
-  pretty (Labeled i s) = PP.pretty s PP.<> PP.brackets (PP.pretty i)
+  pretty (Labeled 0 s) = PP.pretty s
+  pretty (Labeled l s) = PP.pretty s PP.<> PP.brackets (PP.int l)  
 
 
 unlabeled :: Symbol -> Symbol
@@ -78,7 +78,6 @@ instance (PP.Pretty f) => PP.Pretty (Problem f Int) where
   pretty p =
     PP.vcat
     [ PP.int i PP.<+> PP.text ":" PP.<+> R.prettyRule (PP.text "->") PP.pretty ppVar rl | (i,(rl,_)) <- IMap.toList (pRules p) ]
-    -- ++ [ PP.int i PP.<+> PP.text "~>" PP.<+> PP.hcat [ PP.int j PP.<> PP.text ";" | j <- ISet.toList js] | (i,(_,js)) <- IMap.toList (pRules p)]
     where
       ppVar i = PP.text "x" PP.<> PP.int i
 
@@ -90,14 +89,9 @@ toWST p = P.Problem {
   , P.rules = P.RulesPair { P.strictRules = trs, P.weakRules = [] }
   , P.variables = nub (RS.vars trs)
   , P.symbols = nub (RS.funs trs)
-  , P.comment = Nothing } -- flip PP.displayS "" <$> PP.renderSmart 1.0 75 <$> ppSig <$> pSig p }
+  , P.comment = Nothing }
   where
     trs = rules p
-    -- ppSig s =
-    --   PP.text "Types are as follows:"
-    --   PP.</> PP.linebreak
-    --   PP.</> PP.indent 5 (PP.align (PP.pretty s))
-    --   PP.</> PP.linebreak
 
 prettyWST :: (PP.Pretty f, Eq f) => Problem f Int -> PP.Doc
 prettyWST = P.prettyWST PP.pretty ppVar . toWST where
@@ -191,11 +185,6 @@ cgPreds p i = IMap.foldWithKey collect [] (pRules p) where
   collect j (_,ss) preds
     | i `ISet.member` ss = j : preds
     | otherwise = preds
-
--- cgSuccs :: (Eq f, Eq v) => Problem f v -> R.ARule f v -> [R.ARule f v]
--- cgSuccs p r =
---   maybe [] (map fst . mapMaybe (`IMap.lookup` pRules p) . ISet.toList)
---    (lookup r (IMap.elems (pRules p)))
 
 usableIdxs :: Problem f v -> [Int] -> [Int]
 usableIdxs p initial = walk (concatMap (cgSuccs p) initial) [] where

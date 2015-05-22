@@ -3,13 +3,17 @@
     INNERMOST)
 
 (VAR
-    x3 x4 x5 x2 x0 x6 x1)
+    x0 x4 x1 x2 x3 x5 x6)
 (RULES
-    revApp_cond(Nil(),x3) -> x3
-    revApp_cond(Cons(x4,x5),x3) -> @(@(rec[revApp_0](),x5),Cons(x4,x3))
-    @(revApp_l(x2),x3) -> revApp_cond(x2,x3)
-    @(revApp(),x2) -> revApp_l(x2)
+    @(main_4(x0),x4) -> @(x4,x0)
+    @(flatten(x1,x2,x3),x4) -> @(@(x3,@(@(@(x2,x1),x4),Nil())),Nil())
+    @(main_3(x0,x1,x2),x3) -> @(main_4(x0),flatten(x1,x2,x3))
+    revApp_cond(Nil(),x4) -> x4
+    revApp_cond(Cons(x5,x6),x4) -> @(@(rec[revApp_0](),x6),Cons(x5,x4))
+    @(revApp_l(x3),x4) -> revApp_cond(x3,x4)
+    @(revApp(),x3) -> revApp_l(x3)
     @(rec[revApp_0](),x0) -> @(revApp(),x0)
+    @(main_2(x0,x1),x2) -> @(main_3(x0,x1,x2),rec[revApp_0]())
     dfsAcc_cond(Leaf(x5),x2,x4) -> @(@(x2,x5),x4)
     dfsAcc_cond(Node(x5,x6),x2,x4) -> @(@(@(rec[dfsAcc_0](),x2),x6)
                                        ,@(@(@(rec[dfsAcc_0](),x2),x5),x4))
@@ -17,10 +21,8 @@
     @(dfsAcc_g(x2),x3) -> dfsAcc_g_t(x2,x3)
     @(dfsAcc(),x2) -> dfsAcc_g(x2)
     @(rec[dfsAcc_0](),x0) -> @(dfsAcc(),x0)
-    @(cons_x(x2),x3) -> Cons(x2,x3)
-    @(cons(),x2) -> cons_x(x2)
-    @(flatten(),x1) -> @(@(rec[revApp_0]()
-                          ,@(@(@(rec[dfsAcc_0](),cons()),x1),Nil()))
-                        ,Nil())
-    main(x0) -> @(flatten(),x0))
+    @(main_1(x0),x1) -> @(main_2(x0,x1),rec[dfsAcc_0]())
+    @(cons_x(x1),x2) -> Cons(x1,x2)
+    @(cons(),x1) -> cons_x(x1)
+    main(x0) -> @(main_1(x0),cons()))
 

@@ -3,16 +3,15 @@
     INNERMOST)
 
 (VAR
-    x11 x7 x9 x5 x3 x61 x77 x122 x154)
+    x12 x13 x18 x26 x4 x3 x2 x1 x7)
 (RULES
-    comp_f_g[1](walk_1(),walk_4(x11),x7) -> walk_4[1](x11,x7)
-    comp_f_g[1](comp_f_g(x7,walk_4(x9)),walk_4(x5),x3) ->
-      comp_f_g[1](x7,walk_4(x9),walk_4[1](x5,x3))
-    walk_4[1](x7,x11) -> Cons(x7,x11)
-    rec[walk_0][1](Nil()) -> walk_1()
-    rec[walk_0][1](Cons(x61,x77)) -> comp_f_g(rec[walk_0][1](x77),walk_4(x61))
+    main(Cons(x12,x13)) -> comp_f_g[1](rec[walk_0][1](x13),walk_4(x12),Nil())
     main(Nil()) -> Nil()
-    main(Cons(x122,x154)) -> comp_f_g[1](rec[walk_0][1](x154)
-                                        ,walk_4(x122)
-                                        ,Nil()))
+    comp_f_g[1](walk_1(),walk_4(x18),x26) -> Cons(x18,x26)
+    comp_f_g[1](comp_f_g(x4,walk_4(x3)),walk_4(x2),x1) -> comp_f_g[1](x4
+                                                                     ,walk_4(x3)
+                                                                     ,Cons(x2
+                                                                          ,x1))
+    rec[walk_0][1](Cons(x12,x7)) -> comp_f_g(rec[walk_0][1](x7),walk_4(x12))
+    rec[walk_0][1](Nil()) -> walk_1())
 

@@ -20,7 +20,8 @@ let rec fold f z xs =
   | Cons(x,xs') -> f x (fold f z xs')
 ;;
 
-  fold (insert leq) Nil ys
+let isort ys = fold (insert leq) Nil ys
+;;  
 
 		
 	   

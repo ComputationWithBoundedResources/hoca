@@ -3,102 +3,138 @@
     INNERMOST)
 
 (VAR
-    x1 x2 x3 x4 x6 x7 x9 x10 x8 x0 x5 x11 x13 x14 x15 x12)
+    x0 x12 x16 x4 x10 x13 x14 x15 x17 x8 x9 x2 x5 x11 x3 x1 x6 x7)
 (RULES
-    dc_cond(False(),x1,x2,x3,x4,x6) -> @(x2,x6)
-    mapL_cond(NilL(),x7) -> NilL()
-    mapL_cond(ConsL(x9,x10),x7) -> ConsL(@(x7,x9),@(@(rec[mapL_0](),x7),x10))
-    @(mapL_f(x7),x8) -> mapL_cond(x8,x7)
-    @(mapL(),x7) -> mapL_f(x7)
-    @(rec[mapL_0](),x0) -> @(mapL(),x0)
-    dc_cond(True(),x1,x2,x3,x4,x6) -> @(@(x4,x6)
-                                       ,@(@(rec[mapL_0]()
-                                           ,rec[dc_0](x1,x2,x3,x4))
-                                         ,@(x3,x6)))
-    @(dc(x1,x2,x3,x4),x6) -> dc_cond(@(x1,x6),x1,x2,x3,x4,x6)
-    @(rec[dc_0](x1,x2,x3,x4),x5) -> @(dc(x1,x2,x3,x4),x5)
-    @(divideAndConquer_isDivisible_solve_divide_combine(x1,x2,x3,x4),x5) ->
-      @(rec[dc_0](x1,x2,x3,x4),x5)
-    @(divideAndConquer_isDivisible_solve_divide(x1,x2,x3),x4) ->
-      divideAndConquer_isDivisible_solve_divide_combine(x1,x2,x3,x4)
-    @(divideAndConquer_isDivisible_solve(x1,x2),x3) ->
-      divideAndConquer_isDivisible_solve_divide(x1,x2,x3)
-    @(divideAndConquer_isDivisible(x1),x2) ->
-      divideAndConquer_isDivisible_solve(x1,x2)
-    @(divideAndConquer(),x1) -> divideAndConquer_isDivisible(x1)
+    @(main_12(x0),x12) -> @(x12,x0)
+    @(mergesort_zs_3(),x16) -> x16
+    @(mergesort_zs_2(x4,x10,x12,x13,x14),x15) -> @(@(@(@(@(x10,x13)
+                                                        ,mergesort_zs_3())
+                                                      ,x14)
+                                                    ,@(x4,x15))
+                                                  ,x12)
+    @(mergesort_zs_1(x4,x10,x12,x13),x14) -> mergesort_zs_2(x4,x10,x12,x13,x14)
+    @(mergesort_zs(x4,x10,x12),x13) -> mergesort_zs_1(x4,x10,x12,x13)
     divisible_cond(Nil()) -> False()
     divisible_cond_1(Nil()) -> False()
-    divisible_cond_1(Cons(x4,x5)) -> True()
-    divisible_cond(Cons(x2,x3)) -> divisible_cond_1(x3)
-    @(divisible(),x1) -> divisible_cond(x1)
-    @(mergesort_0(),x1) -> x1
-    take_cond(0(),x3) -> Nil()
+    divisible_cond_1(Cons(x16,x17)) -> True()
+    divisible_cond(Cons(x14,x15)) -> divisible_cond_1(x15)
+    @(divisible(),x13) -> divisible_cond(x13)
+    @(divide_ys(x8,x9,x13),x14) -> ConsL(@(@(x8,x14),x13)
+                                        ,ConsL(@(@(x9,x14),x13),NilL()))
+    @(divide(x2,x5,x8,x9),x13) -> @(divide_ys(x8,x9,x13),@(x5,@(x2,x13)))
+    combine_cond_1(ConsL(x16,x17),x11,x14) -> @(@(x11,x14),x16)
+    combine_cond(ConsL(x14,x15),x11) -> combine_cond_1(x15,x11,x14)
+    @(combine(x11),x13) -> combine_cond(x13,x11)
+    @(mergesort(x2,x4,x5,x8,x9,x10,x11),x12) -> @(@(@(mergesort_zs(x4,x10,x12)
+                                                     ,divisible())
+                                                   ,divide(x2,x5,x8,x9))
+                                                 ,combine(x11))
+    @(main_11(x0,x2,x4,x5,x8,x9,x10),x11) -> @(main_12(x0)
+                                              ,mergesort(x2
+                                                        ,x4
+                                                        ,x5
+                                                        ,x8
+                                                        ,x9
+                                                        ,x10
+                                                        ,x11))
+    merge_cond(Nil(),x3,x11,x12) -> x12
+    merge_cond_1(Nil(),x3,x11,x12,x13,x14) -> x11
+    merge_cond_2(True(),x3,x11,x12,x13,x14,x15,x16) -> Cons(x13
+                                                           ,@(@(rec[merge_0](x3)
+                                                               ,x14)
+                                                             ,x12))
+    merge_cond_2(False(),x3,x11,x12,x13,x14,x15,x16) ->
+      Cons(x15,@(@(rec[merge_0](x3),x11),x16))
+    merge_cond_1(Cons(x15,x16),x3,x11,x12,x13,x14) -> merge_cond_2(@(@(x3,x13)
+                                                                    ,x15)
+                                                                  ,x3
+                                                                  ,x11
+                                                                  ,x12
+                                                                  ,x13
+                                                                  ,x14
+                                                                  ,x15
+                                                                  ,x16)
+    merge_cond(Cons(x13,x14),x3,x11,x12) -> merge_cond_1(x12,x3,x11,x12,x13,x14)
+    @(merge_ys(x3,x11),x12) -> merge_cond(x11,x3,x11,x12)
+    @(merge(x3),x11) -> merge_ys(x3,x11)
+    @(rec[merge_0](x3),x4) -> @(merge(x3),x4)
+    @(main_10(x0,x2,x3,x4,x5,x8,x9),x10) -> @(main_11(x0,x2,x4,x5,x8,x9,x10)
+                                             ,rec[merge_0](x3))
+    @(divideAndConquer_isDivisible_solve_divide_combine_initial(x14),x15) ->
+      @(x15,x14)
+    dc_cond(False(),x1,x10,x11,x12,x13,x15) -> @(x11,x15)
+    dc_cond(True(),x1,x10,x11,x12,x13,x15) -> @(@(x13,x15)
+                                               ,@(@(x1
+                                                   ,rec[dc_0](x1
+                                                             ,x10
+                                                             ,x11
+                                                             ,x12
+                                                             ,x13))
+                                                 ,@(x12,x15)))
+    @(dc(x1,x10,x11,x12,x13),x15) -> dc_cond(@(x10,x15),x1,x10,x11,x12,x13,x15)
+    @(rec[dc_0](x1,x10,x11,x12,x13),x14) -> @(dc(x1,x10,x11,x12,x13),x14)
+    @(divideAndConquer_isDivisible_solve_divide_combine(x1,x10,x11,x12,x13)
+     ,x14) -> @(divideAndConquer_isDivisible_solve_divide_combine_initial(x14)
+               ,rec[dc_0](x1,x10,x11,x12,x13))
+    @(divideAndConquer_isDivisible_solve_divide(x1,x10,x11,x12),x13) ->
+      divideAndConquer_isDivisible_solve_divide_combine(x1,x10,x11,x12,x13)
+    @(divideAndConquer_isDivisible_solve(x1,x10,x11),x12) ->
+      divideAndConquer_isDivisible_solve_divide(x1,x10,x11,x12)
+    @(divideAndConquer_isDivisible(x1,x10),x11) ->
+      divideAndConquer_isDivisible_solve(x1,x10,x11)
+    @(divideAndConquer(x1),x10) -> divideAndConquer_isDivisible(x1,x10)
+    @(main_9(x0,x1,x2,x3,x4,x5,x8),x9) -> @(main_10(x0,x2,x3,x4,x5,x8,x9)
+                                           ,divideAndConquer(x1))
+    drop_cond(0(),x6,x10) -> x10
+    drop_cond(S(x11),x6,x10) -> @(@(rec[drop_0](x6),x11),@(x6,x10))
+    @(drop_n(x6,x9),x10) -> drop_cond(x9,x6,x10)
+    @(drop(x6),x9) -> drop_n(x6,x9)
+    @(rec[drop_0](x6),x7) -> @(drop(x6),x7)
+    @(main_8(x0,x1,x2,x3,x4,x5,x6),x8) -> @(main_9(x0,x1,x2,x3,x4,x5,x8)
+                                           ,rec[drop_0](x6))
+    take_cond(0(),x6,x7,x9) -> Nil()
+    take_cond(S(x10),x6,x7,x9) -> Cons(@(x7,x9)
+                                      ,@(@(rec[take_0](x6,x7),x10),@(x6,x9)))
+    @(take_n(x6,x7,x8),x9) -> take_cond(x8,x6,x7,x9)
+    @(take(x6,x7),x8) -> take_n(x6,x7,x8)
+    @(rec[take_0](x6,x7),x8) -> @(take(x6,x7),x8)
+    @(main_7(x0,x1,x2,x3,x4,x5,x6),x7) -> @(main_8(x0,x1,x2,x3,x4,x5,x6)
+                                           ,rec[take_0](x6,x7))
     head_cond(Nil()) -> Head_error_empty_list()
-    head_cond(Cons(x6,x7)) -> x6
-    @(head(),x5) -> head_cond(x5)
-    take_cond(S(x4),x3) -> Cons(@(head(),x3)
-                               ,@(@(rec[take_0](),x4),@(tail(),x3)))
-    @(take_n(x2),x3) -> take_cond(x2,x3)
-    @(take(),x2) -> take_n(x2)
-    @(rec[take_0](),x0) -> @(take(),x0)
+    head_cond(Cons(x8,x9)) -> x8
+    @(head(),x7) -> head_cond(x7)
+    @(main_6(x0,x1,x2,x3,x4,x5),x6) -> @(main_7(x0,x1,x2,x3,x4,x5,x6),head())
+    tail_cond(Nil()) -> Tail_error_empty_list()
+    tail_cond(Cons(x7,x8)) -> x8
+    @(tail(),x6) -> tail_cond(x6)
+    @(main_5(x0,x1,x2,x3,x4),x5) -> @(main_6(x0,x1,x2,x3,x4,x5),tail())
     halve_cond(0()) -> 0()
     halve_cond_1(0()) -> S(0())
-    halve_cond_1(S(x4)) -> S(@(rec[halve_0](),x4))
-    halve_cond(S(x3)) -> halve_cond_1(x3)
-    @(halve(),x2) -> halve_cond(x2)
+    halve_cond_1(S(x7)) -> S(@(rec[halve_0](),x7))
+    halve_cond(S(x6)) -> halve_cond_1(x6)
+    @(halve(),x5) -> halve_cond(x5)
     @(rec[halve_0](),x0) -> @(halve(),x0)
+    @(main_4(x0,x1,x2,x3),x4) -> @(main_5(x0,x1,x2,x3,x4),rec[halve_0]())
+    @(const_f(x4),x5) -> x4
+    @(const(),x4) -> const_f(x4)
+    @(main_3(x0,x1,x2),x3) -> @(main_4(x0,x1,x2,x3),const())
+    leq_cond(0(),x4) -> True()
+    leq_cond_1(0(),x5) -> False()
+    leq_cond_1(S(x6),x5) -> @(@(rec[leq_0](),x5),x6)
+    leq_cond(S(x5),x4) -> leq_cond_1(x4,x5)
+    @(leq_x(x3),x4) -> leq_cond(x3,x4)
+    @(leq(),x3) -> leq_x(x3)
+    @(rec[leq_0](),x0) -> @(leq(),x0)
+    @(main_2(x0,x1),x2) -> @(main_3(x0,x1,x2),rec[leq_0]())
     length_cond(Nil()) -> 0()
     length_cond(Cons(x3,x4)) -> S(@(rec[length_0](),x4))
     @(length(),x2) -> length_cond(x2)
     @(rec[length_0](),x0) -> @(length(),x0)
-    drop_cond(0(),x3) -> x3
-    tail_cond(Nil()) -> Tail_error_empty_list()
-    tail_cond(Cons(x6,x7)) -> x7
-    @(tail(),x5) -> tail_cond(x5)
-    drop_cond(S(x4),x3) -> @(@(rec[drop_0](),x4),@(tail(),x3))
-    @(drop_n(x2),x3) -> drop_cond(x2,x3)
-    @(drop(),x2) -> drop_n(x2)
-    @(rec[drop_0](),x0) -> @(drop(),x0)
-    @(divide(),x1) -> ConsL(@(@(rec[take_0]()
-                               ,@(rec[halve_0](),@(rec[length_0](),x1)))
-                             ,x1)
-                           ,ConsL(@(@(rec[drop_0]()
-                                     ,@(rec[halve_0](),@(rec[length_0](),x1)))
-                                   ,x1)
-                                 ,NilL()))
-    @(const_f(x1),x2) -> x1
-    @(const(),x1) -> const_f(x1)
-    merge_cond(Nil(),x6,x7) -> x7
-    merge_cond_1(Nil(),x6,x7,x8,x9) -> x6
-    merge_cond_2(True(),x6,x7,x8,x9,x10,x11) -> Cons(x8
-                                                    ,@(@(rec[merge_0](),x9),x7))
-    merge_cond_2(False(),x6,x7,x8,x9,x10,x11) -> Cons(x10
-                                                     ,@(@(rec[merge_0](),x6)
-                                                       ,x11))
-    leq_cond(0(),x13) -> True()
-    leq_cond_1(0(),x14) -> False()
-    leq_cond_1(S(x15),x14) -> @(@(rec[leq_0](),x14),x15)
-    leq_cond(S(x14),x13) -> leq_cond_1(x13,x14)
-    @(leq_x(x12),x13) -> leq_cond(x12,x13)
-    @(leq(),x12) -> leq_x(x12)
-    @(rec[leq_0](),x0) -> @(leq(),x0)
-    merge_cond_1(Cons(x10,x11),x6,x7,x8,x9) -> merge_cond_2(@(@(rec[leq_0](),x8)
-                                                             ,x10)
-                                                           ,x6
-                                                           ,x7
-                                                           ,x8
-                                                           ,x9
-                                                           ,x10
-                                                           ,x11)
-    merge_cond(Cons(x8,x9),x6,x7) -> merge_cond_1(x7,x6,x7,x8,x9)
-    @(merge_ys(x6),x7) -> merge_cond(x6,x6,x7)
-    @(merge(),x6) -> merge_ys(x6)
-    @(rec[merge_0](),x0) -> @(merge(),x0)
-    combine_cond_1(ConsL(x4,x5),x2) -> @(@(rec[merge_0](),x2),x4)
-    combine_cond(ConsL(x2,x3)) -> combine_cond_1(x3,x2)
-    @(combine(),x1) -> combine_cond(x1)
-    main(x0) -> @(@(@(@(@(divideAndConquer(),divisible()),mergesort_0())
-                     ,divide())
-                   ,@(const(),combine()))
-                 ,x0))
+    @(main_1(x0),x1) -> @(main_2(x0,x1),rec[length_0]())
+    mapL_cond(NilL(),x1) -> NilL()
+    mapL_cond(ConsL(x3,x4),x1) -> ConsL(@(x1,x3),@(@(rec[mapL_0](),x1),x4))
+    @(mapL_f(x1),x2) -> mapL_cond(x2,x1)
+    @(mapL(),x1) -> mapL_f(x1)
+    @(rec[mapL_0](),x0) -> @(mapL(),x0)
+    main(x0) -> @(main_1(x0),rec[mapL_0]()))
 

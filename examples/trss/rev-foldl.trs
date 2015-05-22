@@ -3,9 +3,9 @@
     INNERMOST)
 
 (VAR
-    x6 x24 x40 x14 x3)
+    x3 x40 x56 x14 x6)
 (RULES
-    rec[foldl_0][3](x6,Nil()) -> x6
-    rec[foldl_0][3](x24,Cons(x40,x14)) -> rec[foldl_0][3](Cons(x40,x24),x14)
-    main(x3) -> rec[foldl_0][3](Nil(),x3))
+    main(x3) -> rec[foldl_0][3](Nil(),x3)
+    rec[foldl_0][3](x40,Cons(x56,x14)) -> rec[foldl_0][3](Cons(x56,x40),x14)
+    rec[foldl_0][3](x6,Nil()) -> x6)
 

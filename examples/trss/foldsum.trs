@@ -3,20 +3,20 @@
     INNERMOST)
 
 (VAR
-    x2 x1 x3 x7 x20 x14 x9 x10 x4)
+    x7 x2 x1 x18 x4 x13 x36 x14 x3)
 (RULES
-    foldr_f[3](NilF()) -> 0()
-    foldr_f[3](ConsF(plus_x(x2),x1)) -> comp_f_g[1](plus_x(x2)
-                                                   ,rec[foldr_0][3](x1))
-    rec[foldr_0][3](NilF()) -> id()
+    main(x7) -> foldr_f[3](rec[mapF_0][2](x7))
     rec[foldr_0][3](ConsF(plus_x(x2),x1)) -> comp_f_g(plus_x(x2)
                                                      ,rec[foldr_0][3](x1))
-    comp_f_g[1](plus_x(x3),comp_f_g(plus_x(x2),x1)) ->
-      plus_x[1](x3,comp_f_g[1](plus_x(x2),x1))
-    comp_f_g[1](plus_x(x7),id()) -> plus_x[1](x7,0())
+    rec[foldr_0][3](NilF()) -> id()
+    foldr_f[3](ConsF(plus_x(x2),x1)) -> comp_f_g[1](plus_x(x2)
+                                                   ,rec[foldr_0][3](x1))
+    foldr_f[3](NilF()) -> 0()
+    plus_x[1](S(x18),x4) -> S(plus_x[1](x18,x4))
+    plus_x[1](0(),x13) -> x13
+    rec[mapF_0][2](Cons(x36,x14)) -> ConsF(plus_x(x36),rec[mapF_0][2](x14))
     rec[mapF_0][2](Nil()) -> NilF()
-    rec[mapF_0][2](Cons(x20,x14)) -> ConsF(plus_x(x20),rec[mapF_0][2](x14))
-    plus_x[1](0(),x9) -> x9
-    plus_x[1](S(x10),x4) -> S(plus_x[1](x10,x4))
-    main(x7) -> foldr_f[3](rec[mapF_0][2](x7)))
+    comp_f_g[1](plus_x(x7),id()) -> plus_x[1](x7,0())
+    comp_f_g[1](plus_x(x3),comp_f_g(plus_x(x2),x1)) ->
+      plus_x[1](x3,comp_f_g[1](plus_x(x2),x1)))
 

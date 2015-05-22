@@ -18,5 +18,3 @@ let rec revApp l acc =
 
 let flatten t = revApp (dfsAcc cons t Nil) Nil
 ;;
-
-  flatten t

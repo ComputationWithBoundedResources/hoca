@@ -9,5 +9,3 @@ let rec rev xs =
   | Nil -> Nil
   | Cons(x,xs') -> append (rev xs') Cons(x,Nil)
 ;;			  
-
-  rev l

@@ -45,6 +45,6 @@ uncurried rs =
      ren = R.mapRule (T.fold var fun)
      var (Left v) = T.var (v * 2 + 1)
      var (Right v) = T.var (v * 2)
-     fun (T.Sym (f,i)) as = T.fun (Problem.Labeled (Problem.LInt i) f) as
+     fun (T.Sym (f,i)) as = T.fun (Problem.Labeled i f) as
      fun _ _ = error "uncurried: TRS contains application symbol"
      

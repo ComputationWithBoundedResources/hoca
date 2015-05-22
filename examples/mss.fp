@@ -67,4 +67,3 @@ let mms l =
   in maxlist (scanr f 0 l)
 ;;
 
-mms input

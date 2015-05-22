@@ -3,9 +3,9 @@
     INNERMOST)
 
 (VAR
-    x6 x3)
+    x3 x6)
 (RULES
-    rec[take_l_0][2](0()) -> Nil()
+    main(x3) -> rec[take_l_0][2](x3)
     rec[take_l_0][2](S(x6)) -> Cons(rec[take_l_0][2](x6))
-    main(x3) -> rec[take_l_0][2](x3))
+    rec[take_l_0][2](0()) -> Nil())
 

@@ -9,7 +9,5 @@ let fleft op e xs =
   in foldr step (fun u -> u) xs e
 ;;
 
-let rev = fleft (fun xs x -> Cons(x,xs)) Nil
+let rev l = fleft (fun xs x -> Cons(x,xs)) Nil l
 ;;
-
-rev l

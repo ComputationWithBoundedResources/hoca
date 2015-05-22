@@ -75,7 +75,7 @@ let rec merge ys zs =
 	| False -> Cons(z,merge ys zs')
 ;;
   
-let mergesort = 
+let mergesort zs = 
   let divisible ys =
     match ys with
     | Nil -> False
@@ -91,7 +91,6 @@ let mergesort =
     | ConsL(l1,p') ->
        match p' with
        | ConsL(l2,p'') -> merge l1 l2
-  in divideAndConquer divisible (fun ys -> ys) divide (const combine)
+  in divideAndConquer divisible (fun ys -> ys) divide (const combine) zs
 ;;
 
-mergesort zs

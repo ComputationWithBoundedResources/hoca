@@ -1305,6 +1305,6 @@ let promote p = bind p (fun q -> q)
 	     
 let parser = bind' (string Cons(A,Cons(B,Nil))) eos;;
 
-  
-  runParser parser input
+let main input = runParser parser input
+;;  
 		 

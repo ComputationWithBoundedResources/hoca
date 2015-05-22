@@ -3,12 +3,12 @@
     INNERMOST)
 
 (VAR
-    x14 x5 x3 x7 x25)
+    x25 x14 x7 x5 x3)
 (RULES
-    rec[iter_0][3](0()) -> id()
-    rec[iter_0][3](S(x14)) -> compS_f(rec[iter_0][3](x14))
-    compS_f[1](compS_f(x5),x3) -> compS_f[1](x5,S(x3))
-    compS_f[1](id(),x7) -> S(x7)
+    main(S(x25)) -> compS_f[1](rec[iter_0][3](x25),0())
     main(0()) -> 0()
-    main(S(x25)) -> compS_f[1](rec[iter_0][3](x25),0()))
+    rec[iter_0][3](S(x14)) -> compS_f(rec[iter_0][3](x14))
+    rec[iter_0][3](0()) -> id()
+    compS_f[1](id(),x7) -> S(x7)
+    compS_f[1](compS_f(x5),x3) -> compS_f[1](x5,S(x3)))
 

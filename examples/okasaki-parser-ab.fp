@@ -1303,8 +1303,9 @@ let parens = between (lexeme (char LPAREN)) (lexeme (char RPAREN))
 let promote p = bind p (fun q -> q)  
 ;;
 	     
-let parser = bind' (char A) (bind' (char B) eos);;
+let parser = bind' (char A) (bind' (char B) eos)
+;;
 
-  
-  runParser parser input
+let main input = runParser parser input
+;;  
 		 

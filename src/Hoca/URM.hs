@@ -13,7 +13,7 @@ import qualified Data.Map as Map
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Rewriting.Applicative.Term
-import Data.Rewriting.Applicative.Rule hiding (map)
+import Data.Rewriting.Applicative.Rule
 import Data.Rewriting.Applicative.Rules (lhss, rhss)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Control.Monad.Writer (execWriter, tell)

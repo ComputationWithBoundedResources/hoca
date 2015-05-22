@@ -3,45 +3,38 @@
     INNERMOST)
 
 (VAR
-    x2 x1 x77 x3 x26 x14 x10 x6 x17 x13 x4 x5 x15 x11 x9 x7 x106 x114 x58 x66
-    x74 x18 x43)
+    x227 x2 x1 x13 x17 x10 x6 x42 x34 x4 x5 x3 x29 x46 x116 x132 x22 x461 x18
+    x14 x15 x11 x9 x7 x931 x232 x264 x92)
 (RULES
-    rec[mapL_0][2](NilL()) -> NilL()
+    main(x227) -> rec[dc_0][1](x227)
     rec[mapL_0][2](ConsL(x2,x1)) -> ConsL(rec[dc_0][1](x2),rec[mapL_0][2](x1))
-    rec[dc_0][1](Nil()) -> Nil()
-    rec[dc_0][1](Cons(x77,Nil())) -> Cons(x77,Nil())
+    rec[mapL_0][2](NilL()) -> NilL()
+    rec[length_0][1](Cons(x13,x17)) -> S(rec[length_0][1](x17))
+    rec[length_0][1](Nil()) -> 0()
+    rec[leq_0][2](S(x10),S(x6)) -> rec[leq_0][2](x10,x6)
+    rec[leq_0][2](S(x42),0()) -> False()
+    rec[leq_0][2](0(),x34) -> True()
+    const_f[2](Cons(x4,Cons(x5,x6)),ConsL(x3,ConsL(x2,x1))) ->
+      rec[merge_0][2](x3,x2)
+    rec[halve_0][1](S(S(x29))) -> S(rec[halve_0][1](x29))
+    rec[halve_0][1](S(0())) -> S(0())
+    rec[halve_0][1](0()) -> 0()
+    rec[take_0][2](S(x46),Cons(x116,x132)) -> Cons(x116
+                                                  ,rec[take_0][2](x46,x132))
+    rec[take_0][2](S(0()),Nil()) -> Cons(Head_error_empty_list(),Nil())
+    rec[take_0][2](0(),x6) -> Nil()
+    rec[drop_0][2](S(x22),Cons(x116,x132)) -> rec[drop_0][2](x22,x132)
+    rec[drop_0][2](S(0()),Nil()) -> Tail_error_empty_list()
+    rec[drop_0][2](0(),x6) -> x6
     rec[dc_0][1](Cons(x3
                      ,Cons(x2,x1))) ->
       const_f[2](Cons(x3
                      ,Cons(x2,x1))
-                ,rec[mapL_0][2](ConsL(Cons(x3
-                                          ,rec[take_0][2](rec[halve_0][1](rec[length_0][1](x1))
-                                                         ,Cons(x2,x1)))
-                                     ,ConsL(rec[drop_0][2](rec[halve_0][1](rec[length_0][1](x1))
-                                                          ,Cons(x2,x1))
-                                           ,NilL()))))
-    rec[take_0][2](0(),x26) -> Nil()
-    rec[take_0][2](S(0()),Nil()) -> Cons(Head_error_empty_list(),Nil())
-    rec[take_0][2](S(x14),Cons(x10,x6)) -> Cons(x10,rec[take_0][2](x14,x6))
-    rec[halve_0][1](0()) -> 0()
-    rec[halve_0][1](S(0())) -> S(0())
-    rec[halve_0][1](S(S(x17))) -> S(rec[halve_0][1](x17))
-    rec[length_0][1](Nil()) -> 0()
-    rec[length_0][1](Cons(x13,x17)) -> S(rec[length_0][1](x17))
-    rec[drop_0][2](0(),x26) -> x26
-    rec[drop_0][2](S(0()),Nil()) -> Tail_error_empty_list()
-    rec[drop_0][2](S(x14),Cons(x10,x6)) -> rec[drop_0][2](x14,x6)
-    const_f[2](Cons(x4,Cons(x5,x6)),ConsL(x3,ConsL(x2,x1))) ->
-      rec[merge_0][2](x3,x2)
-    merge_cond_2(True(),Cons(x15,x17),Cons(x11,x13),x9,x7,x5,x3) ->
-      Cons(x9,rec[merge_0][2](x7,Cons(x11,x13)))
-    merge_cond_2(False(),Cons(x15,x17),Cons(x11,x13),x9,x7,x5,x3) ->
-      Cons(x5,rec[merge_0][2](Cons(x15,x17),x3))
-    rec[leq_0][2](0(),x106) -> True()
-    rec[leq_0][2](S(x114),0()) -> False()
-    rec[leq_0][2](S(x10),S(x6)) -> rec[leq_0][2](x10,x6)
-    rec[merge_0][2](Nil(),x58) -> x58
-    rec[merge_0][2](Cons(x66,x74),Nil()) -> Cons(x66,x74)
+                ,rec[mapL_0][2](divide_ys[1](Cons(x3
+                                                 ,Cons(x2,x1))
+                                            ,S(rec[halve_0][1](rec[length_0][1](x1))))))
+    rec[dc_0][1](Cons(x461,Nil())) -> Cons(x461,Nil())
+    rec[dc_0][1](Nil()) -> Nil()
     rec[merge_0][2](Cons(x18,x14),Cons(x10,x6)) ->
       merge_cond_2(rec[leq_0][2](x18,x10)
                   ,Cons(x18,x14)
@@ -50,5 +43,16 @@
                   ,x14
                   ,x10
                   ,x6)
-    main(x43) -> rec[dc_0][1](x43))
+    rec[merge_0][2](Cons(x10,x6),Nil()) -> Cons(x10,x6)
+    rec[merge_0][2](Nil(),x6) -> x6
+    merge_cond_2(False(),Cons(x15,x17),Cons(x11,x13),x9,x7,x5,x3) ->
+      Cons(x5,rec[merge_0][2](Cons(x15,x17),x3))
+    merge_cond_2(True(),Cons(x15,x17),Cons(x11,x13),x9,x7,x5,x3) ->
+      Cons(x9,rec[merge_0][2](x7,Cons(x11,x13)))
+    divide_ys[1](Cons(x931,Cons(x232,x264)),S(S(x92))) ->
+      ConsL(Cons(x931,Cons(x232,rec[take_0][2](x92,x264)))
+           ,ConsL(rec[drop_0][2](x92,x264),NilL()))
+    divide_ys[1](Cons(x3,Cons(x2,x1)),S(0())) -> ConsL(Cons(x3,Nil())
+                                                      ,ConsL(Cons(x2,x1)
+                                                            ,NilL())))
 

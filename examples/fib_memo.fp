@@ -83,5 +83,3 @@ let rec fibM n =
 
 let fib n = evalState (fibM n) Nil
 ;;
-
-  fib n

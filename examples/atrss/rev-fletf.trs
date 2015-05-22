@@ -3,24 +3,28 @@
     INNERMOST)
 
 (VAR
-    x4 x5 x7 x8 x6 x0 x1 x2 x3)
+    x0 x3 x4 x5 x2 x6 x1 x7)
 (RULES
-    foldr_cond(Nil(),x4,x5) -> x5
-    foldr_cond(Cons(x7,x8),x4,x5) -> @(@(x4,x7)
-                                      ,@(@(@(rec[foldr_0](),x4),x5),x8))
-    @(foldr_f_z(x4,x5),x6) -> foldr_cond(x6,x4,x5)
-    @(foldr_f(x4),x5) -> foldr_f_z(x4,x5)
-    @(foldr(),x4) -> foldr_f(x4)
+    @(main_3(x0),x3) -> @(x3,x0)
+    @(rev_l_1(x4),x5) -> Cons(x5,x4)
+    @(rev_l(),x4) -> rev_l_1(x4)
+    @(rev(x2),x3) -> @(@(@(x2,rev_l()),Nil()),x3)
+    @(main_2(x0),x2) -> @(main_3(x0),rev(x2))
+    @(fleft_op_e_xs_1(),x6) -> x6
+    @(fleft_op_e_xs(x1,x3,x4),x5) -> @(@(@(@(x1,x5),fleft_op_e_xs_1()),x4),x3)
+    @(step_x_f(x2,x5,x6),x7) -> @(x6,@(@(x2,x7),x5))
+    @(step_x(x2,x5),x6) -> step_x_f(x2,x5,x6)
+    @(step(x2),x5) -> step_x(x2,x5)
+    @(fleft_op_e(x1,x2,x3),x4) -> @(fleft_op_e_xs(x1,x3,x4),step(x2))
+    @(fleft_op(x1,x2),x3) -> fleft_op_e(x1,x2,x3)
+    @(fleft(x1),x2) -> fleft_op(x1,x2)
+    @(main_1(x0),x1) -> @(main_2(x0),fleft(x1))
+    foldr_cond(Nil(),x1,x2) -> x2
+    foldr_cond(Cons(x4,x5),x1,x2) -> @(@(x1,x4)
+                                      ,@(@(@(rec[foldr_0](),x1),x2),x5))
+    @(foldr_f_z(x1,x2),x3) -> foldr_cond(x3,x1,x2)
+    @(foldr_f(x1),x2) -> foldr_f_z(x1,x2)
+    @(foldr(),x1) -> foldr_f(x1)
     @(rec[foldr_0](),x0) -> @(foldr(),x0)
-    @(step_x_f(x1,x4,x5),x6) -> @(x5,@(@(x1,x6),x4))
-    @(step_x(x1,x4),x5) -> step_x_f(x1,x4,x5)
-    @(step(x1),x4) -> step_x(x1,x4)
-    @(fleft_0(),x4) -> x4
-    @(fleft_op_e(x1,x2),x3) -> @(@(@(@(rec[foldr_0](),step(x1)),fleft_0()),x3)
-                                ,x2)
-    @(fleft_op(x1),x2) -> fleft_op_e(x1,x2)
-    @(fleft(),x1) -> fleft_op(x1)
-    @(rev_anonymous(x1),x2) -> Cons(x2,x1)
-    @(rev_0(),x1) -> rev_anonymous(x1)
-    main(x0) -> @(@(@(fleft(),rev_0()),Nil()),x0))
+    main(x0) -> @(main_1(x0),rec[foldr_0]()))
 

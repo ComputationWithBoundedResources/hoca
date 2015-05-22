@@ -3,78 +3,341 @@
     INNERMOST)
 
 (VAR
-    x3 x5 x6 x4 x1 x2 x7 x9 x10 x8 x11 x12 x0)
+    x0 x27 x5 x26 x11 x13 x17 x25 x8 x24 x15 x22 x23 x6 x9 x21 x12 x20 x19 x18
+    x16 x4 x10 x14 x3 x7 x1 x2)
 (RULES
-    @(runParser_anonymous_2(x3,x5),x6) -> ParseSuccess(x3,x5)
-    @(runParser_anonymous_1(x3),x5) -> runParser_anonymous_2(x3,x5)
-    @(runParser_anonymous(x3),x4) -> runParser_anonymous_1(x3)
-    @(runParser_0(),x3) -> runParser_anonymous(x3)
-    @(runParser_1(),x3) -> ParseFail(x3)
-    @(runParser_p(x1),x2) -> @(@(@(@(@(x1,bot[0]()),runParser_0())
-                                  ,runParser_1())
-                                ,x2)
+    @(main_27(x0),x27) -> @(x27,x0)
+    @(main(x5,x26),x27) -> @(@(x5,x26),x27)
+    @(main_26(x0,x5),x26) -> @(main_27(x0),main(x5,x26))
+    @(main_25(x0,x5,x11,x13,x17),x25) -> @(main_26(x0,x5)
+                                          ,@(@(x13
+                                              ,@(x17,Cons(A(),Cons(B(),Nil()))))
+                                            ,x11))
+    @(promote_p(),x26) -> x26
+    @(promote(x8),x25) -> @(@(x8,x25),promote_p())
+    @(main_24(x0,x5,x8,x11,x13,x17),x24) -> @(main_25(x0,x5,x11,x13,x17)
+                                             ,promote(x8))
+    @(main_23(x0,x5,x8,x11,x13,x15,x17,x22),x23) -> @(main_24(x0
+                                                             ,x5
+                                                             ,x8
+                                                             ,x11
+                                                             ,x13
+                                                             ,x17)
+                                                     ,@(@(x23
+                                                         ,@(x22
+                                                           ,@(x15,LPAREN())))
+                                                       ,@(x22,@(x15,RPAREN()))))
+    @(between_pl_pr_p(x6,x13,x24),x26) -> @(@(x13,x24),@(x6,x26))
+    @(between_pl_pr(x6,x8,x13,x23,x24),x25) -> @(@(x13,x23)
+                                                ,@(@(x8,x25)
+                                                  ,between_pl_pr_p(x6,x13,x24)))
+    @(between_pl(x6,x8,x13,x23),x24) -> between_pl_pr(x6,x8,x13,x23,x24)
+    @(between(x6,x8,x13),x23) -> between_pl(x6,x8,x13,x23)
+    @(main_22(x0,x5,x6,x8,x11,x13,x15,x17),x22) -> @(main_23(x0
+                                                            ,x5
+                                                            ,x8
+                                                            ,x11
+                                                            ,x13
+                                                            ,x15
+                                                            ,x17
+                                                            ,x22)
+                                                    ,between(x6,x8,x13))
+    @(lexeme_p(x6,x9,x13,x15),x23) -> @(@(x13
+                                         ,@(@(x9,@(x15,SPACE())),@(x6,SPACE())))
+                                       ,@(x6,x23))
+    @(lexeme(x6,x8,x9,x13,x15),x22) -> @(@(x8,x22),lexeme_p(x6,x9,x13,x15))
+    @(main_21(x0,x5,x6,x8,x9,x11,x13,x15,x17),x21) -> @(main_22(x0
+                                                               ,x5
+                                                               ,x6
+                                                               ,x8
+                                                               ,x11
+                                                               ,x13
+                                                               ,x15
+                                                               ,x17)
+                                                       ,lexeme(x6
+                                                              ,x8
+                                                              ,x9
+                                                              ,x13
+                                                              ,x15))
+    @(followedBy_p_q_1(x23),x24) -> x23
+    @(followedBy_p_q(),x23) -> followedBy_p_q_1(x23)
+    @(followedBy_p(x12,x21),x22) -> @(@(@(x12,followedBy_p_q()),x21),x22)
+    @(followedBy(x12),x21) -> followedBy_p(x12,x21)
+    @(main_20(x0,x5,x6,x8,x9,x11,x12,x13,x15,x17),x20) -> @(main_21(x0
+                                                                   ,x5
+                                                                   ,x6
+                                                                   ,x8
+                                                                   ,x9
+                                                                   ,x11
+                                                                   ,x13
+                                                                   ,x15
+                                                                   ,x17)
+                                                           ,followedBy(x12))
+    @(many1_p_1(x21),x22) -> Cons(x21,x22)
+    @(many1_p(),x21) -> many1_p_1(x21)
+    @(many1(x12,x19),x20) -> @(@(@(x12,many1_p()),x20),@(x19,x20))
+    @(main_19(x0,x5,x6,x8,x9,x11,x12,x13,x15,x17),x19) -> @(main_20(x0
+                                                                   ,x5
+                                                                   ,x6
+                                                                   ,x8
+                                                                   ,x9
+                                                                   ,x11
+                                                                   ,x12
+                                                                   ,x13
+                                                                   ,x15
+                                                                   ,x17)
+                                                           ,many1(x12,x19))
+    many_cond(None(),x6,x8,x18,x19) -> @(x6,Nil())
+    @(many_2(x6,x21),x22) -> @(x6,Cons(x21,x22))
+    many_cond(Some(x21),x6,x8,x18,x19) -> @(@(x8,@(rec[many_0](x6,x8,x18),x19))
+                                           ,many_2(x6,x21))
+    @(many_p(x6,x8,x18,x19),x20) -> many_cond(x20,x6,x8,x18,x19)
+    @(many(x6,x8,x18),x19) -> @(@(x8,@(x18,x19)),many_p(x6,x8,x18,x19))
+    @(rec[many_0](x6,x8,x18),x19) -> @(many(x6,x8,x18),x19)
+    @(main_18(x0,x5,x6,x8,x9,x11,x12,x13,x15,x17),x18) -> @(main_19(x0
+                                                                   ,x5
+                                                                   ,x6
+                                                                   ,x8
+                                                                   ,x9
+                                                                   ,x11
+                                                                   ,x12
+                                                                   ,x13
+                                                                   ,x15
+                                                                   ,x17)
+                                                           ,rec[many_0](x6
+                                                                       ,x8
+                                                                       ,x18))
+    @(maybe_p(x6,x9),x19) -> @(@(x9,x19),@(x6,None()))
+    @(someP(x6),x19) -> @(x6,Some(x19))
+    @(maybe(x6,x8,x9),x18) -> @(maybe_p(x6,x9),@(@(x8,x18),someP(x6)))
+    @(main_17(x0,x5,x6,x8,x9,x11,x12,x13,x15),x17) -> @(main_18(x0
+                                                               ,x5
+                                                               ,x6
+                                                               ,x8
+                                                               ,x9
+                                                               ,x11
+                                                               ,x12
+                                                               ,x13
+                                                               ,x15
+                                                               ,x17)
+                                                       ,maybe(x6,x8,x9))
+    string_cond(Nil(),x6,x13,x15) -> @(x6,Unit())
+    string_cond(Cons(x18,x19),x6,x13,x15) -> @(@(x13,@(x15,x18))
+                                              ,@(rec[string_0](x6,x13,x15),x19))
+    @(string(x6,x13,x15),x17) -> string_cond(x17,x6,x13,x15)
+    @(rec[string_0](x6,x13,x15),x16) -> @(string(x6,x13,x15),x16)
+    @(main_16(x0,x5,x6,x8,x9,x11,x12,x13,x15),x16) -> @(main_17(x0
+                                                               ,x5
+                                                               ,x6
+                                                               ,x8
+                                                               ,x9
+                                                               ,x11
+                                                               ,x12
+                                                               ,x13
+                                                               ,x15)
+                                                       ,rec[string_0](x6
+                                                                     ,x13
+                                                                     ,x15))
+    @(main_15(x0,x4,x5,x6,x8,x9,x10,x11,x12,x13,x14),x15) -> @(main_16(x0
+                                                                      ,x5
+                                                                      ,x6
+                                                                      ,x8
+                                                                      ,x9
+                                                                      ,x11
+                                                                      ,x12
+                                                                      ,x13
+                                                                      ,x15)
+                                                              ,@(@(x14,x10),x4))
+    @(char(x3,x10,x14),x15) -> @(@(x14,x10),@(x3,x15))
+    @(main_14(x0,x3,x4,x5,x6,x8,x9,x10,x11,x12,x13),x14) -> @(main_15(x0
+                                                                     ,x4
+                                                                     ,x5
+                                                                     ,x6
+                                                                     ,x8
+                                                                     ,x9
+                                                                     ,x10
+                                                                     ,x11
+                                                                     ,x12
+                                                                     ,x13
+                                                                     ,x14)
+                                                             ,char(x3,x10,x14))
+    filter_cond(True(),x6,x7,x16) -> @(x6,x16)
+    filter_cond(False(),x6,x7,x16) -> x7
+    @(filter_p_f(x6,x7,x15),x16) -> filter_cond(@(x15,x16),x6,x7,x16)
+    @(filter_p(x6,x7,x8,x14),x15) -> @(@(x8,x14),filter_p_f(x6,x7,x15))
+    @(filter(x6,x7,x8),x14) -> filter_p(x6,x7,x8,x14)
+    @(main_13(x0,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12),x13) -> @(main_14(x0
+                                                                    ,x3
+                                                                    ,x4
+                                                                    ,x5
+                                                                    ,x6
+                                                                    ,x8
+                                                                    ,x9
+                                                                    ,x10
+                                                                    ,x11
+                                                                    ,x12
+                                                                    ,x13)
+                                                            ,filter(x6,x7,x8))
+    @(bind'_p_q(x14),x15) -> x14
+    @(bind'_p(x8,x13),x14) -> @(@(x8,x13),bind'_p_q(x14))
+    @(bind'(x8),x13) -> bind'_p(x8,x13)
+    @(main_12(x0,x3,x4,x5,x6,x7,x8,x9,x10,x11),x12) -> @(main_13(x0
+                                                                ,x3
+                                                                ,x4
+                                                                ,x5
+                                                                ,x6
+                                                                ,x7
+                                                                ,x8
+                                                                ,x9
+                                                                ,x10
+                                                                ,x11
+                                                                ,x12)
+                                                        ,bind'(x8))
+    @(seq_f_p_q_1(x6,x12,x15),x16) -> @(x6,@(@(x12,x15),x16))
+    @(seq_f_p_q(x6,x8,x12,x14),x15) -> @(@(x8,x14),seq_f_p_q_1(x6,x12,x15))
+    @(seq_f_p(x6,x8,x12,x13),x14) -> @(@(x8,x13),seq_f_p_q(x6,x8,x12,x14))
+    @(seq_f(x6,x8,x12),x13) -> seq_f_p(x6,x8,x12,x13)
+    @(seq(x6,x8),x12) -> seq_f(x6,x8,x12)
+    @(main_11(x0,x3,x4,x5,x6,x7,x8,x9,x10),x11) -> @(main_12(x0
+                                                            ,x3
+                                                            ,x4
+                                                            ,x5
+                                                            ,x6
+                                                            ,x7
+                                                            ,x8
+                                                            ,x9
+                                                            ,x10
+                                                            ,x11)
+                                                    ,seq(x6,x8))
+    eos_cond(Nil(),x12,x13,x14,x15) -> @(@(@(@(x12,Unit()),x13),x14),x15)
+    eos_cond(Cons(x16,x17),x12,x13,x14,x15) -> @(x13,x15)
+    @(eos_3(x12,x13,x14),x15) -> eos_cond(x14,x12,x13,x14,x15)
+    @(eos_2(x12,x13),x14) -> eos_3(x12,x13,x14)
+    @(eos_1(x12),x13) -> eos_2(x12,x13)
+    @(eos_0(),x12) -> eos_1(x12)
+    @(eos(),x11) -> eos_0()
+    @(main_10(x0,x3,x4,x5,x6,x7,x8,x9),x10) -> @(main_11(x0
+                                                        ,x3
+                                                        ,x4
+                                                        ,x5
+                                                        ,x6
+                                                        ,x7
+                                                        ,x8
+                                                        ,x9
+                                                        ,x10)
+                                                ,eos())
+    any_cond(Nil(),x11,x12,x14) -> @(x12,x14)
+    any_cond(Cons(x15,x16),x11,x12,x14) -> @(@(@(@(x11,x15),x12),x16),S(x14))
+    @(any_3(x11,x12,x13),x14) -> any_cond(x13,x11,x12,x14)
+    @(any_2(x11,x12),x13) -> any_3(x11,x12,x13)
+    @(any_1(x11),x12) -> any_2(x11,x12)
+    @(any_0(),x11) -> any_1(x11)
+    @(any(),x10) -> any_0()
+    @(main_9(x0,x3,x4,x5,x6,x7,x8),x9) -> @(main_10(x0,x3,x4,x5,x6,x7,x8,x9)
+                                           ,any())
+    @(alt_4(x9,x12,x14,x15),x16) -> @(@(@(@(@(x9,bot[0]()),x12),x16),x14),x15)
+    @(fcp_np(x1,x13,x16),x17) -> @(x13,@(@(x1,x16),x17))
+    @(fcp(x1,x10,x12,x13,x14,x15),x16) -> @(@(@(@(@(x10,bot[1]()),x12)
+                                               ,fcp_np(x1,x13,x16))
+                                             ,x14)
+                                           ,x15)
+    @(alt_3(x1,x9,x10,x12,x13,x14),x15) -> @(alt_4(x9,x12,x14,x15)
+                                            ,fcp(x1,x10,x12,x13,x14,x15))
+    @(alt_2(x1,x9,x10,x12,x13),x14) -> alt_3(x1,x9,x10,x12,x13,x14)
+    @(alt_1(x1,x9,x10,x12),x13) -> alt_2(x1,x9,x10,x12,x13)
+    @(alt_0(x1,x9,x10),x12) -> alt_1(x1,x9,x10,x12)
+    @(alt_p_q(x1,x9,x10),x11) -> alt_0(x1,x9,x10)
+    @(alt_p(x1,x9),x10) -> alt_p_q(x1,x9,x10)
+    @(alt(x1),x9) -> alt_p(x1,x9)
+    @(main_8(x0,x1,x3,x4,x5,x6,x7),x8) -> @(main_9(x0,x3,x4,x5,x6,x7,x8)
+                                           ,alt(x1))
+    @(bind_1(x9,x11),x12) -> @(@(@(x9,x12),bot[3]()),x11)
+    @(bind_0(x8,x9),x11) -> @(@(x8,bot[2]()),bind_1(x9,x11))
+    @(bind_p_f(x8,x9),x10) -> bind_0(x8,x9)
+    @(bind_p(x8),x9) -> bind_p_f(x8,x9)
+    @(bind(),x8) -> bind_p(x8)
+    @(main_7(x0,x1,x3,x4,x5,x6),x7) -> @(main_8(x0,x1,x3,x4,x5,x6,x7),bind())
+    @(fail_3(x9),x11) -> @(x9,x11)
+    @(fail_2(x9),x10) -> fail_3(x9)
+    @(fail_1(),x9) -> fail_2(x9)
+    @(fail_0(),x8) -> fail_1()
+    @(fail(),x7) -> fail_0()
+    @(main_6(x0,x1,x3,x4,x5),x6) -> @(main_7(x0,x1,x3,x4,x5,x6),fail())
+    @(return_0(x6),x8) -> @(x8,x6)
+    @(return_x(x6),x7) -> return_0(x6)
+    @(return(),x6) -> return_x(x6)
+    @(main_5(x0,x1,x3,x4),x5) -> @(main_6(x0,x1,x3,x4,x5),return())
+    @(runParser_p_str_3(x7,x9),x10) -> ParseSuccess(x7,x9)
+    @(runParser_p_str_2(x7),x9) -> runParser_p_str_3(x7,x9)
+    @(runParser_p_str_1(x7),x8) -> runParser_p_str_2(x7)
+    @(runParser_p_str(),x7) -> runParser_p_str_1(x7)
+    @(runParser_p_str_4(),x7) -> ParseFail(x7)
+    @(runParser_p(x5),x6) -> @(@(@(@(@(x5,bot[4]()),runParser_p_str())
+                                  ,runParser_p_str_4())
+                                ,x6)
                               ,0())
-    @(runParser(),x1) -> runParser_p(x1)
-    @(bind_1(x4,x6),x7) -> @(@(@(x4,x7),bot[2]()),x6)
-    @(bind_0(x3,x4),x6) -> @(@(x3,bot[1]()),bind_1(x4,x6))
-    string_cond(Nil()) -> @(return(),Unit())
-    @(bind_1(x7,x9),x10) -> @(@(@(x7,x10),bot[4]()),x9)
-    @(bind_0(x6,x7),x9) -> @(@(x6,bot[3]()),bind_1(x7,x9))
-    @(bind'_0(x5),x6) -> x5
-    @(bind'_p(x4),x5) -> @(@(bind(),x4),bind'_0(x5))
-    @(bind'(),x4) -> bind'_p(x4)
-    @(bind_1(x8,x10),x11) -> @(@(@(x8,x11),bot[6]()),x10)
-    @(bind_0(x7,x8),x10) -> @(@(x7,bot[5]()),bind_1(x8,x10))
-    @(bind_p_f(x7,x8),x9) -> bind_0(x7,x8)
-    @(bind_p(x7),x8) -> bind_p_f(x7,x8)
-    @(bind(),x7) -> bind_p(x7)
-    @(return_0(x8),x10) -> @(x10,x8)
-    @(return_x(x8),x9) -> return_0(x8)
-    @(return(),x8) -> return_x(x8)
-    filter_cond(True(),x7) -> @(return(),x7)
-    @(fail_anonymous_2(x10),x12) -> @(x10,x12)
-    @(fail_anonymous_1(x10),x11) -> fail_anonymous_2(x10)
-    @(fail_anonymous(),x10) -> fail_anonymous_1(x10)
-    @(fail_0(),x9) -> fail_anonymous()
-    @(fail(),x8) -> fail_0()
-    filter_cond(False(),x7) -> fail()
-    @(filter_0(x6),x7) -> filter_cond(@(x6,x7),x7)
-    @(filter_p(x5),x6) -> @(@(bind(),x5),filter_0(x6))
-    @(filter(),x5) -> filter_p(x5)
-    any_cond(Nil(),x6,x7,x9) -> @(x7,x9)
-    any_cond(Cons(x10,x11),x6,x7,x9) -> @(@(@(@(x6,x10),x7),x11),S(x9))
-    @(any_anonymous_2(x6,x7,x8),x9) -> any_cond(x8,x6,x7,x9)
-    @(any_anonymous_1(x6,x7),x8) -> any_anonymous_2(x6,x7,x8)
-    @(any_anonymous(x6),x7) -> any_anonymous_1(x6,x7)
-    @(any_0(),x6) -> any_anonymous(x6)
-    @(any(),x5) -> any_0()
+    @(runParser(),x5) -> runParser_p(x5)
+    @(main_4(x0,x1,x3),x4) -> @(main_5(x0,x1,x3,x4),runParser())
+    isAlphaChar_cond(SLASH()) -> False()
+    isAlphaChar_cond(DOT()) -> False()
+    isAlphaChar_cond(MINUS()) -> False()
+    isAlphaChar_cond(GT()) -> False()
+    isAlphaChar_cond(LPAREN()) -> False()
+    isAlphaChar_cond(RPAREN()) -> False()
+    isAlphaChar_cond(SPACE()) -> False()
+    isAlphaChar_cond(A()) -> True()
+    isAlphaChar_cond(B()) -> True()
+    isAlphaChar_cond(C()) -> True()
+    isAlphaChar_cond(D()) -> True()
+    isAlphaChar_cond(E()) -> True()
+    isAlphaChar_cond(F()) -> True()
+    isAlphaChar_cond(G()) -> True()
+    isAlphaChar_cond(H()) -> True()
+    isAlphaChar_cond(I()) -> True()
+    isAlphaChar_cond(J()) -> True()
+    isAlphaChar_cond(K()) -> True()
+    isAlphaChar_cond(L()) -> True()
+    isAlphaChar_cond(M()) -> True()
+    isAlphaChar_cond(N()) -> True()
+    isAlphaChar_cond(O()) -> True()
+    isAlphaChar_cond(P()) -> True()
+    isAlphaChar_cond(Q()) -> True()
+    isAlphaChar_cond(R()) -> True()
+    isAlphaChar_cond(S()) -> True()
+    isAlphaChar_cond(T()) -> True()
+    isAlphaChar_cond(U()) -> True()
+    isAlphaChar_cond(V()) -> True()
+    isAlphaChar_cond(W()) -> True()
+    isAlphaChar_cond(X()) -> True()
+    isAlphaChar_cond(Y()) -> True()
+    isAlphaChar_cond(Z()) -> True()
+    @(isAlphaChar(),x4) -> isAlphaChar_cond(x4)
+    @(main_3(x0,x1),x3) -> @(main_4(x0,x1,x3),isAlphaChar())
     eqChar_cond_1(A()) -> True()
     eqChar_cond_1(B()) -> False()
     eqChar_cond_1(C()) -> False()
-    eqChar_cond(A(),x6) -> eqChar_cond_1(x6)
+    eqChar_cond(A(),x4) -> eqChar_cond_1(x4)
     eqChar_cond_2(A()) -> False()
     eqChar_cond_2(B()) -> True()
     eqChar_cond_2(C()) -> False()
-    eqChar_cond(B(),x6) -> eqChar_cond_2(x6)
+    eqChar_cond(B(),x4) -> eqChar_cond_2(x4)
     eqChar_cond_3(A()) -> False()
     eqChar_cond_3(B()) -> False()
     eqChar_cond_3(C()) -> True()
-    eqChar_cond(C(),x6) -> eqChar_cond_3(x6)
-    @(eqChar_x(x5),x6) -> eqChar_cond(x5,x6)
-    @(eqChar(),x5) -> eqChar_x(x5)
-    @(char(),x4) -> @(@(filter(),any()),@(eqChar(),x4))
-    string_cond(Cons(x2,x3)) -> @(@(bind'(),@(char(),x2)),@(rec[string_0](),x3))
-    @(string(),x1) -> string_cond(x1)
-    @(rec[string_0](),x0) -> @(string(),x0)
-    eos_cond(Nil(),x2,x3,x4,x5) -> @(@(@(@(x2,Unit()),x3),x4),x5)
-    eos_cond(Cons(x6,x7),x2,x3,x4,x5) -> @(x3,x5)
-    @(eos_anonymous_2(x2,x3,x4),x5) -> eos_cond(x4,x2,x3,x4,x5)
-    @(eos_anonymous_1(x2,x3),x4) -> eos_anonymous_2(x2,x3,x4)
-    @(eos_anonymous(x2),x3) -> eos_anonymous_1(x2,x3)
-    @(eos_0(),x2) -> eos_anonymous(x2)
-    @(eos(),x1) -> eos_0()
-    main(x0) -> @(@(runParser()
-                   ,@(@(bind'(),@(rec[string_0](),Cons(A(),Cons(B(),Nil()))))
-                     ,eos()))
-                 ,x0))
+    eqChar_cond(C(),x4) -> eqChar_cond_3(x4)
+    @(eqChar_x(x3),x4) -> eqChar_cond(x3,x4)
+    @(eqChar(),x3) -> eqChar_x(x3)
+    @(main_2(x0,x1),x2) -> @(main_3(x0,x1),eqChar())
+    not_cond(True()) -> False()
+    not_cond(False()) -> True()
+    @(not(),x2) -> not_cond(x2)
+    @(main_1(x0),x1) -> @(main_2(x0,x1),not())
+    max_cond(0(),x1,x2) -> x2
+    max_cond_1(0(),x1,x3) -> x1
+    max_cond_1(S(x4),x1,x3) -> S(@(@(rec[max_0](),x3),x4))
+    max_cond(S(x3),x1,x2) -> max_cond_1(x2,x1,x3)
+    @(max_x(x1),x2) -> max_cond(x1,x1,x2)
+    @(max(),x1) -> max_x(x1)
+    @(rec[max_0](),x0) -> @(max(),x0)
+    main(x0) -> @(main_1(x0),rec[max_0]()))
 

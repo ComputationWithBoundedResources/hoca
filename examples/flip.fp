@@ -4,8 +4,6 @@ let rec flip x =
   | Z(x') -> O(flip x')
   | O(x') -> Z(flip x')
 ;;
-  
-flip w
 
 
     

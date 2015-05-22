@@ -10,7 +10,8 @@ let rec plus x y =
   | S(x') -> S(plus x' y)
 ;;	      
 
-  map (plus x) l
+let mapplus l x = map (plus x) l
+;;  
 
 
     

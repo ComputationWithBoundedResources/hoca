@@ -8,4 +8,5 @@ let compS f z = f (S(z))
 let id y = y
 ;;	     
 
-  iter compS id n 0
+let iterid n = iter compS id n 0
+;;  

@@ -87,5 +87,7 @@ let rec pas p =
 ;;
 
 let parser = promote (pas eos);;
-  runParser parser input
+
+let main input = runParser parser input
+;;  
 		 

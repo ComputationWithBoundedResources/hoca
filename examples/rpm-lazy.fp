@@ -32,5 +32,3 @@ let repmin t =
   let f p = rpm t (lazy (force (snd (force p)))) in
   force (fst (force (fix f)))
 ;;
-
-  repmin t

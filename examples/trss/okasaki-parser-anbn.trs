@@ -3,167 +3,153 @@
     INNERMOST)
 
 (VAR
-    x98 x106 x10 x6 x2 x1 x20 x16 x8 x4 x5 x3 x7 x63 x163 x131 x67 x35 x12 x31
-    x23 x81 x65 x33 x17 x19 x79 x71)
+    x3 x10 x6 x26 x18 x2 x1 x5 x4 x7 x9 x8 x30 x14 x35 x12 x44 x143 x52 x36 x28
+    x20 x11 x25 x27 x51 x67 x83 x104 x120 x92 x29 x16 x60 x48 x64 x88 x56 x40
+    x24 x159 x63 x75 x23 x39 x55 x71 x87)
 (RULES
-    rec[max_0][2](0(),x98) -> x98
-    rec[max_0][2](S(x106),0()) -> S(x106)
+    main(x3) -> rec[pas_0][6](eos()
+                             ,bot[4]()
+                             ,bind2_1()
+                             ,runParser_p_str_4()
+                             ,x3
+                             ,0())
     rec[max_0][2](S(x10),S(x6)) -> S(rec[max_0][2](x10,x6))
-    alt_fail_0[1](runParser_1(),x2,x1) -> ParseFail(rec[max_0][2](x2,x1))
-    alt_fail_0[1](alt_fail(return_x(bind3_p_f(pas_2(x20))),x16,Cons(A(),x8),x4)
-                 ,x5
-                 ,x3) -> alt_fail_0[1](x16,rec[max_0][2](x5,x3),S(x4))
-    alt_fail_0[1](alt_fail(return_x(eos()),x20,Cons(A(),x8),x4),x5,x3) ->
-      alt_fail_0[1](x20,rec[max_0][2](x5,x3),x4)
-    pas_1[6](x8,x7,alt_fail(return_x(x6),x5,Cons(A(),x4),x3),x2,S(x1)) ->
-      rec[pas_0][6](bind3_p_f(pas_2(x8))
-                   ,x7
-                   ,alt_fail(return_x(x6),x5,Cons(A(),x4),x3)
-                   ,x2
-                   ,S(x1))
-    return_0[4](bind3_1(pas_2(bind3_p_f(pas_2(x63))))
-               ,alt_fail_0(alt_fail(return_x(bind3_p_f(pas_2(x163)))
-                                   ,x131
-                                   ,Cons(A(),x67)
-                                   ,x35)
-                          ,S(S(x20)))
-               ,Nil()
-               ,S(S(x12))) -> alt_fail_0[1](x131
-                                           ,S(S(rec[max_0][2](x20,x12)))
-                                           ,S(x35))
-    return_0[4](bind3_1(pas_2(bind3_p_f(pas_2(x63))))
-               ,alt_fail_0(alt_fail(return_x(eos()),x163,Cons(A(),x67),x35)
-                          ,S(S(x20)))
-               ,Nil()
-               ,S(S(x12))) -> alt_fail_0[1](x163
-                                           ,S(S(rec[max_0][2](x20,x12)))
-                                           ,x35)
-    return_0[4](bind3_1(pas_2(bind3_p_f(pas_2(x8))))
-               ,alt_fail_0(alt_fail(return_x(bind3_p_f(pas_2(x7)))
-                                   ,x6
-                                   ,Cons(A(),x5)
-                                   ,x4)
-                          ,S(S(x3)))
-               ,Cons(A(),x2)
-               ,S(S(x1))) -> alt_fail_0[1](x6
-                                          ,S(S(rec[max_0][2](x3,S(x1))))
-                                          ,S(x4))
-    return_0[4](bind3_1(pas_2(bind3_p_f(pas_2(x7))))
-               ,alt_fail_0(alt_fail(return_x(eos()),x6,Cons(A(),x5),x4)
-                          ,S(S(x3)))
-               ,Cons(A(),x2)
-               ,S(S(x1))) -> alt_fail_0[1](x6,S(S(rec[max_0][2](x3,S(x1)))),x4)
-    return_0[4](bind3_1(pas_2(bind3_p_f(pas_2(x8))))
-               ,alt_fail_0(alt_fail(return_x(x4),x5,Cons(A(),x6),x7),S(S(x3)))
-               ,Cons(B(),x2)
-               ,S(S(x1))) -> return_0[4](bind3_1(pas_2(x8))
-                                        ,alt_fail_0(alt_fail(return_x(x4)
-                                                            ,x5
-                                                            ,Cons(A(),x6)
-                                                            ,x7)
-                                                   ,S(S(x3)))
-                                        ,x2
-                                        ,S(S(S(x1))))
-    return_0[4](bind3_1(pas_2(bind3_p_f(pas_2(x8))))
-               ,alt_fail_0(alt_fail(return_x(bind3_p_f(pas_2(x7)))
-                                   ,x6
-                                   ,Cons(A(),x5)
-                                   ,x4)
-                          ,S(S(x3)))
-               ,Cons(C(),x2)
-               ,S(S(x1))) -> alt_fail_0[1](x6
-                                          ,S(S(rec[max_0][2](x3,S(x1))))
-                                          ,S(x4))
-    return_0[4](bind3_1(pas_2(bind3_p_f(pas_2(x7))))
-               ,alt_fail_0(alt_fail(return_x(eos()),x6,Cons(A(),x5),x4)
-                          ,S(S(x3)))
-               ,Cons(C(),x2)
-               ,S(S(x1))) -> alt_fail_0[1](x6,S(S(rec[max_0][2](x3,S(x1)))),x4)
-    return_0[4](bind3_1(pas_2(eos()))
-               ,alt_fail_0(alt_fail(return_x(x3),x4,Cons(A(),x5),x6),S(S(x2)))
-               ,Nil()
-               ,S(S(x1))) -> ParseSuccess()
-    return_0[4](bind3_1(pas_2(eos()))
-               ,alt_fail_0(alt_fail(return_x(bind3_p_f(pas_2(x163)))
-                                   ,x131
-                                   ,Cons(A(),x67)
-                                   ,x35)
-                          ,S(S(x20)))
-               ,Cons(x31,x23)
-               ,S(S(x12))) -> alt_fail_0[1](x131
-                                           ,S(S(rec[max_0][2](x20,x12)))
-                                           ,S(x35))
-    return_0[4](bind3_1(pas_2(eos()))
-               ,alt_fail_0(alt_fail(return_x(eos()),x163,Cons(A(),x67),x35)
-                          ,S(S(x20)))
-               ,Cons(x31,x23)
-               ,S(S(x12))) -> alt_fail_0[1](x163
-                                           ,S(S(rec[max_0][2](x20,x12)))
-                                           ,x35)
-    rec[pas_0][6](bind3_p_f(pas_2(x35))
-                 ,x31
-                 ,alt_fail(return_x(bind3_p_f(pas_2(x81)))
-                          ,x65
-                          ,Cons(A(),x33)
-                          ,x17)
-                 ,Nil()
-                 ,S(x12)) -> alt_fail_0[1](x65,S(rec[max_0][2](x12,x12)),S(x17))
-    rec[pas_0][6](bind3_p_f(pas_2(x35))
-                 ,x31
-                 ,alt_fail(return_x(eos()),x81,Cons(A(),x33),x17)
-                 ,Nil()
-                 ,S(x12)) -> alt_fail_0[1](x81,S(rec[max_0][2](x12,x12)),x17)
-    rec[pas_0][6](eos(),bot[1](),runParser_1(),Nil(),0()) -> ParseSuccess()
-    rec[pas_0][6](x12,x19,x20,Cons(A(),x8),x4) ->
-      pas_1[6](x12
-              ,bot[6]()
-              ,alt_fail(return_x(x12),x20,Cons(A(),x8),x4)
-              ,x8
-              ,S(x4))
-    rec[pas_0][6](x12,x19,x20,Cons(A(),x8),x4) ->
-      pas_1[6](x12
-              ,bot[8]()
-              ,alt_fail(return_x(x12),x20,Cons(A(),x8),x4)
-              ,x8
-              ,S(x4))
-    rec[pas_0][6](x12,x19,x20,Cons(A(),x8),x4) ->
-      pas_1[6](x12
-              ,bot[12]()
-              ,alt_fail(return_x(x12),x20,Cons(A(),x8),x4)
-              ,x8
-              ,S(x4))
-    rec[pas_0][6](bind3_p_f(pas_2(x8))
-                 ,x7
-                 ,alt_fail(return_x(x3),x4,Cons(A(),x5),x6)
-                 ,Cons(B(),x2)
-                 ,S(x1)) -> return_0[4](bind3_1(pas_2(x8))
-                                       ,alt_fail_0(alt_fail(return_x(x3)
-                                                           ,x4
-                                                           ,Cons(A(),x5)
-                                                           ,x6)
-                                                  ,S(S(x1)))
-                                       ,x2
-                                       ,S(S(x1)))
-    rec[pas_0][6](eos(),bot[1](),runParser_1(),Cons(B(),x1),0()) ->
-      alt_fail_0[1](runParser_1(),S(0()),0())
-    rec[pas_0][6](bind3_p_f(pas_2(x79))
-                 ,x71
-                 ,alt_fail(return_x(bind3_p_f(pas_2(x163)))
-                          ,x131
-                          ,Cons(A(),x67)
-                          ,x35)
-                 ,Cons(C(),x23)
-                 ,S(x12)) -> alt_fail_0[1](x131
-                                          ,S(S(rec[max_0][2](x12,x12)))
-                                          ,S(x35))
-    rec[pas_0][6](bind3_p_f(pas_2(x79))
-                 ,x71
-                 ,alt_fail(return_x(eos()),x163,Cons(A(),x67),x35)
-                 ,Cons(C(),x23)
-                 ,S(x12)) -> alt_fail_0[1](x163
-                                          ,S(S(rec[max_0][2](x12,x12)))
-                                          ,x35)
-    rec[pas_0][6](eos(),bot[1](),runParser_1(),Cons(C(),x1),0()) ->
-      alt_fail_0[1](runParser_1(),S(0()),0())
-    main(x1) -> rec[pas_0][6](eos(),bot[1](),runParser_1(),x1,0()))
+    rec[max_0][2](S(x26),0()) -> S(x26)
+    rec[max_0][2](0(),x18) -> x18
+    return_x[5](A(),bind2_1(),x3,x2,S(x1)) -> A[5](x3,x2,S(x1))
+    return_x[5](B(),bind2_1(),x3,x2,S(x1)) -> B[5](x3,x2,S(x1))
+    return_x[5](x6,bind_1(x5,x4),x3,x2,S(x1)) -> bind_1[4](x5,x4,x6,x3,x2,S(x1))
+    return_x[5](x7
+               ,bind3_1(pas_p_1(bind3_p_f(bind_p_f(x5,x6),pas_p_1(x4))))
+               ,x3
+               ,x2
+               ,S(x1)) -> bind3_p_f[5](bind_p_f(x5,x6)
+                                      ,pas_p_1(x4)
+                                      ,bot[3]()
+                                      ,x3
+                                      ,x2
+                                      ,S(x1))
+    return_x[5](x9
+               ,bind3_1(pas_p_1(eos()))
+               ,alt_fail(return_x(x8),x7,x6,x5,x4)
+               ,Cons(x3,x2)
+               ,S(x1)) -> alt_fail[1](return_x(x8),x7,x6,x5,x4,S(x1))
+    return_x[5](x6
+               ,bind3_1(pas_p_1(eos()))
+               ,alt_fail_np(x5,x4)
+               ,Cons(x3,x2)
+               ,S(x1)) -> alt_fail_np[1](x5,x4,S(x1))
+    return_x[5](x3,bind3_1(pas_p_1(eos())),x2,Nil(),S(x1)) -> ParseSuccess()
+    fail_0[4](x8,alt_fail(return_x(x7),x6,x5,x4,x3),x2,S(x1)) ->
+      alt_fail[1](return_x(x7),x6,x5,x4,x3,S(x1))
+    fail_0[4](x5,alt_fail_np(x4,x3),x2,S(x1)) -> alt_fail_np[1](x4,x3,S(x1))
+    bind[2](x26,x30) -> bind_p_f(x26,x30)
+    bind_p_f[5](bind_p_f(x14,x18),x10,x35,x6,x4,x8,x12) ->
+      bind_p_f[5](x14,x18,bot[6](),bind_1(x10,x6),x4,x8,x12)
+    bind_p_f[5](any(),x44,x143,x52,x36,Cons(x28,x20),x12) -> bind_1[4](x44
+                                                                      ,x52
+                                                                      ,x28
+                                                                      ,x36
+                                                                      ,x20
+                                                                      ,S(x12))
+    bind_p_f[5](any(),x9,x8,x7,alt_fail(return_x(x6),x5,x4,x3,x2),Nil(),x1) ->
+      alt_fail[1](return_x(x6),x5,x4,x3,x2,x1)
+    bind_p_f[5](any(),x6,x5,x4,alt_fail_np(x3,x2),Nil(),x1) ->
+      alt_fail_np[1](x3,x2,x1)
+    bind_0[4](bind_p_f(x11,x10)
+             ,x9
+             ,x8
+             ,alt_fail(return_x(x3),x4,x5,x6,x7)
+             ,x2
+             ,x1) -> bind_0[4](x11
+                              ,x10
+                              ,bind_1(x9,x8)
+                              ,alt_fail(return_x(x3),x4,x5,x6,x7)
+                              ,x2
+                              ,x1)
+    bind_0[4](any(),x10,x9,alt_fail(return_x(x4),x5,x6,x7,x8),Cons(x3,x2),x1) ->
+      bind_1[4](x10,x9,x3,alt_fail(return_x(x4),x5,x6,x7,x8),x2,S(x1))
+    bind_0[4](any(),x8,x7,alt_fail(return_x(x6),x5,x4,x3,x2),Nil(),x1) ->
+      alt_fail[1](return_x(x6),x5,x4,x3,x2,x1)
+    bind_1[4](pas_p(x25),x35,x27,x51,x67,x83) ->
+      rec[pas_0][6](bind3_p_f(bind[2](any(),filter_p_f(eqChar_x(B())))
+                             ,pas_p_1(x25))
+                   ,bot[7]()
+                   ,x35
+                   ,x51
+                   ,x67
+                   ,x83)
+    bind_1[4](filter_p_f(eqChar_x(B())),x4,C(),x3,x2,S(x1)) -> fail_0[4](x4
+                                                                        ,x3
+                                                                        ,x2
+                                                                        ,S(x1))
+    bind_1[4](filter_p_f(eqChar_x(B())),x4,B(),x3,x2,S(x1)) ->
+      return_x[5](B(),x4,x3,x2,S(x1))
+    bind_1[4](filter_p_f(eqChar_x(B())),x4,A(),x3,x2,S(x1)) -> fail_0[4](x4
+                                                                        ,x3
+                                                                        ,x2
+                                                                        ,S(x1))
+    bind_1[4](filter_p_f(eqChar_x(A())),x4,C(),x3,x2,S(x1)) -> fail_0[4](x4
+                                                                        ,x3
+                                                                        ,x2
+                                                                        ,S(x1))
+    bind_1[4](filter_p_f(eqChar_x(A())),x4,B(),x3,x2,S(x1)) -> fail_0[4](x4
+                                                                        ,x3
+                                                                        ,x2
+                                                                        ,S(x1))
+    bind_1[4](filter_p_f(eqChar_x(A())),x4,A(),x3,x2,S(x1)) ->
+      return_x[5](A(),x4,x3,x2,S(x1))
+    bind3_p_f[5](bind_p_f(x10,x14),pas_p_1(x6),x7,x4,x8,x12) ->
+      bind_p_f[5](x10,x14,bot[2](),bind3_1(pas_p_1(x6)),x4,x8,x12)
+    alt[7](bind_p_f(x104,x120),return_x(x92),x29,x16,x60,x48,x64) ->
+      bind_0[4](x104,x120,x16,alt_fail(return_x(x92),x16,x60,x48,x64),x48,x64)
+    alt_fail[1](return_x(bind3_p_f(bind_p_f(x6,x7),pas_p_1(x5)))
+               ,bind2_1()
+               ,x4
+               ,x3
+               ,x2
+               ,x1) -> bind3_p_f[5](bind_p_f(x6,x7)
+                                   ,pas_p_1(x5)
+                                   ,bot[5]()
+                                   ,alt_fail_np(x4,x1)
+                                   ,x3
+                                   ,x2)
+    alt_fail[1](return_x(eos()),bind2_1(),x88,Cons(x56,x40),x24,x104) ->
+      alt_fail_np[1](x88,x104,x24)
+    alt_fail[1](return_x(eos()),bind2_1(),x159,Nil(),x48,x63) -> ParseSuccess()
+    alt_fail[1](return_x(x7),bind_1(x6,x5),x4,x3,x2,x1) ->
+      bind_1[4](x6,x5,x7,alt_fail_np(x4,x1),x3,x2)
+    alt_fail[1](return_x(x8)
+               ,bind3_1(pas_p_1(bind3_p_f(bind_p_f(x6,x7),pas_p_1(x5))))
+               ,x4
+               ,x3
+               ,x2
+               ,x1) -> bind3_p_f[5](bind_p_f(x6,x7)
+                                   ,pas_p_1(x5)
+                                   ,bot[3]()
+                                   ,alt_fail_np(x4,x1)
+                                   ,x3
+                                   ,x2)
+    alt_fail[1](return_x(x29)
+               ,bind3_1(pas_p_1(eos()))
+               ,x88
+               ,Cons(x56,x40)
+               ,x24
+               ,x104) -> alt_fail_np[1](x88,x104,x24)
+    alt_fail[1](return_x(x29),bind3_1(pas_p_1(eos())),x159,Nil(),x48,x63) ->
+      ParseSuccess()
+    alt_fail_np[1](alt_fail(return_x(x7),x6,x5,x4,x3),x2,x1) ->
+      alt_fail[1](return_x(x7),x6,x5,x4,x3,rec[max_0][2](x2,x1))
+    alt_fail_np[1](runParser_p_str_4(),x11,x7) -> ParseFail(rec[max_0][2](x11
+                                                                         ,x7))
+    alt_fail_np[1](alt_fail_np(x4,x3),x2,x1) ->
+      alt_fail_np[1](x4,x3,rec[max_0][2](x2,x1))
+    rec[pas_0][6](x75,x23,x39,x55,x71,x87) ->
+      alt[7](bind[2](bind[2](any(),filter_p_f(eqChar_x(A()))),pas_p(x75))
+            ,return_x(x75)
+            ,x23
+            ,x39
+            ,x55
+            ,x71
+            ,x87))
 
