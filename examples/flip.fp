@@ -1,3 +1,7 @@
+type bstring =
+    E | Z of bstring | O of bstring
+;;
+
 let rec flip x = 
   match x with
   | E -> E

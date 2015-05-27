@@ -17,6 +17,7 @@ import qualified Data.IntMap as IMap
 import qualified Data.IntSet as ISet
 import           Data.IntMap (IntMap)
 import           Data.IntSet (IntSet)
+import           Data.Monoid (Monoid)
 import           Data.Maybe (listToMaybe, catMaybes)
 import           Control.Applicative ((<$>))
 
@@ -25,7 +26,7 @@ data Lbl = LString String
          | LSym Symbol
          deriving (Show, Eq, Ord)
                   
-newtype Name = Name [Lbl] deriving (Show, Eq, Ord)
+newtype Name = Name [Lbl] deriving (Show, Eq, Ord, Monoid)
 
 data Symbol =
   Con PCF.Symbol
@@ -52,7 +53,7 @@ instance PP.Pretty Symbol where
   pretty (Con g) = PP.text (PCF.sname g)
   pretty (Lambda l) = PP.pretty l
   pretty (Cond l) = PP.pretty l
-  pretty (Fix l) = PP.text "rec" PP.<> PP.brackets (PP.pretty l)
+  pretty (Fix l) = PP.pretty l
   pretty (Bot l) = PP.text "bot" PP.<> PP.brackets (PP.pretty l)      
   pretty Main = PP.text "main"
   pretty (Labeled 0 s) = PP.pretty s

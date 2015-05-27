@@ -18,22 +18,22 @@ import qualified Data.Rewriting.Applicative.SimpleTypes as ST
 import qualified Data.Rewriting.Applicative.Term as T
 import qualified Data.Rewriting.Term as Term
 
-import qualified Prelude as Prelude
+import qualified Prelude
 import           Prelude hiding ((&&),(||), not)
 import           System.Environment (getArgs)
 import           System.Exit (exitSuccess,exitFailure)
 import           System.IO (hPutStrLn, stderr)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import           Data.Graph (flattenSCC, stronglyConnCompR)
-import           Control.Applicative ((<$>))
+import           Data.Monoid (mempty)
 import           Control.Monad (foldM, void, forM)
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import           Data.List (nub)
 import           Data.Either (either)
-import           Data.Maybe (catMaybes, fromJust, isJust)
+import           Data.Maybe (mapMaybe, fromJust, isJust)
 import           Data.Text.Lazy (pack)
 import           GHC.IO (unsafePerformIO)
-
+import           Control.Applicative
 import qualified Hoca.Narrowing as N
 import qualified Hoca.Problem as Problem
 import           Hoca.Strategy
@@ -42,7 +42,7 @@ import           Hoca.Utils (putDocLn, writeDocFile, render)
 import qualified Hoca.PCF.Core as PCF
 import Hoca.PCF.Sugar (programFromString, expressionFromString, Context, Exp)
 import Hoca.PCF.Desugar (desugar, desugarExpression)
-
+import Hoca.PCF.Core.DMInfer (infer)
 
 type Problem = Problem.Problem Problem.Symbol Int
 type Rule = R.ARule Problem.Symbol Int
@@ -62,9 +62,9 @@ instance Boolean Bool where
   not = Prelude.not
 
 instance Boolean b => Boolean (a -> b) where
-  f && g = \ a -> (f a && g a)
-  f || g = \ a -> (f a || g a)  
-  not f = \ a -> not (f a)
+  f && g = \ a -> f a && g a
+  f || g = \ a -> f a || g a
+  not f = not . f
 
 
 cfa :: Problem :~> Problem
@@ -92,7 +92,7 @@ fixRule _ rl =
    Just Problem.Fix {} -> True
    _ -> False
 anyRule _ _ = True  
-recursiveRule p = Problem.isRecursive p
+recursiveRule = Problem.isRecursive
 
 definingRule :: String -> Problem -> Rule -> Bool
 definingRule name _ rl =
@@ -132,7 +132,7 @@ ruleDeleting p ns =
    [i] -> i `notElem` nwIds
    _ -> False
    where
-     nwIds = catMaybes ( map (Problem.indexOf p . N.narrowedWith) (N.narrowings ns))
+     nwIds = mapMaybe (Problem.indexOf p . N.narrowedWith) (N.narrowings ns)
 
 withRule,onRule :: (Problem -> Rule -> Bool) -> Problem -> NarrowedRule -> Bool
 withRule p rs = all (p rs) . map N.narrowedWith . N.narrowings
@@ -207,15 +207,18 @@ modifyState f = do
   st <- getState
   putState (f st)
 
-expressionFromArgs :: FilePath -> Maybe String -> [String] -> IO (PCF.Exp Context)
-expressionFromArgs fname mname args = do
+programFromArgs :: FilePath -> Maybe String -> [String] -> IO (PCF.Program Context)
+programFromArgs fname mname args = do
   r <- parseDesugared <$> readFile fname
   either (\e -> putErrLn e >> exitFailure) return r where
     parseDesugared s = do
-      fun <- programFromString fname s >>= desugar mname
+      p <- programFromString fname s >>= desugar mname
       as <- sequence [ expressionFromString ("argument " ++ show i) ai >>= desugarExpression
                      | (i,ai) <- zip [(1::Int)..] args]
-      return (foldl (PCF.App []) fun as)
+      return p { PCF.expression = foldl (PCF.App mempty) (PCF.expression p) as }
+      
+expressionFromArgs :: FilePath -> Maybe String -> [String] -> IO (PCF.Exp Context)
+expressionFromArgs fn mn as = PCF.expression <$> programFromArgs fn mn as
       
 load' :: FilePath -> IO ()
 load' fn = do
@@ -289,7 +292,7 @@ dotCallGraph hl = withProblem mkGraph where
       mkEdge i j = GV.edge i j eAttribs
         where eAttribs
                 | i `elem` highlightedNodes && j `elem` highlightedNodes =
-                    [GVattribs.color GVSVG.RoyalBlue] ++ [ GVattribs.style GVattribs.dashed | j `notElem` reachSelectedNodes]
+                    GVattribs.color GVSVG.RoyalBlue : [ GVattribs.style GVattribs.dashed | j `notElem` reachSelectedNodes]
                 | otherwise = []
      -- legendM = GV.graphAttrs [GVattribs.toLabel (concatMap (\ (i,r) -> show i ++ ": " ++ showRule r) rs) ]
       showRule rl =
@@ -392,6 +395,8 @@ main = do
         tr | doSimp = pcfToTrs >=> simplify
            | otherwise = pcfToTrs
 
+norm p = p { PCF.expression = fromJust $ PCF.nf step (PCF.expression p)} where
+     step = \ e -> PCF.beta e <|> PCF.fixCBV e <|> PCF.cond e
 
 
 -- TODO

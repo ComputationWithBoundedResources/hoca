@@ -25,7 +25,7 @@ import qualified Data.Rewriting.Term as Term
 
 import           Hoca.Utils (nubRules)
 import qualified Hoca.PCF.Core as PCF
-import           Hoca.PCF.Sugar.Types (Context, Variable (..), ProgramPoint (..))
+import           Hoca.PCF.Sugar.Types (Context (..), Variable (..), ProgramPoint (..))
 import           Hoca.Problem (Name(..), Symbol (..), Lbl(..))
 import qualified Hoca.Problem as Problem
 
@@ -44,46 +44,43 @@ toProblem e = Problem.fromRules (toTRS e)
 label :: PCF.Exp Context -> PCF.Exp Name
 label expr = State.evalState (labelM expr) (Map.empty,[])
   where
-    labelM e@(PCF.Var _ v) = PCF.Var <$> name e <*> return v
-    labelM e@(PCF.Con _ g es) = PCF.Con <$> name e <*> return g <*> mapM labelM es
-    labelM e@(PCF.Bot _) = PCF.Bot <$> name e
-    labelM e@(PCF.App _ e1 e2) = PCF.App <$> name e <*> labelM e1 <*> labelM e2
+    labelM e@(PCF.Var _ v) = 
+        PCF.Var <$> name e <*> return v
+    labelM e@(PCF.Con _ g es) = 
+        PCF.Con <$> name e <*> return g <*> mapM labelM es
+    labelM e@(PCF.Bot _) = 
+        PCF.Bot <$> name e
+    labelM e@(PCF.App _ e1 e2) = 
+        PCF.App <$> name e <*> labelM e1 <*> labelM e2
     labelM e@(PCF.Cond _ e1 cs) =
-      PCF.Cond <$> name e
-               <*> labelM e1
-               <*> mapM (\ (g,eg) -> (,) g <$> labelM eg) cs
-    labelM e@(PCF.Abs v _ e1) = PCF.Abs v <$> name e <*> labelM e1
-    labelM e@(PCF.Fix i _ es) = PCF.Fix i <$> name e <*> mapM labelM es
+        PCF.Cond <$> name e
+                 <*> labelM e1
+                 <*> mapM (\ (g,eg) -> (,) g <$> labelM eg) cs
+    labelM e@(PCF.Abs _ v e1) = 
+        PCF.Abs <$> name e <*> return v <*> labelM e1
+    labelM e@(PCF.Fix _ i es) = 
+        PCF.Fix <$> name e <*> return i <*> mapM labelM es
 
-    withSurroundingLet ctx n =
-      case surroundingLet ctx of
-       Nothing -> maybeFresh (Name [n, LString "main"])
-       Just l -> maybeFresh (Name [n, LString l])
-       where
-         surroundingLet [] = Nothing
-         surroundingLet (LetBdy (Variable fn) _ _ : _) = Just fn
-         surroundingLet (LetRecBdy (Variable fn) _ _ : _) = Just fn    
-         surroundingLet (_ : ctx') = surroundingLet ctx'
-
+    -- mapping of expressions could be expensive; better use positions e.g.
     name e = do
       m <- fst <$> State.get
       case Map.lookup e m of
        Just l -> return l
        Nothing -> do
-         l <- name' e
+         l <- maybeFresh (name' e)
          State.modify (\ (_,seen) -> (Map.insert e l m, seen))
          return l
          
       where 
-        name' (PCF.Cond ctx _ _) = withSurroundingLet ctx (LString "cond")
-        name' (PCF.Abs _ ctx _) = fromCtx ctx
-        name' _ = maybeFresh (Name [])
-        fromCtx (LetBdy fn vs _: _) = maybeFresh (Name [LString v | Variable v <- vs ++ [fn]])
-        fromCtx (LetRecBdy (Variable fn) vs _: _) = maybeFresh (Name [LInt (length vs), LString fn])
---        fromCtx (LambdaBdy _ : ctx') = withSurroundingLet ctx' (LString "anonymous")
-        fromCtx ctx' = withSurroundingLet ctx' (LInt 0)
-    
-    maybeFresh :: Name -> State.State (Map.Map (PCF.Exp Context) Name, [Name]) Name
+        name' (PCF.Cond (Context ctx) _ _) = fromTopLetFrame ctx `mappend` Name [LString "cond"]
+        name' (PCF.Abs (Context ctx) _ _) = fromTopLetFrame ctx
+        name' _ = mempty
+
+        fromTopLetFrame (LetBdy fn vs _: _)  = Name [LString v | Variable v <- vs ++ [fn]]
+        fromTopLetFrame (LetRecBdy (Variable fn) _ _: _) = Name [LString "fix", LString fn]
+        fromTopLetFrame (_:ctx) = fromTopLetFrame ctx
+        fromTopLetFrame _ = Name [LString "main"]
+        
     maybeFresh (Name []) = maybeFresh (Name [LInt 1])
     maybeFresh l = do 
       seen <- snd <$> State.get
@@ -165,7 +162,7 @@ toTRS = nubRules . snd . eval . mainM . label
       record [fun Main vs --> t ]
 
     toTRSM (PCF.Var _ i) = variable i
-    toTRSM e@(PCF.Abs _ la f) = do
+    toTRSM e@(PCF.Abs la _ f) = do
       (v,tf) <- withVar (toTRSM f)
       vs <- freeVars e
       let te = fun (Lambda la) (cvars vs)
@@ -190,22 +187,22 @@ toTRS = nubRules . snd . eval . mainM . label
         caseBdy (n+1) (PCF.Abs _ _ fg) = caseBdy n fg
         caseBdy _ _ = error "case expression with invalid body"
 
-    toTRSM e@(PCF.Fix i l fs)
+    toTRSM e@(PCF.Fix l i fs)
       | 0 <= i && i < length fs
-        && all isApp fs = do
+        && all isAbs fs = do
           visited <- elem lf <$> fst <$> get
           vs <- freeVars e
           let te = fun (Fix lf) (cvars vs)
           unless visited $ do
             modify (\ (lfs, j) -> (lf : lfs, j))
             let v = var (maximum (0 : [1 + j | Term.Var j <- Set.toList vs] ))
-            tf <- toTRSM (fromJust (foldM PCF.apply f [PCF.Fix j l fs | j <- [0..length fs - 1]]))
+            tf <- toTRSM (fromJust (foldM PCF.apply f [PCF.Fix l j fs | j <- [0..length fs - 1]]))
             record [ app te v --> app tf v ]
           return te
       where
-        isApp (PCF.Abs {}) = True
-        isApp _ = False
-        f@(PCF.Abs _ lf _) = fs!!i
+        isAbs (PCF.Abs {}) = True
+        isAbs _ = False
+        f@(PCF.Abs lf _ _) = fs!!i
       
     toTRSM (PCF.Fix _ _ _) =
       error "non-lambda abstraction given to fixpoint combinator"

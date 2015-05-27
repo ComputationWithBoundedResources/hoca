@@ -1,6 +1,9 @@
-let pred x =
-  match x with
-  | S(y) -> y
-  | 0 -> 0
+
+type nat = 0 | S of nat
 ;;
 
+let pred x =
+  match x with
+  | 0 -> 0
+  | S(x') -> x'
+;;

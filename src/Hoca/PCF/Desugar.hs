@@ -11,8 +11,10 @@ import           Hoca.PCF.Sugar.Types
 import           Control.Monad.Reader (ReaderT, MonadReader, runReaderT, ask, local)
 import           Control.Monad.Error (MonadError, throwError)
 import           Control.Arrow (first, second)
-import           Data.Maybe (fromJust,isNothing)
 import           Control.Applicative ((<$>), Applicative(..))
+import           Data.Monoid (mappend, mempty)
+import           Data.Maybe (isNothing)
+import qualified Data.Map as Map
 
 -- desugaring monad
 newtype DesugarM a =
@@ -28,7 +30,7 @@ newtype DesugarM a =
     , MonadError String)
 
 run :: DesugarM a -> Either String a
-run = flip runReaderT ([],[]) . runDesugarM
+run = flip runReaderT ([],mempty) . runDesugarM
 
 environment :: DesugarM [(Variable, Int)]
 environment = fst <$> ask
@@ -41,10 +43,10 @@ withVar v = local (first newEnv) where
   newEnv env = (v, 0::Int) : [(v',i+1) | (v',i) <- env]
 
 withEmptyContext :: DesugarM a -> DesugarM a
-withEmptyContext = local (second (const []))
+withEmptyContext = local (second (const mempty))
 
-withContext :: Context -> DesugarM a -> DesugarM a
-withContext ctx = local (second (ctx ++))
+withContext :: [ProgramPoint] -> DesugarM a -> DesugarM a
+withContext ctx = local (second (Context ctx `mappend`))
 
 
 pcfSymbol :: Symbol -> Int -> PCF.Symbol
@@ -52,10 +54,10 @@ pcfSymbol (Symbol n) = PCF.symbol n
 
 
 lambda :: Variable -> DesugarM (PCF.Exp Context) -> DesugarM (PCF.Exp Context)
-lambda v@(Variable n) m = PCF.Abs (Just n) <$> context <*> withVar v m
+lambda v@(Variable n) m = PCF.Abs <$> context <*> return (Just n) <*> withVar v m
 
 anonymous :: DesugarM (PCF.Exp Context) -> DesugarM (PCF.Exp Context)
-anonymous m = PCF.Abs Nothing <$> context <*> withVar (Variable "_") m    
+anonymous m = PCF.Abs <$> context <*> return Nothing <*> withVar (Variable "_") m    
 
 
 letToLambda :: Variable -> [Variable] -> Exp -> DesugarM (PCF.Exp Context)
@@ -76,7 +78,7 @@ desugarLetRec ds mf = do
   f' <- foldr lambda mf fs -- \ f1..fn -> [f]
   es <- sequence [ letRecExp fi vsi ei | (_,fi,vsi,ei) <- ds] -- [.. \ f1..fn v1..vm -> [ei] ..]
   ctx <- context
-  return (foldl (PCF.App ctx) f' [ PCF.Fix i ctx es | i <- [0..length ds-1] ])
+  return (foldl (PCF.App ctx) f' [ PCF.Fix ctx i es | i <- [0..length ds-1] ])
     where
       fs = [ fn | (_,fn,_,_)  <- ds]
       letRecExp f vs b = letRecBdy [] fs where
@@ -91,27 +93,27 @@ desugarExp (Var pos v@(Variable n)) = do
    Just i -> PCF.Var <$> context <*> return i
    Nothing -> throwError ("Variable " ++ show n ++ " at line " ++ show (ln pos)
                           ++ ", column " ++ show (cn pos) ++ " not bound.")
-desugarExp e@(Con _ g es) =
+desugarExp (Con _ g es) =
   PCF.Con <$> context <*> return g'
-   <*> sequence [withContext [ConstructorArg i e] (desugarExp ei)
+   <*> sequence [withContext [ConstructorArg i (es!!i)] (desugarExp ei)
                 | (i,ei) <- zip [1..] es]
   where g' = pcfSymbol g (length es)
 desugarExp (App _ e1 e2) =
-  PCF.App <$> context <*> (desugarExp e1) <*> (desugarExp e2)
+  PCF.App <$> context <*> desugarExp e1 <*> desugarExp e2
 desugarExp e@(Lazy _ f) =
   anonymous (withContext [LazyBdy e] (desugarExp f))
 desugarExp e@(Force _ f) = 
   PCF.App <$> context
    <*> withContext [ForceBdy e] (desugarExp f)
-   <*> return (PCF.Bot [])
-desugarExp e@(Cond _ gexp cs) = 
+   <*> return (PCF.Bot mempty)
+desugarExp (Cond _ gexp cs) = 
   PCF.Cond <$> context
-   <*> withContext [CaseGuard e] (desugarExp gexp)
+   <*> withContext [CaseGuard gexp] (desugarExp gexp)
    <*> sequence [ (pcfSymbol g (length vs),) <$> caseBdy g c [] vs
                 | (g, vs, c, _) <- cs ]
   where
-    caseBdy g c zs []      = withContext [CaseBdy g zs e] (desugarExp c)
-    caseBdy g c zs (v:vs') = withContext [CaseBdy g zs e] (lambda v (caseBdy g c (v:zs) vs'))
+    caseBdy g c zs []      = withContext [CaseBdy g zs c] (desugarExp c)
+    caseBdy g c zs (v:vs') = withContext [CaseBdy g zs c] (lambda v (caseBdy g c (v:zs) vs'))
 desugarExp (Let _ ds f) = desugarLet ds (desugarExp f)
 desugarExp (LetRec _ ds f) = desugarLetRec ds (desugarExp f)
  
@@ -125,22 +127,49 @@ desugarDecls ds (f,vs) = foldr lambda (foldr desugarDecl (desugarExp main) ds) v
   p = Pos "" 0 0
 
 desugarExpression :: Exp -> Either String (PCF.Exp Context)
-desugarExpression exp = run (desugarExp exp)
+desugarExpression e = run (desugarExp e)
 
-desugar :: Maybe String -> Program -> Either String (PCF.Exp Context)
-desugar mname prog = run (desugarDecls ds =<< getMainCall (concatMap defs ds)) where
-  ds = fundecs prog
-  defs (FunDeclLet _ ds') = ds'
-  defs (FunDeclRec _ ds') = ds'  
-  getMainCall [] =
-    case mname of
-     Just name -> throwError ("program contains no function named '" ++ name ++ "'")
-     _ -> throwError "program contains no function definition"
-  getMainCall [(_,f,vs,_)]
-    | isNothing mname = return (f,vs)
-  getMainCall ((_,f@(Variable name),vs,_):ds')
-    | Just name == mname = return (f,vs)
-    | otherwise = getMainCall ds'
+signatureFromPrologue :: [TypeDecl] -> Either String PCF.TSignature 
+signatureFromPrologue ds = Map.fromList <$> concat <$> mapM fromDecl ds where
+  fromDecl d = do 
+    tret <- fromSType (TyCon (typeName d) (TyVar `map` typeVars d))
+    let fromCase (Symbol f, ts) = do 
+                 targs <- fromSType `mapM` ts
+                 return (PCF.symbol f (length targs), (targs,tret))
+    fromCase `mapM` typeList d 
+        where       
+          TypeName m = typeName d
+          dict = zip (typeVars d) [0..]
+          fromSType (TyVar v@(TypeVar n)) = 
+              case lookup v dict of 
+                Just i -> return (PCF.BVar i)
+                Nothing -> throwError ("type variable '" ++ n
+                                      ++ "' not bound in declaration of type '" 
+                                      ++ m ++ "'.") 
+          fromSType (TyCon (TypeName n) ts) = 
+              PCF.TSCon n <$> mapM fromSType ts
+          fromSType (t1 :~> t2) = 
+              (PCF.:~>) <$> fromSType t1 <*> fromSType t2
+      
+desugar :: Maybe String -> Program -> Either String (PCF.Program Context)
+desugar mname prog = do
+  sig <- signatureFromPrologue (prologue prog)
+  e <- run (desugarDecls ds =<< getMainCall (concatMap defs ds)) 
+  return PCF.Program { PCF.signature = sig , PCF.expression = e}
+    where
+      ds = functions prog
+      defs (FunDeclLet _ ds') = ds'
+      defs (FunDeclRec _ ds') = ds'  
+
+      getMainCall [] =
+          case mname of
+            Just name -> throwError ("program contains no function named '" ++ name ++ "'")
+            _ -> throwError "program contains no function definition"
+      getMainCall [(_,f,vs,_)]
+          | isNothing mname = return (f,vs)
+      getMainCall ((_,f@(Variable name),vs,_):ds')
+          | Just name == mname = return (f,vs)
+          | otherwise = getMainCall ds'
     
 --    
 

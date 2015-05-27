@@ -1,5 +1,8 @@
 let comp f g x = f (g x) ;;
-  
+
+type 'a list = Nil | Cons of 'a * 'a list
+;;
+
 (* rev :: list -> list *)
 let rev l =
   (* walk :: list -> (list -> list) *)

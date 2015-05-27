@@ -2,10 +2,12 @@
 module Hoca.PCF.Core
   ( Exp (..)
   , Symbol (..)
+  , Program (..)
     -- * constructors
   , symbol
     -- * operations
   , constructors
+  , label
   , match
   , isInstanceOf
   , applySubst
@@ -18,57 +20,26 @@ module Hoca.PCF.Core
   , nf
   , cbv
   , ctxtClosure
+  -- * Types
+  , Type (..)
+  , TypeSchema (..)
+  , TSignature
+  , typeOf
+  , subExpressions
   ) where
 
 import           Hoca.Strategy
-import           Hoca.Utils (composeM, ($$), (//))
+import           Hoca.PCF.Core.Types
+import           Hoca.Utils (composeM)
 
 import           Control.Applicative ((<$>), Applicative(..), Alternative(..))
 import qualified Data.Set as Set
-import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import qualified Data.IntMap as IntMap
 import           Data.Maybe (isJust)
 import           Control.Monad (foldM,guard)
 import           Data.Function (on)
-import           Data.List (sortBy, intersperse)
+import           Data.List (sortBy)
 
-data Symbol = Symbol { sname :: String, sarity :: Int } deriving (Show, Eq, Ord)
-
-symbol :: String -> Int -> Symbol
-symbol = Symbol
-
-type Variable = Int
-             
-data Exp l =
-  Var l Variable
-  | Con l Symbol [Exp l]
-  | Bot l 
-  | Abs (Maybe String) l (Exp l) 
-  | App l (Exp l) (Exp l)
-  | Cond l (Exp l) [(Symbol, Exp l)]
-  | Fix Int l [Exp l]
-  deriving (Show, Eq, Ord)
-
-instance PP.Pretty Symbol where
-  pretty = PP.text . sname
-
-
-instance PP.Pretty (Exp l) where
-  pretty (Var _ i) = PP.underline (PP.int i)
-  pretty (Con _ f as) =
-    PP.pretty f PP.<> PP.tupled [PP.pretty ai | ai <- as]
-  pretty (Bot _) = PP.bold (PP.text "_|_")
-  pretty (Abs n _ e) = PP.parens (PP.bold (PP.text "λ" PP.<> pp n) PP.<> PP.text "." // PP.pretty e)
-    where pp (Just name) = PP.text name
-          pp Nothing = PP.empty
-  pretty (App _ e1 e2) =
-    PP.parens (PP.pretty e1 // PP.pretty e2)
-  pretty (Fix i _ es) =
-    PP.parens (PP.bold (PP.text "fix_" PP.<> PP.int i) $$ PP.brackets (PP.vcat (intersperse (PP.text ",") [ PP.pretty e | e <- es])))
-  pretty (Cond _ e cs) =
-    PP.parens ((PP.bold (PP.text "case") PP.<+> PP.pretty e PP.<+> PP.bold (PP.text "of"))
-               $$ PP.vsep [ PP.pretty g PP.<+> PP.text "->" PP.<+> PP.pretty e'
-                          | (g,e') <- cs ])
 
 constructors :: Exp l -> Set.Set Symbol
 constructors (Con _ g _) = Set.singleton g
@@ -79,8 +50,13 @@ constructors (Cond _ e cs) = foldl f (constructors e) cs
 constructors (Fix _ _ es) = Set.unions (map constructors es)
 constructors _ = Set.empty
 
-
-type Subst l = IntMap.IntMap (Exp l)
+subExpressions :: Exp l -> [Exp l]
+subExpressions e@(Con _ _ ts) = e : concatMap subExpressions ts
+subExpressions e@(Abs _ _ e1) = e : subExpressions e1
+subExpressions e@(App _ e1 e2) = e : subExpressions e1 ++ subExpressions e2
+subExpressions e@(Cond _ e1 cs) = e : subExpressions e1 ++ concatMap (subExpressions . snd) cs
+subExpressions e@(Fix _ _ es) = e : concatMap subExpressions es 
+subExpressions e = [e]
 
 match :: Eq l2 => Exp l1 -> Exp l2 -> Maybe (Subst l2)
 match e f = go 0 e f IntMap.empty where
@@ -107,7 +83,7 @@ match e f = go 0 e f IntMap.empty where
       (cs',ct') = (srt cs, srt ct)
     guard (map fst cs' == map fst ct')    
     go k s t sub >>= composeM (zipWith (go k) (map snd cs') (map snd ct'))
-  go k (Fix i _ ss) (Fix j _ ts) sub = do
+  go k (Fix _ i ss) (Fix _ j ts) sub = do
     guard (i == j)
     composeM (zipWith (go k) ss ts) sub
   go k (Abs _ _ s) (Abs _ _ t) sub = go (k+1) s t sub
@@ -178,9 +154,9 @@ cond _ = empty
 
 -- fix(\e.f) --> f{(\z.fix(\e.f) z) / e}
 fixCBV :: (Alternative m, Monad m) => Exp l -> m (Exp l)
-fixCBV (App l (Fix i l' fs) a)
+fixCBV (App l (Fix l' i fs) a)
   | 0 <= i && i < length fs =
-      App l <$> (fs !! i) `applyL` [Fix j l' fs | j <- [0..length fs - 1]] <*> return a
+      App l <$> (fs !! i) `applyL` [Fix l' j fs | j <- [0..length fs - 1]] <*> return a
 fixCBV _ = empty
 
 -- * combinators 

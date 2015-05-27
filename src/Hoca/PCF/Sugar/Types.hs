@@ -3,6 +3,7 @@
 module Hoca.PCF.Sugar.Types where
 
 import qualified Data.Set as Set
+import Data.Monoid (Monoid)
 
 newtype Symbol = Symbol String deriving (Eq, Ord, Show) -- ^ constructors
 newtype Variable = Variable String deriving (Ord, Eq, Show) -- ^ variables
@@ -94,7 +95,7 @@ data ProgramPoint =
   | ConstructorArg Int Exp
     deriving (Show, Eq, Ord)
              
-type Context = [ProgramPoint]
+newtype Context = Context [ProgramPoint] deriving (Eq, Ord, Monoid)
 
 
 ----------------------------------------------------------------------
@@ -107,6 +108,6 @@ data FunDecl =
   FunDeclLet Pos [(Pos,Variable,[Variable],Exp)] -- ^ non-recursive function declaration
   | FunDeclRec Pos [(Pos,Variable,[Variable],Exp)] -- ^ recursive function declaration
 
-data Program = Program { typedecs :: [TypeDecl]
-                       , fundecs :: [FunDecl]}
+data Program = Program { prologue :: [TypeDecl]
+                       , functions :: [FunDecl]}
 

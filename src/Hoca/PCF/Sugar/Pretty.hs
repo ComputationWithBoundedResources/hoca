@@ -66,3 +66,33 @@ instance PP.Pretty Exp where
   pretty (Let _ ls e) = prettyLet "let" ls e
   pretty (LetRec _ ls e) = prettyLet "let rec" ls e
 
+
+prettyLetPP :: Variable -> [Variable] -> Exp -> [ProgramPoint] -> PP.Doc
+prettyLetPP f vs e ps = 
+  PP.text "In the definition '" 
+  PP.<> (ppSeq PP.space [PP.pretty vi | vi <- f:vs]
+               PP.<+> PP.text "= ...', namely")
+  PP.<$> PP.nest 2 (PP.pretty e)
+  PP.<$$> PP.pretty (Context (filter nf ps))
+      where nf (LetBdy g _ _) = f /= g
+            nf (LetRecBdy g _ _) = f /= g
+            nf _ = True
+  
+
+instance PP.Pretty Context where 
+  pretty (Context (LetBdy f vs e:ps)) = prettyLetPP f vs e ps
+  pretty (Context (LetRecBdy f vs e:ps)) = prettyLetPP f vs e ps
+  pretty (Context (CaseGuard e:ps)) = 
+      PP.text "In a matched expression, namely"
+      PP.<$> PP.nest 2 (PP.pretty e)
+      PP.<$$> PP.pretty (Context ps)
+  pretty (Context (CaseBdy _ [] e:ps)) = 
+      PP.text "In the case of a match-expression, namely"
+      PP.<$> PP.nest 2 (PP.pretty e)
+      PP.<$$> PP.pretty (Context ps)                       
+  pretty (Context (ConstructorArg i e:ps)) = 
+      PP.text "In the" PP.<+> PP.int i PP.<> PP.text"th argument of a constructor, namely"    
+      PP.<$> PP.nest 2 (PP.pretty e)
+      PP.<$$> PP.pretty (Context ps)      
+  pretty _ = PP.empty          
+
