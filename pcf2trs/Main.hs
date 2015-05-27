@@ -219,6 +219,9 @@ programFromArgs fname mname args = do
       
 expressionFromArgs :: FilePath -> Maybe String -> [String] -> IO (PCF.Exp Context)
 expressionFromArgs fn mn as = PCF.expression <$> programFromArgs fn mn as
+
+programFromFile :: FilePath -> IO (PCF.Program Context)
+programFromFile fname = programFromArgs fname Nothing []
       
 load' :: FilePath -> IO ()
 load' fn = do
@@ -398,7 +401,11 @@ main = do
 norm p = p { PCF.expression = fromJust $ PCF.nf step (PCF.expression p)} where
      step = \ e -> PCF.beta e <|> PCF.fixCBV e <|> PCF.cond e
 
-
+typeProgram p = 
+    case infer p of 
+      Left e -> putDocLn e >> error "program not typable"
+      Right p' -> putDocLn (PCF.typeOf (PCF.expression p')) >> return p'
+                
 -- TODO
 s = save "/home/zini/op.trs" >> saveCG Nothing "/home/zini/op.svg"
 a p = apply p >> s

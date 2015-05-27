@@ -5,8 +5,9 @@ module Hoca.PCF.Core.Types where
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import qualified Data.IntMap as IntMap
 import Data.Map (Map)
+import qualified Data.Map as Map
 import           Hoca.Utils (($$), (//), ppSeq)
-import           Data.List (sort, nub)
+import           Data.List (nub)
 
 ----------------------------------------------------------------------
 -- Symbols
@@ -68,8 +69,8 @@ instance PP.Pretty (Exp l) where
     PP.parens (PP.bold (PP.text "fix_" PP.<> PP.int i) $$ PP.brackets (ppSeq PP.comma [ PP.pretty e | e <- es]))
   pretty (Cond _ e cs) =
     PP.parens ((PP.bold (PP.text "case") PP.<+> PP.pretty e PP.<+> PP.bold (PP.text "of"))
-               $$ PP.braces (ppSeq (PP.text "|") [ PP.pretty g PP.<+> PP.text "->" PP.<+> PP.pretty e'
-                                                 | (g,e') <- cs ]))
+               $$ PP.braces (ppSeq (PP.text " | ") [ PP.pretty g PP.<+> PP.text "->" PP.<+> PP.pretty e'
+                                                   | (g,e') <- cs ]))
 
 type Subst l = IntMap.IntMap (Exp l)
 
@@ -133,6 +134,12 @@ instance PP.Pretty Type where
          fromType (TyCon n ts) = TSCon n (map fromType ts)
          fromType (t1 :-> t2) = fromType t1 :~> fromType t2
 
+instance PP.Pretty TSignature where 
+    pretty ts = 
+        PP.vcat [ PP.pretty ci PP.<+> PP.text "::" 
+                  PP.<+> PP.align (ppSeq (PP.text " * ") (PP.pretty `map` tins)
+                                   PP.<+> PP.text "->" PP.<+> PP.pretty tout)
+                | (ci, (tins,tout)) <- Map.toList ts ]
 ----------------------------------------------------------------------
 -- Program
 ----------------------------------------------------------------------
@@ -141,4 +148,10 @@ data Program l =
      Program { signature :: TSignature
              , expression :: Exp l }
 
-
+instance PP.Pretty (Program l) where 
+    pretty p = 
+        PP.pretty (expression p)
+        PP.<$> PP.text "where" 
+        PP.<$> PP.nest 2 (PP.align (PP.pretty (signature p)))
+        
+type TypedProgram l = Program (l,Type)

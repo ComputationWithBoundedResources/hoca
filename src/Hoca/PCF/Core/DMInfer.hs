@@ -240,5 +240,7 @@ ctx |- Fix l i es = do
          (s1 `o` ctx)
          (second (s1 `o`) `map` eqs)
        
-infer :: Program l -> Either (TypingError (Exp l)) (TypedExp l)
-infer p = snd <$> run (signature p) ([] |- expression p) -- uncurry o
+infer :: Program l -> Either (TypingError (Exp l)) (TypedProgram l)
+infer p = do 
+  (_,te) <- run (signature p) ([] |- expression p)
+  return p { expression = te }
