@@ -1,7 +1,7 @@
 #!/usr/local/bin/runhaskell
 
 {-# LANGUAGE TypeOperators #-}
-
+-- TEMPORARY / integrate in tct3 later
 module Main where
 
 
@@ -372,8 +372,10 @@ main = do
      putDocLn (PP.pretty (fromJust (PCF.nf PCF.cbv e)))
    "--eval" : _ -> putStrLn helpMsg
    "--pcf" : fname : [] -> do
-     e <- expressionFromArgs fname Nothing []
-     putDocLn (PP.pretty e)
+     p <- programFromArgs fname Nothing []
+     case infer p of 
+       Left e -> putDocLn (PP.pretty p) >> putDocLn e
+       Right p' -> putDocLn (PP.pretty p')
    "--pcf" : _ -> putStrLn helpMsg     
    "--no-simp" : fname : [] -> 
      transform False fname Nothing

@@ -1,3 +1,15 @@
+type Unit = Unit;;
+
+type 'a llist = NilL | ConsL of 'a * (Unit -> 'a llist)
+;;
+
+type nat = 0 | S of nat
+;;
+
+type 'a list = Nil | Cons of 'a * 'a list
+;;
+
+
 let rec zipwith_l f xs ys =
   lazy (match force xs with
 	| NilL -> NilL
@@ -15,13 +27,13 @@ let rec plus x y =
 
 let tail_l xs =
   match force xs with
-  | NilL -> Error_empty_list
+  | NilL -> error
   | ConsL(x,xs') -> xs'
 ;;		     
     
 let rec nth_l n xs =
   match force xs with
-  | NilL -> Error_nth_l
+  | NilL -> error
   | ConsL(x,xs') -> 
      match n with
      | 0 -> x

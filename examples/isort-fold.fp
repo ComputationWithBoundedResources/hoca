@@ -1,3 +1,12 @@
+type nat = 0 | S of nat
+;;
+
+type 'a list = Nil | Cons of 'a * 'a list
+;;
+
+type bool = False | True
+;;
+
 let rec leq x y = 
   match x with
     | 0 -> True

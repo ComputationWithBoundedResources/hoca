@@ -1,3 +1,6 @@
+type nat = 0 | S of nat;;
+type bool = True | False ;;
+
 let rec even x =
   match x with
   | 0 -> True

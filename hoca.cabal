@@ -2,19 +2,19 @@ name:          hoca
 version:       0.2
 stability:     experimental
 author:        Martin Avanzini, Ugo Dal Lago
-maintainer:    martin.avanzini@uibk.ac.at
+maintainer:    Martin Avanzini <martin.avanzini@uibk.ac.at>
 license:       MIT
 license-file:  LICENSE
-category:      Logic
+category:      Program Analysis
 synopsis:      Higher Order Complexity Analysis
-description:   
+description:
 build-type:    Simple
 cabal-version: >= 1.8
 
 
 source-repository head
     type: git
-    location: git://github.com/mzini/hoca
+    location: git://github.com/ComputationWithBoundedResources/hoca
 
 executable pcf2trs
  hs-source-dirs: pcf2trs

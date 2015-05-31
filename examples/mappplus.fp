@@ -1,3 +1,9 @@
+type nat = 0 | S of nat
+;;
+
+type 'a list = Nil | Cons of 'a * 'a list
+;;
+
 let rec map f xs = 
   match xs with
   | Nil -> Nil 

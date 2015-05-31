@@ -109,5 +109,7 @@ pa $$ pb = PP.align (pa PP.<$> PP.indent 1 pb)
 pa // pb = PP.align (pa PP.</> pb)
 
 ppSeq :: PP.Doc -> [PP.Doc] -> PP.Doc
-ppSeq sep = PP.align . PP.cat . PP.punctuate sep
+ppSeq _ [] = PP.empty
+ppSeq _ [a] = a
+ppSeq s (a:as) = PP.align (a PP.<//> PP.cat [s PP.<> a' | a' <- as])
 

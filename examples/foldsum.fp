@@ -1,7 +1,13 @@
+type nat = 0 | S of nat
+;;
+
+type 'a list = Nil | Cons of 'a * 'a list
+;;
+
 let rec foldr f z xs = 
   match xs with 
-  | NilF -> z
-  | ConsF(x,xs') -> f x (foldr f z xs')
+  | Nil -> z
+  | Cons(x,xs') -> f x (foldr f z xs')
 ;;
   
 let rec plus x y = 
@@ -10,10 +16,10 @@ let rec plus x y =
   | S(x') -> S(plus x' y)
 ;; 
 
-let rec mapF f xs = 
+let rec map f xs = 
   match xs with
-  | Nil -> NilF 
-  | Cons(x,xs') -> ConsF(f x, mapF f xs')
+  | Nil -> Nil
+  | Cons(x,xs') -> Cons(f x, map f xs')
 ;; 
 
 let comp f g z = f (g z)
@@ -22,5 +28,5 @@ let comp f g z = f (g z)
 let id x = x
 ;;
 
-let foldsum l = foldr comp id (mapF plus l) 0
+let foldsum l = foldr comp id (map plus l) 0
 ;;

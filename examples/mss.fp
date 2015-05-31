@@ -1,3 +1,10 @@
+type 'a list = Nil | Cons of 'a * 'a list
+;;
+
+type int = 0 | S of int | M of int
+;;
+    
+
 (* max : nat -> nat -> nat *)
 let rec max x y = 
   match x with
@@ -41,7 +48,7 @@ let rec scanr f z xs =
   | Nil -> Cons(z,Nil)
   | Cons(x,xs') -> 
      match scanr f z xs' with
-     | Nil -> Scanr_error
+     | Nil -> error
      | Cons(y,ys) -> Cons(f x y, Cons(y,ys))
 ;;
 

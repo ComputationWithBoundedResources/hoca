@@ -93,13 +93,18 @@ desugarExp (Var pos v@(Variable n)) = do
    Just i -> PCF.Var <$> context <*> return i
    Nothing -> throwError ("Variable " ++ show n ++ " at line " ++ show (ln pos)
                           ++ ", column " ++ show (cn pos) ++ " not bound.")
+                          
+desugarExp (Err _) = PCF.Bot <$> context
+  
 desugarExp (Con _ g es) =
   PCF.Con <$> context <*> return g'
-   <*> sequence [withContext [ConstructorArg i (es!!i)] (desugarExp ei)
-                | (i,ei) <- zip [1..] es]
+   <*> sequence [withContext [ConstructorArg (i + 1) (es!!i)] (desugarExp ei)
+                | (i,ei) <- zip [0..] es]
   where g' = pcfSymbol g (length es)
 desugarExp (App _ e1 e2) =
-  PCF.App <$> context <*> desugarExp e1 <*> desugarExp e2
+  PCF.App <$> context 
+          <*> withContext [Lapp e1] (desugarExp e1) 
+          <*> withContext [Rapp e2] (desugarExp e2)
 desugarExp e@(Lazy _ f) =
   anonymous (withContext [LazyBdy e] (desugarExp f))
 desugarExp e@(Force _ f) = 

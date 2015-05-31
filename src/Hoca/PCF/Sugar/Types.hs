@@ -5,15 +5,21 @@ module Hoca.PCF.Sugar.Types where
 import qualified Data.Set as Set
 import Data.Monoid (Monoid)
 
-newtype Symbol = Symbol String deriving (Eq, Ord, Show) -- ^ constructors
-newtype Variable = Variable String deriving (Ord, Eq, Show) -- ^ variables
+-- | constructors
+newtype Symbol = Symbol String deriving (Eq, Ord, Show) 
+
+-- | variables
+newtype Variable = Variable String deriving (Ord, Eq, Show)
 
 ----------------------------------------------------------------------
 -- type expressions / declarations
 ----------------------------------------------------------------------
 
-newtype TypeVar = TypeVar String deriving (Eq, Ord, Show) -- ^ type variables
-newtype TypeName = TypeName String deriving (Eq, Ord, Show) -- ^ type names
+-- | type variables  
+newtype TypeVar = TypeVar String deriving (Eq, Ord, Show) 
+
+-- | type names
+newtype TypeName = TypeName String deriving (Eq, Ord, Show) 
 
 data Type = TyVar TypeVar -- ^ variable
           | TyCon TypeName [Type] -- ^ composite type
@@ -40,6 +46,7 @@ data Pos = Pos {sn :: String -- ^ source name
 data Exp =
   Abs Pos Variable Exp -- ^ abstraction
   | Var Pos Variable -- ^ variable
+  | Err Pos -- ^ used to handle error function  
   | Con Pos Symbol [Exp] -- ^ constructor
   | App Pos Exp Exp -- ^ application
   | Lazy Pos Exp -- ^ lazy keyword
@@ -54,6 +61,7 @@ freeVars :: Exp -> Set.Set Variable
 freeVars (Abs _ v e) = Set.delete v (freeVars e)
 freeVars (Var _ v) = Set.insert v Set.empty
 freeVars (Lazy _ e) = freeVars e
+freeVars (Err _) = Set.empty
 freeVars (Force _ e) = freeVars e
 freeVars (App _ e1 e2) = freeVars e1 `Set.union` freeVars e2
 freeVars (Con _ _ es) = Set.unions [ freeVars e | e <- es ]
@@ -73,6 +81,7 @@ freeVars (LetRec _ ds e) =
 
 -- | source position of overall expression
 sourcePos :: Exp -> Pos
+sourcePos (Err l) = l
 sourcePos (Abs l _ _) = l
 sourcePos (Lazy l _) = l
 sourcePos (Force l _) = l
@@ -93,6 +102,8 @@ data ProgramPoint =
   | CaseGuard Exp
   | CaseBdy Symbol [Variable] Exp
   | ConstructorArg Int Exp
+  | Lapp Exp
+  | Rapp Exp  
     deriving (Show, Eq, Ord)
              
 newtype Context = Context [ProgramPoint] deriving (Eq, Ord, Monoid)

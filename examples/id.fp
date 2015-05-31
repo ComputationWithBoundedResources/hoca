@@ -1,3 +1,6 @@
+type nat = 0 | S of nat
+;;
+
 let rec iter f g x = 
   match x with  
   | 0 -> g

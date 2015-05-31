@@ -10,7 +10,8 @@ let rev l =
     match xs with 
     | Nil -> (fun x -> x)
     | Cons(x,xs') ->
-       comp (walk xs') (fun ys -> Cons(x,ys))
+       comp (walk xs')
+	 (fun ys -> Cons(x,ys))
   in walk l Nil
 ;;	  
 	  

@@ -123,7 +123,9 @@ withVars n m = do
 variable :: Int -> TM Term
 variable i = do
   vs <- ask
-  return (var (vs!!i))
+  if i >= length vs 
+   then error "variable not in scope"
+   else return (var (vs!!i))
 
 freshInt :: TM Int
 freshInt = do
@@ -202,8 +204,10 @@ toTRS = nubRules . snd . eval . mainM . label
       where
         isAbs (PCF.Abs {}) = True
         isAbs _ = False
-        f@(PCF.Abs lf _ _) = fs!!i
-      
+        f@(PCF.Abs lf _ _) 
+            | i >= length fs = error "fix-point index out of scope"
+            | otherwise = fs!!i
+
     toTRSM (PCF.Fix _ _ _) =
       error "non-lambda abstraction given to fixpoint combinator"
 

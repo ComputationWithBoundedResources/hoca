@@ -23,7 +23,7 @@ type Parser = CharParser [(TypeName,Int)]
 ----------------------------------------------------------------------
 
 reservedWords :: [String]
-reservedWords = words "type let rec in = of fun match with | -> and ;; lazy force"
+reservedWords = words "type let rec in = of fun match with | -> and ;; lazy force error"
 
 whiteSpace :: Parser String
 whiteSpace = many ((space <|> tab <|> newline) <?> "whitespace")
@@ -84,9 +84,15 @@ expP = (lambdaExp <?> "lambda expression")
       (_,e):es <-
         many1 ((try (withPos var) <?> "variable")
                <|> (withPos constrExp <?> "constructor expression")
+               <|> (withPos errorExp <?> "error expression")
                <|> (parens (withPos expP) <?> "parenthesised expression"))
       return (foldl (\ f1 (p,f2) -> App p f1 f2) e es)
-           
+
+    errorExp = do 
+     pos <- posP
+     symbol "error"
+     return (Err pos)
+     
     lambdaExp = do
       pos <- posP
       try (symbol "fun")

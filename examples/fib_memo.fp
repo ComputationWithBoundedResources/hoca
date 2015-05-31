@@ -1,3 +1,18 @@
+type Unit = Unit
+;;
+
+type nat = 0 | S of nat
+;;
+
+type 'a list = Nil | Cons of 'a * 'a list
+;;
+
+type ('a,'b) pair = Pair of 'a * 'b
+;;
+
+type 'a option = None | Some of 'a
+;;    
+
 let rec plus x y = 
   match x with
   | 0 -> y

@@ -121,17 +121,17 @@ instance PP.Pretty (TypingError (Exp Context)) where
         PP.<+> PP.text "with actual type"
         PP.<+> PP.squotes (PP.pretty t1)
         PP.<> PP.text "."
-        PP.<$$> PP.nest 2 (PP.pretty (label e))
+        PP.<$$> PP.pretty (label e)
     pretty (ConstructorNotInScope f e) = 
         PP.text "The symbol" PP.<+> PP.squotes (PP.pretty f) PP.<+> PP.text "is not in scope."
-        PP.<$$> PP.nest 2 (PP.pretty (label e))
+        PP.<$$> PP.pretty (label e)
     pretty ExpressionNotClosed = 
         PP.text "The program contains free variables."
     pretty (InvalidNumArguments i j f e) = 
         PP.text "The symbol" PP.<+> PP.squotes (PP.pretty f) 
         PP.<+> PP.text "expects" PP.<+> PP.int i PP.<+> PP.text "arguments, but"
         PP.<+> PP.int j PP.<+> PP.text "were given."        
-        PP.<$$> PP.nest 2 (PP.pretty (label e))
+        PP.<$$> PP.pretty (label e)
         
 newtype InferM e a = InferM { runInferM :: RWST TSignature () TypeVariable (Either e) a } deriving
     ( Applicative, Functor, Monad

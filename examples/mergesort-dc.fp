@@ -1,7 +1,17 @@
-let rec mapL f xs = 
+type nat = 0 | S of nat
+;;
+
+type 'a list = Nil | Cons of 'a * 'a list
+;;
+
+type bool = True | False
+;;    
+
+
+let rec map f xs = 
   match xs with
-  | NilL -> NilL 
-  | ConsL(x,xs') -> ConsL(f x, mapL f xs')
+  | Nil -> Nil 
+  | Cons(x,xs') -> Cons(f x, map f xs')
 ;;
 
 let rec length xs =
@@ -32,13 +42,13 @@ let rec halve x =
 
 let tail l =
   match l with
-  | Nil -> Tail_error_empty_list
+  | Nil -> error
   | Cons(l,ls) -> ls
 ;;		    
 
 let head l =
   match l with
-  | Nil -> Head_error_empty_list
+  | Nil -> error
   | Cons(l,ls) -> l
 ;;
   
@@ -59,7 +69,7 @@ let divideAndConquer isDivisible solve divide combine initial =
   let rec dc pb = 
     match isDivisible pb with
     | False -> solve pb
-    | True -> combine pb (mapL dc (divide pb))
+    | True -> combine pb (map dc (divide pb))
   in dc initial
 ;;
 
@@ -85,12 +95,12 @@ let mergesort zs =
        | Cons(y',ys'') -> True
   and divide ys =
     let n = halve (length ys)
-    in ConsL(take n ys, ConsL(drop n ys,NilL))
+    in Cons(take n ys, Cons(drop n ys,Nil))
   and combine p =
     match p with
-    | ConsL(l1,p') ->
+    | Cons(l1,p') ->
        match p' with
-       | ConsL(l2,p'') -> merge l1 l2
+       | Cons(l2,p'') -> merge l1 l2
   in divideAndConquer divisible (fun ys -> ys) divide (const combine) zs
 ;;
 
