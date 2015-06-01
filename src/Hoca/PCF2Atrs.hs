@@ -11,9 +11,9 @@ module Hoca.PCF2Atrs (
 
 import           Control.Applicative ((<$>),(<*>), Applicative)
 import           Control.Monad.RWS
+import           Control.Arrow (first)
 import qualified Control.Monad.State.Lazy as State
 import           Data.List (sort)
-import qualified Data.Map as Map
 import           Data.Maybe (fromJust)
 import qualified Data.Set as Set
 
@@ -42,7 +42,7 @@ toProblem :: PCF.Exp Context -> Problem
 toProblem e = Problem.fromRules (toTRS e)
 
 label :: PCF.Exp Context -> PCF.Exp Name
-label expr = State.evalState (labelM expr) (Map.empty,[])
+label expr = State.evalState (labelM expr) []
   where
     labelM e@(PCF.Var _ v) = 
         PCF.Var <$> name e <*> return v
@@ -61,16 +61,7 @@ label expr = State.evalState (labelM expr) (Map.empty,[])
     labelM e@(PCF.Fix _ i es) = 
         PCF.Fix <$> name e <*> return i <*> mapM labelM es
 
-    -- mapping of expressions could be expensive; better use positions e.g.
-    name e = do
-      m <- fst <$> State.get
-      case Map.lookup e m of
-       Just l -> return l
-       Nothing -> do
-         l <- maybeFresh (name' e)
-         State.modify (\ (_,seen) -> (Map.insert e l m, seen))
-         return l
-         
+    name = maybeFresh . name'
       where 
         name' (PCF.Cond (Context ctx) _ _) = fromTopLetFrame ctx `mappend` Name [LString "cond"]
         name' (PCF.Abs (Context ctx) _ _) = fromTopLetFrame ctx
@@ -80,16 +71,16 @@ label expr = State.evalState (labelM expr) (Map.empty,[])
         fromTopLetFrame (LetRecBdy (Variable fn) _ _: _) = Name [LString "fix", LString fn]
         fromTopLetFrame (_:ctx) = fromTopLetFrame ctx
         fromTopLetFrame _ = Name [LString "main"]
-        
-    maybeFresh (Name []) = maybeFresh (Name [LInt 1])
-    maybeFresh l = do 
-      seen <- snd <$> State.get
-      let v = head (dropWhile (`elem` seen) (iterate inc l))
-      State.modify (\ (es,_) -> (es,v:seen))
-      return v
-        where 
-          inc (Name (LInt i : ls)) = Name (LInt (i+1) : ls)
-          inc (Name vs) = Name (LInt 1 : vs)
+
+        maybeFresh (Name []) = maybeFresh (Name [LInt 1])
+        maybeFresh l = do 
+          seen <- State.get
+          let v = head (dropWhile (`elem` seen) (iterate inc l))
+          State.modify ((:) v)
+          return v
+            where 
+              inc (Name (LInt i : ls)) = Name (LInt (i+1) : ls)
+              inc (Name vs) = Name (LInt 1 : vs)
 
 -- transformation ----------------------------------------------------------------------
       
@@ -196,7 +187,7 @@ toTRS = nubRules . snd . eval . mainM . label
           vs <- freeVars e
           let te = fun (Fix lf) (cvars vs)
           unless visited $ do
-            modify (\ (lfs, j) -> (lf : lfs, j))
+            modify (first ((:) lf))
             let v = var (maximum (0 : [1 + j | Term.Var j <- Set.toList vs] ))
             tf <- toTRSM (fromJust (foldM PCF.apply f [PCF.Fix l j fs | j <- [0..length fs - 1]]))
             record [ app te v --> app tf v ]
@@ -208,7 +199,7 @@ toTRS = nubRules . snd . eval . mainM . label
             | i >= length fs = error "fix-point index out of scope"
             | otherwise = fs!!i
 
-    toTRSM (PCF.Fix _ _ _) =
+    toTRSM (PCF.Fix {}) =
       error "non-lambda abstraction given to fixpoint combinator"
 
 
