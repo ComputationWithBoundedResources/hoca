@@ -1,7 +1,7 @@
 name:          hoca
-version:       0.2
+version:       0.3
 stability:     experimental
-author:        Martin Avanzini, Ugo Dal Lago
+author:        Martin Avanzini, Ugo Dal Lago, Georg Moser
 maintainer:    Martin Avanzini <martin.avanzini@uibk.ac.at>
 license:       MIT
 license-file:  LICENSE
@@ -23,23 +23,21 @@ executable pcf2trs
               , base >= 4 && < 5
               , containers >= 0.5 && < 0.6
               , graphviz >= 2999.17.0.1
-              , hoca == 0.2
+              , hoca == 0.3
               , multiset >= 0.2 && < 0.3
               , term-rewriting >= 0.2 && < 0.3
+              , term-rewriting-applicative >= 0.1 && < 0.2
               , text >= 1.1
- extensions:
-        TypeOperators
+ extensions: TypeOperators
+           , FlexibleContexts 
+               
  ghc-options:       
    -threaded -Wall -O2 -fno-warn-orphans -fno-spec-constr-count -rtsopts -with-rtsopts=-N
 
 library
     hs-source-dirs:
         src
-    exposed-modules: Data.Rewriting.Applicative.Term
-                     Data.Rewriting.Applicative.Rule
-                     Data.Rewriting.Applicative.Rules
-                     Data.Rewriting.Applicative.SimpleTypes
-                     Hoca.Utils
+    exposed-modules: Hoca.Utils
                      Hoca.Strategy
                      Hoca.Problem
                      Hoca.DFA
@@ -67,6 +65,7 @@ library
                  , multiset >= 0.2 && < 0.3
                  , parsec >= 3.1 && < 3.2
                  , term-rewriting >= 0.2 && < 0.3
+                 , term-rewriting-applicative >= 0.1 && < 0.2                 
                  , text >= 1.1
     extensions: TypeSynonymInstances
               , FlexibleContexts 

@@ -156,7 +156,7 @@ cond _ = empty
 fixCBV :: (Alternative m, Monad m) => Exp l -> m (Exp l)
 fixCBV (App l (Fix l' i fs) a)
   | 0 <= i && i < length fs =
-      App l <$> (fs !! i) `applyL` [Fix l' j fs | j <- [0..length fs - 1]] <*> return a
+      App l <$> (fs!! i) `applyL` [Fix l' j fs | j <- [0..length fs - 1]] <*> return a
 fixCBV _ = empty
 
 -- * combinators 

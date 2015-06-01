@@ -130,7 +130,7 @@ removeInstances p = p { pRules = foldl removeInstance (pRules p) insts } where
 replaceRulesM :: (Monad m, Ord f, Ord v) => (Int -> R.ARule f v -> [Int] -> Maybe [(R.ARule f v, [Int])]) -> Problem f v -> m (Problem f v)
 replaceRulesM m p = runVarSupplyT (mapM f (IMap.toList (pRules p))) >>= toProblem 
   where
-    f (i,(r,ISet.toList -> ss)) = do
+    f (i,(r,ISet.toList -> ss)) = 
       case m i r ss of
        Nothing -> do
          j <- fresh
