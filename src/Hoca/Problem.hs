@@ -8,7 +8,6 @@ import qualified Data.Rewriting.Applicative.SimpleTypes as ST
 import qualified Data.Rewriting.Problem as P
 import qualified Data.Rewriting.Rules as RS
 
-import qualified Hoca.PCF.Core as PCF
 import           Hoca.Utils (runVarSupplyT, fresh)
 
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
@@ -29,7 +28,7 @@ data Lbl = LString String
 newtype Name = Name [Lbl] deriving (Show, Eq, Ord, Monoid)
 
 data Symbol =
-  Con PCF.Symbol
+  Con String
   | Lambda Name
   | Bot Int
   | Cond Name
@@ -50,7 +49,7 @@ instance PP.Pretty Name where
   pretty (Name (l:ls)) = PP.pretty (Name ls) PP.<> PP.text "_" PP.<> PP.pretty l
 
 instance PP.Pretty Symbol where
-  pretty (Con g) = PP.text (PCF.sname g)
+  pretty (Con g) = PP.text g
   pretty (Lambda l) = PP.pretty l
   pretty (Cond l) = PP.pretty l
   pretty (Fix l) = PP.pretty l

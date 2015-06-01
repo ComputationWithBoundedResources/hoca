@@ -171,7 +171,7 @@ toTRS = nubRules . snd . eval . mainM . label
       record [ app te v --> tf ]
       return te
     toTRSM (PCF.App _ e1 e2) = app <$> toTRSM e1 <*> toTRSM e2
-    toTRSM (PCF.Con _ g es) = fun (Con g) <$> mapM toTRSM es
+    toTRSM (PCF.Con _ g es) = fun (Con (PCF.sname g)) <$> mapM toTRSM es
     toTRSM (PCF.Bot _) = do
       i <- freshInt
       return (fun (Bot i) [])
@@ -182,7 +182,7 @@ toTRS = nubRules . snd . eval . mainM . label
       forM_ cs $ \ (g,eg) -> do
         let ar = PCF.sarity g
         (vsg,tg) <- withVars ar (toTRSM (caseBdy ar eg))
-        record [cond (fun (Con g) vsg) --> tg]
+        record [cond (fun (Con (PCF.sname g)) vsg) --> tg]
       cond <$> toTRSM f
       where
         caseBdy 0 fg = fg
