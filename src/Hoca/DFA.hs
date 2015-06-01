@@ -10,7 +10,7 @@ module Hoca.DFA (
 import qualified Data.Rewriting.Term as T
 import qualified Data.Rewriting.Rule as R
 import Hoca.Utils (runVarSupply, fresh, andM, orM, tracePretty, tracePretty')
-import Hoca.TreeGrammar
+import Hoca.Data.TreeGrammar
 import qualified Data.Set as S
 import qualified Data.Map as M
 import qualified Data.List as L

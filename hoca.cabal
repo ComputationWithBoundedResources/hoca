@@ -49,13 +49,13 @@ library
                      Hoca.PCF.Core.Types                     
                      Hoca.PCF.Core.DMInfer                     
                      Hoca.PCF.Desugar
-                     Hoca.URM
                      Hoca.PCF2Atrs
                      Hoca.Transform
                      Hoca.UsableRules
                      Hoca.Uncurry
                      Hoca.Narrowing
-                     Hoca.TreeGrammar
+                     Hoca.Data.URM
+                     Hoca.Data.TreeGrammar
     other-modules:
     build-depends: ansi-wl-pprint >= 0.6 && < 0.7
                  , base >= 4 && < 5

@@ -51,13 +51,6 @@ instance Applicative Result where
   pure = return
   (<*>) = ap
 
--- instance Applicative Result pure
---   where a = Success [a]
---   Fail <*> _ = Fail
---   (Success _) <*> Fail = Fail
---   (Success fs) <*> (Success as) =
---     Success [f a | f <- fs, a <- as]
-
 succeeded :: Result a -> Bool
 succeeded Fail = False
 succeeded Success {} = True

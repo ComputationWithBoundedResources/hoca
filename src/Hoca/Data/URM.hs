@@ -1,6 +1,6 @@
 -- | Usable Replacement Maps for applicative rules
 
-module Hoca.URM (
+module Hoca.Data.URM (
   URM
   , empty
   , usable

@@ -1,6 +1,6 @@
 -- | 
 
-module Hoca.TreeGrammar (
+module Hoca.Data.TreeGrammar (
   Term (..)
   , Production (..)
   , Grammar
