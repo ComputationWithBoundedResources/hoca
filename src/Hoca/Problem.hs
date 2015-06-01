@@ -22,7 +22,6 @@ import           Control.Applicative ((<$>))
 
 data Lbl = LString String
          | LInt Int
-         | LSym Symbol
          deriving (Show, Eq, Ord)
                   
 newtype Name = Name [Lbl] deriving (Show, Eq, Ord, Monoid)
@@ -40,8 +39,6 @@ data Symbol =
 instance PP.Pretty Lbl where
   pretty (LInt i) = PP.int i
   pretty (LString i) = PP.text i
-  pretty (LSym s) = PP.pretty s
-
 
 instance PP.Pretty Name where
   pretty (Name []) = PP.empty
