@@ -7,12 +7,10 @@ module Hoca.PCF.Desugar (
 
 import qualified Hoca.PCF.Core as PCF
 import           Hoca.PCF.Sugar.Types
-
+import qualified Hoca.Data.MLTypes as Tpe
 import           Control.Monad.Reader (ReaderT, MonadReader, runReaderT, ask, local)
-import           Control.Monad.Error (MonadError, throwError)
+import           Control.Monad.Except (MonadError, throwError)
 import           Control.Arrow (first, second)
-import           Control.Applicative ((<$>), Applicative(..))
-import           Data.Monoid (mappend, mempty)
 import           Data.Maybe (isNothing)
 import qualified Data.Map as Map
 
@@ -134,27 +132,28 @@ desugarDecls ds (f,vs) = foldr lambda (foldr desugarDecl (desugarExp main) ds) v
 desugarExpression :: Exp -> Either String (PCF.Exp Context)
 desugarExpression e = run (desugarExp e)
 
-signatureFromPrologue :: [TypeDecl] -> Either String PCF.TSignature 
-signatureFromPrologue ds = Map.fromList <$> concat <$> mapM fromDecl ds where
+signatureFromPrologue :: [TypeDecl] -> Either String (Tpe.Signature PCF.Symbol)
+signatureFromPrologue ds = Tpe.signatureFromList <$> concat <$> mapM fromDecl ds where
   fromDecl d = do 
     tret <- fromSType (TyCon (typeName d) (TyVar `map` typeVars d))
-    let fromCase (Symbol f, ts) = do 
-                 targs <- fromSType `mapM` ts
-                 return (PCF.symbol f (length targs), (targs,tret))
-    fromCase `mapM` typeList d 
-        where       
-          TypeName m = typeName d
-          dict = zip (typeVars d) [0..]
-          fromSType (TyVar v@(TypeVar n)) = 
-              case lookup v dict of 
-                Just i -> return (PCF.BVar i)
-                Nothing -> throwError ("type variable '" ++ n
-                                      ++ "' not bound in declaration of type '" 
-                                      ++ m ++ "'.") 
-          fromSType (TyCon (TypeName n) ts) = 
-              PCF.TSCon n <$> mapM fromSType ts
-          fromSType (t1 :~> t2) = 
-              (PCF.:~>) <$> fromSType t1 <*> fromSType t2
+    fromCase tret `mapM` typeList d 
+    
+      where       
+        TypeName m = typeName d
+        dict = zip (typeVars d) [0..]
+
+        fromCase tret (Symbol f, ts) = do 
+          targs <- fromSType `mapM` ts
+          return (PCF.symbol f (length targs) Tpe.::: targs Tpe.:~> tret)        
+
+        fromSType (TyVar v@(TypeVar n)) = 
+          case lookup v dict of 
+           Just i -> return (Tpe.TyVar i)
+           Nothing -> throwError ("type variable '" ++ n
+                                  ++ "' not bound in declaration of type '" 
+                                  ++ m ++ "'.") 
+        fromSType (TyCon (TypeName n) ts) = Tpe.TyCon n <$> mapM fromSType ts
+        fromSType (t1 :~> t2) = (Tpe.:->) <$> fromSType t1 <*> fromSType t2
       
 desugar :: Maybe String -> Program -> Either String (PCF.Program Context)
 desugar mname prog = do

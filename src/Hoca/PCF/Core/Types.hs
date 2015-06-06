@@ -2,12 +2,10 @@
 
 module Hoca.PCF.Core.Types where
 
-import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import qualified Data.IntMap as IntMap
-import Data.Map (Map)
-import qualified Data.Map as Map
+import           Hoca.Data.MLTypes
 import           Hoca.Utils (($$), (//), ppSeq)
-import           Data.List (nub)
+import qualified Text.PrettyPrint.ANSI.Leijen as PP
 
 ----------------------------------------------------------------------
 -- Symbols
@@ -78,7 +76,7 @@ instance PP.Pretty (TypedExp l) where
   pretty (Con _ f as) =
     PP.pretty f PP.<> PP.tupled [PP.pretty ai | ai <- as]
   pretty (Bot _) = PP.bold (PP.text "_|_")
-  pretty (Abs (_,t) n e) = PP.align (PP.nest 2 (PP.parens (PP.bold (PP.text "λ" PP.<> pp n) PP.<+> PP.text ":" PP.<+> PP.pretty t PP.<> PP.text "." PP.</> PP.pretty e)))
+  pretty (Abs (_,t :-> _) n e) = PP.align (PP.nest 2 (PP.parens (PP.bold (PP.text "λ" PP.<> pp n) PP.<+> PP.text ":" PP.<+> PP.pretty t PP.<> PP.text "." PP.</> PP.pretty e)))
     where pp (Just name) = PP.text name
           pp Nothing = PP.empty
   pretty (App _ e1 e2) =
@@ -94,100 +92,35 @@ instance PP.Pretty (TypedExp l) where
 
 type Subst l = IntMap.IntMap (Exp l)
 
+----------------------------------------------------------------------
+-- Program
+----------------------------------------------------------------------
+
+data Program l = 
+     Program { signature :: Signature Symbol
+             , expression :: Exp l }
+
+instance PP.Pretty (Program l) where 
+    pretty p = PP.pretty (expression p)
+
 
 ----------------------------------------------------------------------
--- Types
+-- Types Expressions and programs
 ----------------------------------------------------------------------
 
-type TypeVariable = Int
-type TypeName = String
-
-data Type = TyVar TypeVariable
-          | TyCon TypeName [Type]
-          | Type :-> Type deriving (Eq)
-
-data TypeSchema = FVar TypeVariable
-                | BVar TypeVariable
-                | TSCon TypeName [TypeSchema] 
-                | TypeSchema :~> TypeSchema  deriving (Eq)
-
-type TSignature = Map Symbol ([TypeSchema],TypeSchema)
 
 type TypedExp l = Exp (l,Type)
 
 typeOf :: TypedExp l -> Type
 typeOf = snd . label
 
-tsMatrix :: TypeSchema -> Type
-tsMatrix (FVar i) = TyVar i
-tsMatrix (BVar i) = TyVar i
-tsMatrix (TSCon n ts) = TyCon n (map tsMatrix ts)
-tsMatrix (t1 :~> t2) = tsMatrix t1 :-> tsMatrix t2
-
--- prettyprinting
-variableNames :: [String]
-variableNames = [ [c] | c <- ['a'..'z']] ++ [ 'a' : show i | i <- [(1 :: Int)..] ]
-
-prettyTyCon :: (PP.Pretty t, PP.Pretty v) => t -> [v] -> PP.Doc
-prettyTyCon n [] = PP.pretty n
-prettyTyCon n [t] = PP.pretty t PP.<+> PP.pretty n
-prettyTyCon n ts = PP.parens (ppSeq PP.comma [PP.pretty t | t <- ts]) PP.<+> PP.pretty n
-
-prettyTyVar :: TypeVariable -> PP.Doc
-prettyTyVar v = PP.text ("'" ++ variableNames !! v)
-
-
-instance PP.Pretty TypeSchema where
-  pretty t = ppBVars (nub (btvs t)) PP.<> PP.text "." PP.<+> PP.pretty (tsMatrix t) where
-    btvs (FVar _) = []
-    btvs (BVar m) = [m]
-    btvs (TSCon _ tts) = concatMap btvs tts
-    btvs (t1 :~> t2) = btvs t1 ++ btvs t2
-    ppBVars [] = PP.empty
-    ppBVars bvs = PP.text "forall" PP.<+> ppSeq PP.space [ prettyTyVar v | v <- bvs ]
-
-
-
-instance PP.Pretty Type where 
-  pretty t = ppType t False where
-    ppType (TyVar i) _ = prettyTyVar i
-    ppType (TyCon n ts) _ = prettyTyCon n ts
-    ppType (t1 :-> t2) a = maybeParens (ppType t1 True PP.<+> PP.text "->" PP.<+> ppType t2 False) where
-      maybeParens
-        | a = PP.parens
-        | otherwise = id
-         
-
-instance PP.Pretty TSignature where 
-    pretty ts = 
-        PP.vcat [ PP.pretty ci PP.<+> PP.text "::" PP.<+> ppTSig tins tout
-                | (ci, (tins,tout)) <- Map.toList ts ] where
-    
-        ppTpe (tsMatrix -> t@(_ :-> _)) = PP.parens (PP.pretty t)
-        ppTpe (tsMatrix -> t) = PP.pretty t
-        ppTSig [] tout = ppTpe tout
-        ppTSig tins tout = 
-            PP.align (ppSeq (PP.text " * ") (ppTpe `map` tins)
-                      PP.<+> PP.text "->" PP.<+> ppTpe tout)
-                
-
-----------------------------------------------------------------------
--- Program
-----------------------------------------------------------------------
-
-data Program l = 
-     Program { signature :: TSignature
-             , expression :: Exp l }
-
-instance PP.Pretty (Program l) where 
-    pretty p = PP.pretty (expression p)
         
 type TypedProgram l = Program (l,Type)
 
 instance PP.Pretty (TypedProgram l) where 
-    pretty p = 
-        PP.pretty e 
-        PP.<+> PP.text ":" PP.<+> PP.pretty (typeOf e)
-        PP.<$> PP.text "where" 
-        PP.<$> PP.nest 2 (PP.align (PP.pretty (signature p)))
-        where e = expression p
+  pretty p =
+    PP.pretty e 
+    PP.<+> PP.text ":" PP.<+> PP.pretty (typeOf e)
+    PP.<$> PP.text "where" 
+    PP.<$> PP.nest 2 (PP.align (PP.pretty (signature p)))
+    where e = expression p

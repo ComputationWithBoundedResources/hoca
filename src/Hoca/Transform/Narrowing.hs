@@ -1,7 +1,7 @@
 {-# LANGUAGE ViewPatterns #-}
 -- | 
 
-module Hoca.Narrowing (
+module Hoca.Transform.Narrowing (
   NarrowedRule (..)
   , Narrowing (..)
   , narrow

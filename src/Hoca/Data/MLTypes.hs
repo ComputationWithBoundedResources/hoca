@@ -1,0 +1,273 @@
+module Hoca.Data.MLTypes (
+  -- * Types and Schemas
+  TypeVariable 
+  , TypeName
+  , MLType (..)
+  , isTArrow
+  , isTVar
+  , isTCon
+  -- * Plain Types
+  , Type
+  , unify  
+  -- * Type Schemas
+  , TypeSchema
+  , tsMatrix
+  , bvar
+  , fvar
+  -- * Substitution
+  , Substitution
+  , idSubst
+  -- * Declarations and Signatures
+  , Signature
+  , TypeDecl (..)
+  , TypeDeclaration (..)  
+  , signatureToList
+  , signatureFromList
+  , mapSignature
+  -- * Classes
+  , TypeTerm (..)
+  , Substitutable (..)
+  -- * Type Inference Utilities
+  , InferM
+  , runInferM
+  , instantiateSchemas
+  , freshVar
+  , setNonFresh
+  , freshInstanceFor
+) where
+
+import Data.Foldable (toList)
+import           Control.Monad.Except
+import           Control.Monad.RWS
+import           Data.List (nub)
+import           Data.Map (Map)
+import qualified Data.Map as Map
+import           Hoca.Utils (ppSeq)
+import qualified Text.PrettyPrint.ANSI.Leijen as PP
+
+
+---------------------------------------------------------------------- 
+-- General
+---------------------------------------------------------------------- 
+
+type TypeVariable = Int
+type TypeName = String
+
+
+data MLType v = 
+  TyVar v
+  | TyCon TypeName [MLType v]
+  | MLType v :-> MLType v
+  deriving (Eq, Ord, Functor, Foldable)  
+
+substitute :: (v -> MLType v') -> MLType v -> MLType v'
+substitute s (TyVar n) = s n
+substitute s (TyCon n ts) = TyCon n (substitute s `map` ts)
+substitute s (t1 :-> t2) = substitute s t1 :-> substitute s t2
+
+class TypeTerm a where
+  freeTV :: a -> [TypeVariable]
+  boundTV :: a -> [TypeVariable]
+  tvs :: a -> [TypeVariable]
+  tvs a = freeTV a ++ boundTV a
+
+isTVar :: MLType v -> Bool
+isTVar (TyVar _) = True
+isTVar _ = False
+
+isTArrow :: MLType v -> Bool
+isTArrow (_ :-> _) = True
+isTArrow _ = False
+
+isTCon :: MLType v -> Bool
+isTCon (TyCon {}) = True
+isTCon _ = False
+
+
+---------------------------------------------------------------------- 
+-- Plain types, i.e., all variables occur free
+---------------------------------------------------------------------- 
+
+type Type = MLType TypeVariable
+
+instance TypeTerm Type where
+  freeTV = toList
+  boundTV _ = []
+
+
+---------------------------------------------------------------------- 
+-- Type schemas, i.e., types with bound variables
+---------------------------------------------------------------------- 
+
+
+data SchemaVar = BVar TypeVariable | FVar TypeVariable
+  deriving (Eq, Ord)
+
+bvar :: TypeVariable -> TypeSchema
+bvar = TyVar . BVar
+
+fvar :: TypeVariable -> TypeSchema
+fvar = TyVar . FVar
+  
+type TypeSchema = MLType SchemaVar
+
+instance TypeTerm TypeSchema where
+  freeTV ts = [m | FVar m <- toList ts]
+  boundTV ts = [m | BVar m <- toList ts]
+
+tsMatrix :: TypeSchema -> Type
+tsMatrix = fmap f where
+  f (BVar i) = i
+  f (FVar i) = i
+
+
+---------------------------------------------------------------------- 
+-- Type Declarations and signatures
+---------------------------------------------------------------------- 
+
+data TypeDecl = [Type] :~> Type
+infixl 8 :~>
+
+data TypeDeclaration f = f ::: TypeDecl
+infixl 7 :::
+           
+type Signature f = Map f TypeDecl
+
+signatureToList :: Signature f -> [TypeDeclaration f]
+signatureToList = map (uncurry (:::)) . Map.toList
+
+signatureFromList :: Ord f => [TypeDeclaration f] -> Signature f
+signatureFromList = foldl (\ sig (f ::: td) -> Map.insert f td sig) Map.empty
+
+mapSignature :: (TypeDeclaration f -> TypeDecl) -> Signature f -> Signature f
+mapSignature fun = Map.mapWithKey (\ f td -> fun (f ::: td))
+---------------------------------------------------------------------- 
+-- Type substitutions
+---------------------------------------------------------------------- 
+
+type Substitution = TypeVariable -> Type
+
+idSubst :: Substitution 
+idSubst = TyVar 
+
+class Substitutable a where
+  o :: Substitution -> a -> a
+
+instance Substitutable Type where  
+  s `o` (TyVar m) = s m
+  s `o` (TyCon n ts) = TyCon n (map (o s) ts)
+  s `o` (t1 :-> t2) = (s `o` t1) :-> (s `o` t2)
+
+instance Substitutable TypeSchema where  
+  s `o` (TyVar (FVar m)) = fromType (s m) where
+    fromType = fmap FVar 
+  _ `o` (TyVar (BVar m)) = TyVar (BVar m)
+  s `o` (TyCon n ts) = TyCon n (map (o s) ts)
+  s `o` (t1 :-> t2) = (s `o` t1) :-> (s `o` t2)
+  
+instance Substitutable Substitution where
+  s1 `o` s2 = o s1 . s2
+
+
+---------------------------------------------------------------------- 
+-- Type unification
+---------------------------------------------------------------------- 
+
+unify :: [(Type,Type)] -> Either (Type,Type) Substitution
+unify = go idSubst where
+    go s [] = return s
+    go s ((t1,t2):ups) = do 
+      (s',ups') <- step t1 t2
+      go (s' `o` s) (ups' ++ [(s' `o` t1', s' `o` t2') | (t1',t2') <- ups])
+
+    step t1 t2
+       | t1 == t2 = return (idSubst, [])
+    step (TyVar n) t2
+        | n `notElem` freeTV t2 = return (s,[]) where
+         s m = if n == m then t2 else TyVar m
+    step t v@(TyVar _) = step v t
+    step (TyCon n1 ts1) (TyCon n2 ts2) 
+        | n1 == n2 = return (idSubst, zip ts1 ts2)
+    step (s1 :-> t1) (s2 :-> t2) =
+        return (idSubst, [(s1,s2),(t1,t2)])
+    step t1 t2 = throwError (t1,t2)
+
+----------------------------------------------------------------------
+-- Type inference utilities
+----------------------------------------------------------------------
+
+newtype InferM f e a = InferM { runIM :: RWST (Signature f) () TypeVariable (Either e) a } deriving
+    ( Applicative, Functor, Monad
+    , MonadReader (Signature f)
+    , MonadState TypeVariable -- next fresh variable
+    , MonadError e )
+
+runInferM :: Signature f -> InferM f e a -> Either e a
+runInferM sig e = fst <$> evalRWST (runIM e) sig 0
+
+freshVar :: InferM f e TypeVariable
+freshVar = do { n <- get; modify (+1); return n }
+
+setNonFresh :: [TypeVariable] -> InferM f e ()
+setNonFresh vs = modify (\ v -> maximum (v:[vi + 1 | vi <- vs]))
+
+instantiateSchemas :: [TypeSchema] -> InferM f e [Type]
+instantiateSchemas tts = do 
+    n <- get
+    modify (+ f) 
+    return (map (bindTypeInst (\ b -> TyVar (b + n))) tts)
+    where 
+      f = 1 + maximum (0:concatMap boundTV tts)
+      bindTypeInst s = substitute s' where
+         s' (BVar n) = s n
+         s' (FVar n) = TyVar n
+      
+freshInstanceFor :: Ord f => f -> InferM f e (Maybe (TypeDeclaration f))
+freshInstanceFor f = 
+  (Map.lookup f <$> ask) >>= maybe err inst where
+    err = return Nothing 
+    inst (tsins :~> tsout) = do 
+      (tout : tins) <- instantiateSchemas (substitute bvar `map`  (tsout:tsins))
+      return (Just (f ::: tins :~> tout))
+
+
+----------------------------------------------------------------------
+-- prettyprinting
+----------------------------------------------------------------------
+
+variableNames :: [String]
+variableNames = [ [c] | c <- ['a'..'z']] ++ [ 'a' : show i | i <- [(1 :: Int)..] ]
+
+prettyTyCon :: (PP.Pretty t, PP.Pretty v) => t -> [v] -> PP.Doc
+prettyTyCon n [] = PP.pretty n
+prettyTyCon n [t] = PP.pretty t PP.<+> PP.pretty n
+prettyTyCon n ts = PP.parens (ppSeq PP.comma [PP.pretty t | t <- ts]) PP.<+> PP.pretty n
+
+prettyTyVar :: TypeVariable -> PP.Doc
+prettyTyVar v = PP.text ("'" ++ variableNames !! v)
+
+
+instance PP.Pretty TypeSchema where
+  pretty t = ppBVars btvs PP.<> PP.text "." PP.<+> PP.pretty (tsMatrix t) where
+    btvs = nub [ m | BVar m <- toList t]
+    ppBVars [] = PP.empty
+    ppBVars bvs = PP.text "forall" PP.<+> ppSeq PP.space [ prettyTyVar v | v <- bvs ]
+
+instance PP.Pretty Type where 
+  pretty t = ppType t False where
+    ppType (TyVar i) _ = prettyTyVar i
+    ppType (TyCon n ts) _ = prettyTyCon n ts
+    ppType (t1 :-> t2) a = maybeParens (ppType t1 True PP.<+> PP.text "->" PP.<+> ppType t2 False) where
+      maybeParens
+        | a = PP.parens
+        | otherwise = id
+         
+instance PP.Pretty f => PP.Pretty (Signature f) where 
+    pretty ts = 
+        PP.vcat [ PP.pretty ci PP.<+> PP.text "::" PP.<+> ppTSig tins tout
+                | ci ::: tins :~> tout <- signatureToList ts ] where
+    
+        ppTSig [] tout = PP.pretty tout
+        ppTSig tins tout = 
+            PP.align (PP.brackets (ppSeq (PP.text " * ") (PP.pretty `map` tins))
+                                   PP.<+> PP.text "->" PP.<+> PP.pretty tout)

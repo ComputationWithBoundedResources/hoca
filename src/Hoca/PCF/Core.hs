@@ -3,6 +3,8 @@ module Hoca.PCF.Core
   ( Exp (..)
   , Symbol (..)
   , Program (..)
+  , TypedExp
+  , TypedProgram
     -- * constructors
   , symbol
     -- * operations
@@ -10,6 +12,7 @@ module Hoca.PCF.Core
   , label
   , match
   , isInstanceOf
+  , subExpressions
   , applySubst
     -- * reduction
   , beta
@@ -21,25 +24,21 @@ module Hoca.PCF.Core
   , cbv
   , ctxtClosure
   -- * Types
-  , Type (..)
-  , TypeSchema (..)
-  , TSignature
   , typeOf
-  , subExpressions
   ) where
 
 import           Hoca.Strategy
 import           Hoca.PCF.Core.Types
 import           Hoca.Utils (composeM)
 
-import           Control.Applicative ((<$>), Applicative(..), Alternative(..))
+import           Control.Applicative (Alternative(..))
 import qualified Data.Set as Set
 import qualified Data.IntMap as IntMap
 import           Data.Maybe (isJust)
 import           Control.Monad (foldM,guard)
 import           Data.Function (on)
 import           Data.List (sortBy)
-
+import           Hoca.Data.MLTypes
 
 constructors :: Exp l -> Set.Set Symbol
 constructors (Con _ g _) = Set.singleton g

@@ -1,7 +1,7 @@
 module Hoca.Strategy
        (
          Choice (..)
-       , (:~>)
+       , (:=>)
        , run
        , Result (..) -- TODO: remove
        , succeeded
@@ -21,9 +21,9 @@ module Hoca.Strategy
        )
        where
 
-import Control.Applicative (Alternative(..), Applicative(..))
+import Control.Applicative (Alternative(..))
 import Hoca.Utils(tracePretty, composeM)
-import qualified Control.Monad as Control.Monad
+import qualified Control.Monad
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Control.Monad (guard, MonadPlus(..), ap)
 
@@ -77,60 +77,60 @@ instance Choice Result where
 
 -- strategies
 
-type a :~> b = a -> Result b
+type a :=> b = a -> Result b
 
 
-run :: a :~> b -> a -> Maybe b
+run :: a :=> b -> a -> Maybe b
 run s a =
   case s a of
    Fail -> Nothing
    Success (r:_) -> Just r
    Success _ -> error "strategy returned empty result"
 
-try :: a :~> a -> a :~> a
+try :: a :=> a -> a :=> a
 try m = m <=> pure 
 
-(<=>) :: a :~> b -> a :~> b -> a :~> b
+(<=>) :: a :=> b -> a :=> b -> a :=> b
 (<=>) f1 f2 a = f1 a <||> f2 a
 
-alt :: [a :~> b] -> a :~> b
+alt :: [a :=> b] -> a :=> b
 alt = foldl (<=>) abort
 
-(<+>) :: a :~> b -> a :~> b -> a :~> b
+(<+>) :: a :=> b -> a :=> b -> a :=> b
 (<+>) f1 f2 a = f1 a <|> f2 a
 
-choice :: [a :~> b] -> a :~> b
+choice :: [a :=> b] -> a :=> b
 choice = foldl (<+>) abort
 
-abort :: a :~> b
+abort :: a :=> b
 abort _ = empty
 
 
-(>=>) :: a :~> b -> b :~> c -> a :~> c
+(>=>) :: a :=> b -> b :=> c -> a :=> c
 (>=>) = (Control.Monad.>=>)
 
-sequenceS :: [a :~> a] -> a :~> a
+sequenceS :: [a :=> a] -> a :=> a
 sequenceS = composeM
 
 
-repeated :: Int -> a :~> a -> a :~> a
+repeated :: Int -> a :=> a -> a :=> a
 repeated n m
   | n <= 0 = return
   | otherwise = try (m >=> repeated (n-1) m)
 
-exhaustive :: a :~> a -> a :~> a
+exhaustive :: a :=> a -> a :=> a
 exhaustive rel = rel >=> try (exhaustive rel) 
 
-withInput :: (a -> a :~> b) -> a :~> b
+withInput :: (a -> a :=> b) -> a :=> b
 withInput s a = s a a
 
-provided :: a :~> b -> (a -> b -> Bool) -> a :~> b
+provided :: a :=> b -> (a -> b -> Bool) -> a :=> b
 provided t f p = do
   p' <- t p
   guard (f p p')
   return p'
 
-traced :: (PP.Pretty a) => String -> a :~> a
+traced :: (PP.Pretty a) => String -> a :=> a
 traced s a = tracePretty doc (return a) where
   ln c = PP.text (replicate 80 c)
   doc =
@@ -140,5 +140,5 @@ traced s a = tracePretty doc (return a) where
     PP.<$> ln '='
     PP.<$> PP.text ""
 
-logMsg :: String -> a :~> a
+logMsg :: String -> a :=> a
 logMsg msg a = tracePretty (PP.text msg) (return a)
