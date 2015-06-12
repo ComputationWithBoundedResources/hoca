@@ -1,16 +1,10 @@
-
-(STRATEGY
-    INNERMOST)
-
-(VAR
-    x8 x16 x120 x88)
-(RULES
-    main(Cons(C(),x8)) -> ParseFail(S(0()))
-    main(Cons(B(),x8)) -> ParseFail(S(0()))
-    main(Cons(A(),Cons(C(),x16))) -> ParseFail(S(S(0())))
-    main(Cons(A(),Cons(B(),Cons(x120,x88)))) -> ParseFail(S(S(0())))
-    main(Cons(A(),Cons(B(),Nil()))) -> ParseSuccess()
-    main(Cons(A(),Cons(A(),x16))) -> ParseFail(S(S(0())))
-    main(Cons(A(),Nil())) -> ParseFail(S(0()))
-    main(Nil()) -> ParseFail(0()))
-
+The symbol 'Cons' is not in scope.
+In the left argument of an application, namely
+  Cons(A(),Cons(B(),Nil()))
+In the left argument of an application, namely
+  (string Cons(A(),Cons(B(),Nil())))
+In the left argument of an application, namely
+  (bind' (string Cons(A(),Cons(B(),Nil()))))
+  In the definition 'let parser = ...', namely
+  ((bind' (string Cons(A(),Cons(B(),Nil())))) eos)
+  

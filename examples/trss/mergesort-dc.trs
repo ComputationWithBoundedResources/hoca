@@ -3,56 +3,63 @@
     INNERMOST)
 
 (VAR
-    x227 x2 x1 x13 x17 x10 x6 x42 x34 x4 x5 x3 x29 x46 x116 x132 x22 x461 x18
-    x14 x15 x11 x9 x7 x931 x232 x264 x92)
+    x2 x1 x7 x8 x5 x6 x4 x3 x229 x51 x25 x33 x10 x56 x64 x22 x14 x16 x20 x12
+    x113)
 (RULES
-    main(x227) -> rec[dc_0][1](x227)
-    rec[mapL_0][2](ConsL(x2,x1)) -> ConsL(rec[dc_0][1](x2),rec[mapL_0][2](x1))
-    rec[mapL_0][2](NilL()) -> NilL()
-    rec[length_0][1](Cons(x13,x17)) -> S(rec[length_0][1](x17))
-    rec[length_0][1](Nil()) -> 0()
-    rec[leq_0][2](S(x10),S(x6)) -> rec[leq_0][2](x10,x6)
-    rec[leq_0][2](S(x42),0()) -> False()
-    rec[leq_0][2](0(),x34) -> True()
-    const_f[2](Cons(x4,Cons(x5,x6)),ConsL(x3,ConsL(x2,x1))) ->
-      rec[merge_0][2](x3,x2)
-    rec[halve_0][1](S(S(x29))) -> S(rec[halve_0][1](x29))
-    rec[halve_0][1](S(0())) -> S(0())
-    rec[halve_0][1](0()) -> 0()
-    rec[take_0][2](S(x46),Cons(x116,x132)) -> Cons(x116
-                                                  ,rec[take_0][2](x46,x132))
-    rec[take_0][2](S(0()),Nil()) -> Cons(Head_error_empty_list(),Nil())
-    rec[take_0][2](0(),x6) -> Nil()
-    rec[drop_0][2](S(x22),Cons(x116,x132)) -> rec[drop_0][2](x22,x132)
-    rec[drop_0][2](S(0()),Nil()) -> Tail_error_empty_list()
-    rec[drop_0][2](0(),x6) -> x6
-    rec[dc_0][1](Cons(x3
-                     ,Cons(x2,x1))) ->
-      const_f[2](Cons(x3
-                     ,Cons(x2,x1))
-                ,rec[mapL_0][2](divide_ys[1](Cons(x3
-                                                 ,Cons(x2,x1))
-                                            ,S(rec[halve_0][1](rec[length_0][1](x1))))))
-    rec[dc_0][1](Cons(x461,Nil())) -> Cons(x461,Nil())
-    rec[dc_0][1](Nil()) -> Nil()
-    rec[merge_0][2](Cons(x18,x14),Cons(x10,x6)) ->
-      merge_cond_2(rec[leq_0][2](x18,x10)
-                  ,Cons(x18,x14)
-                  ,Cons(x10,x6)
-                  ,x18
-                  ,x14
-                  ,x10
-                  ,x6)
-    rec[merge_0][2](Cons(x10,x6),Nil()) -> Cons(x10,x6)
-    rec[merge_0][2](Nil(),x6) -> x6
-    merge_cond_2(False(),Cons(x15,x17),Cons(x11,x13),x9,x7,x5,x3) ->
-      Cons(x5,rec[merge_0][2](Cons(x15,x17),x3))
-    merge_cond_2(True(),Cons(x15,x17),Cons(x11,x13),x9,x7,x5,x3) ->
-      Cons(x9,rec[merge_0][2](x7,Cons(x11,x13)))
-    divide_ys[1](Cons(x931,Cons(x232,x264)),S(S(x92))) ->
-      ConsL(Cons(x931,Cons(x232,rec[take_0][2](x92,x264)))
-           ,ConsL(rec[drop_0][2](x92,x264),NilL()))
-    divide_ys[1](Cons(x3,Cons(x2,x1)),S(0())) -> ConsL(Cons(x3,Nil())
-                                                      ,ConsL(Cons(x2,x1)
-                                                            ,NilL())))
+    divide_ys#1(x2,x1) -> Cons(take#2(x1,x2),Cons(drop#2(x1,x2),Nil()))
+    cond_merge_ys_zs_2(True(),Cons(x7,x8),Cons(x5,x6),x4,x3,x2,x1) ->
+      Cons(x4,merge#2(x3,Cons(x5,x6)))
+    cond_merge_ys_zs_2(False(),Cons(x7,x8),Cons(x5,x6),x4,x3,x2,x1) ->
+      Cons(x2,merge#2(Cons(x7,x8),x1))
+    merge#2(Nil(),x2) -> x2
+    merge#2(Cons(x4,x2),Nil()) -> Cons(x4,x2)
+    merge#2(Cons(x8,x6),Cons(x4,x2)) -> cond_merge_ys_zs_2(leq#2(x8,x4)
+                                                          ,Cons(x8,x6)
+                                                          ,Cons(x4,x2)
+                                                          ,x8
+                                                          ,x6
+                                                          ,x4
+                                                          ,x2)
+    dc#1(map(),divisible(),mergesort_zs_3(),divide(),const_f(),Nil()) -> Nil()
+    dc#1(map()
+        ,divisible()
+        ,mergesort_zs_3()
+        ,divide()
+        ,const_f()
+        ,Cons(x229,Nil())) -> Cons(x229,Nil())
+    dc#1(map()
+        ,divisible()
+        ,mergesort_zs_3()
+        ,divide()
+        ,const_f()
+        ,Cons(x51,Cons(x25,x33))) ->
+      const_f#2(Cons(x51,Cons(x25,x33))
+               ,map#2(dc(map(),divisible(),mergesort_zs_3(),divide(),const_f())
+                     ,divide_ys#1(Cons(x51,Cons(x25,x33))
+                                 ,S(halve#1(length#1(x33))))))
+    drop#2(0(),x2) -> x2
+    drop#2(S(0()),Nil()) -> bot[1]()
+    drop#2(S(x10),Cons(x56,x64)) -> drop#2(x10,x64)
+    take#2(0(),x2) -> Nil()
+    take#2(S(0()),Nil()) -> Cons(bot[0](),Nil())
+    take#2(S(x22),Cons(x56,x64)) -> Cons(x56,take#2(x22,x64))
+    halve#1(0()) -> 0()
+    halve#1(S(0())) -> S(0())
+    halve#1(S(S(x14))) -> S(halve#1(x14))
+    const_f#2(x3,Cons(x6,Cons(x4,x2))) -> merge#2(x6,x4)
+    leq#2(0(),x16) -> True()
+    leq#2(S(x20),0()) -> False()
+    leq#2(S(x4),S(x2)) -> leq#2(x4,x2)
+    length#1(Nil()) -> 0()
+    length#1(Cons(x6,x8)) -> S(length#1(x8))
+    map#2(dc(x2,x4,x6,x8,x10),Nil()) -> Nil()
+    map#2(dc(x6,x8,x10,x12,x14),Cons(x4,x2)) -> Cons(dc#1(x6,x8,x10,x12,x14,x4)
+                                                    ,map#2(dc(x6,x8,x10,x12,x14)
+                                                          ,x2))
+    main(x113) -> dc#1(map()
+                      ,divisible()
+                      ,mergesort_zs_3()
+                      ,divide()
+                      ,const_f()
+                      ,x113))
 

@@ -3,29 +3,30 @@
     INNERMOST)
 
 (VAR
-    x28 x20 x12 x4 x3 x2 x1 x11 x7 x9 x5 x10 x6 x26 x33 x37)
+    x3 x16 x18 x7 x4 x8 x12 x2 x1 x5)
 (RULES
-    main(x28) -> take_l_cond(ConsL(0(),fibs_1()),x28)
-    rec[zipwith_l_0][3](x20,x12) -> zipwith_l_f_xs_ys(x20,x12)
-    zipwith_l_f_xs_ys[1](zipwith_l_f_xs_ys(x4,x3),x2,x1) ->
-      zipwith_l_cond(zipwith_l_f_xs_ys[1](x4,x3,bot[5]()),x2)
-    zipwith_l_f_xs_ys[1](fibs_1(),x2,x1) -> zipwith_l_cond(fibs_1[1](bot[5]())
-                                                          ,x2)
-    zipwith_l_f_xs_ys[1](rec[fibs_0](),x11,x7) -> zipwith_l_cond(ConsL(0()
-                                                                      ,fibs_1())
-                                                                ,x11)
-    zipwith_l_cond(ConsL(x2,x1),fibs_1()) ->
-      zipwith_l_cond_1(fibs_1[1](bot[4]()),x2,x1)
-    zipwith_l_cond(ConsL(x4,x3),zipwith_l_f_xs_ys(x2,x1)) ->
-      zipwith_l_cond_1(zipwith_l_f_xs_ys[1](x2,x1,bot[4]()),x4,x3)
-    zipwith_l_cond_1(ConsL(x9,x7),x5,x3) -> ConsL(rec[plus_0][2](x5,x9)
-                                                 ,rec[zipwith_l_0][3](x3,x7))
-    rec[plus_0][2](S(x10),x6) -> S(rec[plus_0][2](x10,x6))
-    rec[plus_0][2](0(),x26) -> x26
-    take_l_cond(ConsL(x4,zipwith_l_f_xs_ys(x3,x2)),S(x1)) ->
-      Cons(x4,take_l_cond(zipwith_l_f_xs_ys[1](x3,x2,bot[0]()),x1))
-    take_l_cond(ConsL(0(),fibs_1()),S(x1)) ->
-      Cons(0(),take_l_cond(fibs_1[1](bot[0]()),x1))
-    take_l_cond(ConsL(x33,x37),0()) -> Nil()
-    fibs_1[1](x7) -> ConsL(S(0()),rec[zipwith_l_0][3](rec[fibs_0](),fibs_1())))
+    fibs_2#1(zipwith_l(),plus(),tail_l(),x3) ->
+      ConsL(S(0()),zipwith_l#3(fibs(),fibs_2(zipwith_l(),plus(),tail_l())))
+    cond_take_l_n_xs(ConsL(x16,x18),0()) -> Nil()
+    cond_take_l_n_xs(ConsL(x7,fibs_2(x4,x8,x12)),S(x16)) ->
+      Cons(x7,cond_take_l_n_xs(fibs_2#1(x4,x8,x12,bot[0]()),x16))
+    cond_take_l_n_xs(ConsL(x7,zipwith_l_f_xs_ys(x4,x8,x12)),S(x16)) ->
+      Cons(x7,cond_take_l_n_xs(zipwith_l_f_xs_ys#1(x4,x8,x12,bot[0]()),x16))
+    plus#2(0(),x12) -> x12
+    plus#2(S(x4),x2) -> S(plus#2(x4,x2))
+    cond_zipwith_l_f_xs_ys_1(ConsL(x4,x3),x2,x1) -> ConsL(plus#2(x2,x4)
+                                                         ,zipwith_l#3(x1,x3))
+    cond_zipwith_l_f_xs_ys(ConsL(x5,x4),zipwith_l_f_xs_ys(x1,x2,x3)) ->
+      cond_zipwith_l_f_xs_ys_1(zipwith_l_f_xs_ys#1(x1,x2,x3,bot[6]()),x5,x4)
+    cond_zipwith_l_f_xs_ys(ConsL(x5,x4),fibs_2(x1,x2,x3)) ->
+      cond_zipwith_l_f_xs_ys_1(fibs_2#1(x1,x2,x3,bot[6]()),x5,x4)
+    zipwith_l_f_xs_ys#1(plus(),fibs(),x5,x3) ->
+      cond_zipwith_l_f_xs_ys(ConsL(0(),fibs_2(zipwith_l(),plus(),tail_l())),x5)
+    zipwith_l_f_xs_ys#1(plus(),fibs_2(x3,x4,x5),x2,x1) ->
+      cond_zipwith_l_f_xs_ys(fibs_2#1(x3,x4,x5,bot[7]()),x2)
+    zipwith_l_f_xs_ys#1(plus(),zipwith_l_f_xs_ys(x3,x4,x5),x2,x1) ->
+      cond_zipwith_l_f_xs_ys(zipwith_l_f_xs_ys#1(x3,x4,x5,bot[7]()),x2)
+    zipwith_l#3(x8,x4) -> zipwith_l_f_xs_ys(plus(),x8,x4)
+    main(x12) -> cond_take_l_n_xs(ConsL(0(),fibs_2(zipwith_l(),plus(),tail_l()))
+                                 ,x12))
 

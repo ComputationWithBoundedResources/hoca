@@ -3,13 +3,11 @@
     INNERMOST)
 
 (VAR
-    x1 x14 x10 x6 x24 x40 x2)
+    x16 x6 x4 x2 x8 x1)
 (RULES
-    main(x1) -> rec[revApp_0][2](rec[dfsAcc_0][3](x1,Nil()),Nil())
-    rec[dfsAcc_0][3](Node(x14,x10),x6) -> rec[dfsAcc_0][3](x10
-                                                          ,rec[dfsAcc_0][3](x14
-                                                                           ,x6))
-    rec[dfsAcc_0][3](Leaf(x24),x40) -> Cons(x24,x40)
-    rec[revApp_0][2](Cons(x14,x10),x6) -> rec[revApp_0][2](x10,Cons(x14,x6))
-    rec[revApp_0][2](Nil(),Cons(x1,x2)) -> Cons(x1,x2))
+    revApp#2(Nil(),x16) -> x16
+    revApp#2(Cons(x6,x4),x2) -> revApp#2(x4,Cons(x6,x2))
+    dfsAcc#3(Leaf(x8),x16) -> Cons(x8,x16)
+    dfsAcc#3(Node(x6,x4),x2) -> dfsAcc#3(x4,dfsAcc#3(x6,x2))
+    main(x1) -> revApp#2(dfsAcc#3(x1,Nil()),Nil()))
 

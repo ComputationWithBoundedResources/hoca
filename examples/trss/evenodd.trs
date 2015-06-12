@@ -3,10 +3,10 @@
     INNERMOST)
 
 (VAR
-    x1 x2)
+    x16 x6)
 (RULES
-    main(x1) -> rec[even_0][1](x1)
-    rec[even_0][1](S(S(x2))) -> rec[even_0][1](x2)
-    rec[even_0][1](S(0())) -> False()
-    rec[even_0][1](0()) -> True())
+    even#1(0()) -> True()
+    even#1(S(0())) -> False()
+    even#1(S(S(x16))) -> even#1(x16)
+    main(x6) -> even#1(x6))
 

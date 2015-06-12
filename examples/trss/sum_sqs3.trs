@@ -3,20 +3,18 @@
     INNERMOST)
 
 (VAR
-    x1 x10 x6 x18 x13 x5 x3)
+    x2 x1 x5 x4 x8)
 (RULES
-    main(S(x1)) -> rec[sum_0][1](rec[map_0][2](Cons(S(x1)
-                                                   ,rec[unfoldr_0][2](S(x1)))))
+    sum#1(Nil()) -> 0()
+    sum#1(Cons(x2,x1)) -> plus#2(x2,sum#1(x1))
+    map#2(Nil()) -> Nil()
+    map#2(Cons(x2,x5)) -> Cons(mult#2(x2,x2),map#2(x5))
+    unfoldr#2(0()) -> Nil()
+    unfoldr#2(S(x2)) -> Cons(x2,unfoldr#2(x2))
+    mult#2(0(),x2) -> 0()
+    mult#2(S(x4),x2) -> plus#2(x2,mult#2(x4,x2))
+    plus#2(0(),x8) -> x8
+    plus#2(S(x4),x2) -> S(plus#2(x4,x2))
     main(0()) -> 0()
-    rec[plus_0][2](S(x10),x6) -> S(rec[plus_0][2](x10,x6))
-    rec[plus_0][2](0(),x18) -> x18
-    rec[mult_0][2](S(x10),x6) -> rec[plus_0][2](x6,rec[mult_0][2](x10,x6))
-    rec[mult_0][2](0(),x6) -> 0()
-    rec[unfoldr_0][2](S(x6)) -> Cons(x6,rec[unfoldr_0][2](x6))
-    rec[unfoldr_0][2](0()) -> Nil()
-    rec[map_0][2](Cons(x6,x13)) -> Cons(rec[mult_0][2](x6,x6)
-                                       ,rec[map_0][2](x13))
-    rec[map_0][2](Nil()) -> Nil()
-    rec[sum_0][1](Cons(x5,x3)) -> rec[plus_0][2](x5,rec[sum_0][1](x3))
-    rec[sum_0][1](Nil()) -> 0())
+    main(S(x1)) -> sum#1(map#2(Cons(S(x1),unfoldr#2(S(x1))))))
 

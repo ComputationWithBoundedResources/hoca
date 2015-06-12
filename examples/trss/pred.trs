@@ -3,8 +3,8 @@
     INNERMOST)
 
 (VAR
-    x1)
+    x4)
 (RULES
     main(0()) -> 0()
-    main(S(x1)) -> x1)
+    main(S(x4)) -> x4)
 

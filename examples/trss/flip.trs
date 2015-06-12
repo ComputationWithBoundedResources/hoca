@@ -3,10 +3,10 @@
     INNERMOST)
 
 (VAR
-    x1)
+    x4 x0)
 (RULES
-    main(x1) -> rec[flip_0][1](x1)
-    rec[flip_0][1](O(x1)) -> Z(rec[flip_0][1](x1))
-    rec[flip_0][1](Z(x1)) -> O(rec[flip_0][1](x1))
-    rec[flip_0][1](E()) -> E())
+    flip#1(E()) -> E()
+    flip#1(Z(x4)) -> O(flip#1(x4))
+    flip#1(O(x4)) -> Z(flip#1(x4))
+    main(x0) -> flip#1(x0))
 

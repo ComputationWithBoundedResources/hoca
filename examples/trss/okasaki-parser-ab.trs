@@ -1,16 +1,8 @@
-
-(STRATEGY
-    INNERMOST)
-
-(VAR
-    x14 x56 x120 x88)
-(RULES
-    main(Cons(C(),x14)) -> ParseFail(S(0()))
-    main(Cons(B(),x14)) -> ParseFail(S(0()))
-    main(Cons(A(),Cons(C(),x56))) -> ParseFail(S(S(0())))
-    main(Cons(A(),Cons(B(),Cons(x120,x88)))) -> ParseFail(S(S(0())))
-    main(Cons(A(),Cons(B(),Nil()))) -> ParseSuccess()
-    main(Cons(A(),Cons(A(),x56))) -> ParseFail(S(S(0())))
-    main(Cons(A(),Nil())) -> ParseFail(S(0()))
-    main(Nil()) -> ParseFail(0()))
+Could not match expected type 'Unit' with actual type ''a43 option'.
+In the case of a match-expression, namely
+  (return Unit())
+In the definition 'let string cs = ...', namely
+(match cs with
+| Nil() ->   (return Unit())
+| Cons(c,cs') ->   ((bind' (char c)) (string cs')))
 
