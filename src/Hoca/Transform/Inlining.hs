@@ -69,8 +69,8 @@ narrow rl rs = catMaybes [ narrowAt ci ri | (ci,ri) <- contexts (rhs rl), isFun 
                          }
 
 
--- inline :: (Ord f, Ord v, Num v) => (Problem f v -> NarrowedRule (ASym f) v v -> Bool) -> Problem f v :=> Problem f v
-inline sensible p = replaceRulesIdx narrowRule p where
+inline :: (Ord f, Ord v, Num v) => (Problem f v -> NarrowedRule (ASym f) v v -> Bool) -> Problem f v :=> Problem f v
+inline sensible p = removeInstances <$> replaceRulesIdx narrowRule p where
   renameRule = R.rename ren where
      ren (Left v) = v * 2 + 1
      ren (Right v) = v * 2
@@ -84,11 +84,12 @@ inline sensible p = replaceRulesIdx narrowRule p where
     applyNarrowing ni = [ (trl', ss ++ cgSuccs p nidx )
                         | n <- narrowings ni
                         , let nidx = fromMaybe err (lookup (narrowedWith n) rsEnum) where err = error "narrow rule id not found"
-                        , let trl' = either (\ _-> error ("failed typing " ++ render (renameRule (narrowing n)))) id (inferR sig (renameRule (narrowing n)))
+                        , let Right trl' = inferR sig (renameRule (narrowing n))
+                        -- , let trl' = either (\ _-> error ("failed typing " ++ render (renameRule (narrowing n)))) id (inferR sig (renameRule (narrowing n)))
                         ]
 
 
---rewrite :: (Ord f, Ord v, Num v) => (Problem f v -> NarrowedRule (ASym f) v v -> Bool) -> Problem f v :=> Problem f v
+rewrite :: (Ord f, Ord v, Num v) => (Problem f v -> NarrowedRule (ASym f) v v -> Bool) -> Problem f v :=> Problem f v
 rewrite sensible = inline sensible' where
   sensible' rs nr = all (\ nw -> lhs (narrowedRule nr) `isVariantOf` lhs (narrowing nw)) (narrowings nr)
                     && sensible rs nr

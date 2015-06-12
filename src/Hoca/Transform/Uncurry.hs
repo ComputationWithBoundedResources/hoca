@@ -7,11 +7,11 @@ module Hoca.Transform.Uncurry (
 
 import Hoca.Problem
 import Hoca.Data.MLTypes
-import Prelude hiding (try)
-import Data.Rewriting.Applicative.Term
-import Data.Rewriting.Applicative.Rule
+import Data.Rewriting.Applicative.Term hiding (isInstanceOf)
+import Data.Rewriting.Applicative.Rule hiding (vars)
 import qualified Data.Map as Map
 import Control.Monad (forM)
+import Control.Monad.State (evalStateT, put, get)
 import Control.Monad.Writer (tell, runWriterT)
 import Control.Applicative (empty)
 import Hoca.Strategy 
@@ -32,20 +32,10 @@ applicativeArity prob = \ f -> Map.findWithDefault 0 f m
     aa l (_:ts) = aa l ts
     terms = leftHandSides prob ++ rightHandSides prob
 
-etaSaturate :: Ord f  => Problem f Int :=> Problem f Int
-etaSaturate p = 
-  case etaSaturate' p of 
-   Nothing -> empty 
-   Just rs -> replaceRulesIdx replace p 
-     where 
-       replace idx _ ss = case trls of {_:_:_ -> Just [ (trl,ss) | trl <- trls ]; _ -> Nothing }
-         where trls = fromJust (lookup idx rs)
-
 etaSaturate' :: Ord f => Problem f Int -> Maybe [(Int, [TRule f Int])]
 etaSaturate' p =
   forM (rulesEnum p) $ \ (idx,trl) -> do 
-    n <- aaTerm (lhs (theRule trl))
-    trls <- saturate (ren trl) n
+    trls <- aaTerm (lhs (theRule trl)) >>= saturate trl
     return (idx,trls)
   where
     aa = applicativeArity p
@@ -53,26 +43,38 @@ etaSaturate' p =
     aaTerm (aform -> Just (atermM -> Just (TFun f _),as)) = Just (aa f - length as)
     aaTerm _ = Nothing
 
-    ren = renameTRule (2 *)      
-      
-    saturate trl = saturate' [maximum (-1:tvsFromTRule trl) + 1..] trl
-      
-    saturate' _ trl 0 = return [trl]
-    saturate' (tv1:tv2:ntvs) trl n = 
-      case theType trl of 
-       tp1 :-> tp2 -> 
-         (:) trl <$> saturate' (tv1:tv2:ntvs) trl' (n - 1) where
-           trl' = TRule { theRule = rl' , theEnv = (v,tp1) : theEnv trl , theType = tp2 }
-           
-       TyVar tv -> 
-         (:) trl <$> saturate' ntvs trl' (n - 1) where
-           s tv' = if tv == tv' then TyVar tv1 :-> TyVar tv2 else TyVar tv'
-           trl' = TRule { theRule = rl' , theEnv = (v,TyVar tv1) : (s `o` theEnv trl) , theType = TyVar tv2 }
-             
-       _ -> Nothing
-      where 
-        v =  n * 2 + 1
+    saturate trl n = evalStateT (saturateM trl n) (ftvs,fvs) where
+      ftvs = [maximum (-1:tvsFromTRule trl) + 1..]
+      fvs = [maximum (-1:vars (rhs (theRule trl))) + 1..]
+
+    saturateM _ 0 = return []
+    saturateM trl n = do 
+      (tv1:tv2:ntvs, v:vs) <- get
+      put (ntvs,vs)
+      let 
         rl' = mapRule (`app` Var v) (theRule trl)
+        trl' = case theType trl of 
+                 tp1 :-> tp2 -> TRule { theRule = rl', theEnv = (v,tp1) : theEnv trl              , theType = tp2 }
+                 TyVar tv    -> TRule { theRule = rl', theEnv = (v,TyVar tv1) : (s `o` theEnv trl), theType = TyVar tv2 } where
+                                s = singletonSubst tv (TyVar tv1 :-> TyVar tv2)
+      (:) trl' <$> saturateM trl' (n - 1)
+
+etaSaturate :: Ord f  => Problem f Int :=> Problem f Int
+etaSaturate p = 
+  case etaSaturate' p of 
+   Nothing -> empty 
+   Just rs -> removeInstances <$> replaceRulesIdx replace p
+     where 
+       prs = theRule `map` rules p
+       replace idx trl ss 
+           | null trls = Nothing
+           | otherwise = Just [ (trl',ss) | trl' <- trl:trls ] 
+           where 
+             trls = [ trl' 
+                    | trl' <- fromJust (lookup idx rs)
+                    , not (any (theRule trl' `isInstanceOf`) prs) ]
+
+        
 
 uncurried' :: Problem Symbol Int :=> Problem Symbol Int 
 uncurried' p = do 
@@ -85,8 +87,7 @@ uncurried' p = do
         env = theEnv trl
 
         shiftDecl 0 td = Just td
-        shiftDecl n (tins :~> (t1 :-> t2)) = 
-          shiftDecl (n - 1) ((tins ++ [t1]) :~> t2)
+        shiftDecl n (tins :~> (t1 :-> t2)) = shiftDecl (n - 1) ((tins ++ [t1]) :~> t2)
         shiftDecl _ _ = Nothing
         
         recordTypeDecl f n = 
@@ -108,6 +109,6 @@ uncurried' p = do
       
 
 uncurried :: Problem Symbol Int :=> Problem Symbol Int 
-uncurried = uncurried'
+uncurried = try (exhaustive etaSaturate) >=> uncurried'
 
      

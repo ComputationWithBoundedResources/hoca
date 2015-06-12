@@ -23,7 +23,7 @@ executable pcf2trs
               , base >= 4 && < 5
               , containers >= 0.5 && < 0.6
               , graphviz >= 2999.17.0.1
-              , hoca == 0.3
+              , hoca == 0.4
               , multiset >= 0.2 && < 0.3
               , term-rewriting >= 0.2 && < 0.3
               , term-rewriting-applicative >= 0.1 && < 0.2

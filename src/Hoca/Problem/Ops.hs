@@ -23,6 +23,7 @@ module Hoca.Problem.Ops (
   -- ** Traversal and Modification
   , restrictIdx
   , removeUnusedRules
+  , removeInstances  
   , replaceRules
   , replaceRulesIdx
   , withEdges
@@ -36,6 +37,8 @@ module Hoca.Problem.Ops (
 ) where
 
 import           Control.Arrow (first, second)
+import           Control.Applicative (empty, Alternative)
+import           Control.Monad (foldM)
 import qualified Data.IntMap as IMap
 import qualified Data.IntSet as ISet
 import           Data.Maybe (listToMaybe)
@@ -44,7 +47,7 @@ import qualified Data.Rewriting.Applicative.Term as T
 import qualified Data.Rewriting.Rules as RS
 import           Hoca.Data.MLTypes (Signature, Type, TypeVariable,tvs)
 import           Hoca.Problem.Type
-import           Hoca.Utils (runVarSupplyT, fresh)
+import           Hoca.Utils (runVarSupply, fresh)
 
 renameTRule :: (v -> v') -> TRule f v -> TRule f v'
 renameTRule f tr = 
@@ -176,15 +179,15 @@ removeInstances p = modifyRuleGraph remv p where
       | ISet.member i ss = (rl,ISet.insert j (ISet.delete i ss))
       | otherwise = (rl,ss)
 
-withEdges :: (TRule f v -> TRule f v -> Bool) -> Problem f v -> Problem f v
-withEdges edgeP = modifyRuleGraph we where
+withEdges :: Eq f => (TRule f v -> TRule f v -> Bool) -> Problem f v -> Problem f v
+withEdges edgeP = removeUnusedRules . modifyRuleGraph we where
   we rg = IMap.map f rg where
     f (r,ss) = (r, ISet.filter (isEdge r) ss)
     isEdge r i = maybe False (edgeP r . fst) (IMap.lookup i rg)
 
 
-withEdgesIdx :: (Int -> Int -> Bool) -> Problem f v -> Problem f v
-withEdgesIdx edgeP = modifyRuleGraph (IMap.mapWithKey f) where
+withEdgesIdx :: Eq f => (Int -> Int -> Bool) -> Problem f v -> Problem f v
+withEdgesIdx edgeP = removeUnusedRules . modifyRuleGraph (IMap.mapWithKey f) where
   f i (r,ss) = (r, ISet.filter (edgeP i) ss)
 
 
@@ -193,31 +196,28 @@ withEdgesIdx edgeP = modifyRuleGraph (IMap.mapWithKey f) where
 -- traversal
 ---------------------------------------------------------------------- 
 
-
-replaceRulesIdx :: (Monad m, Ord f, Ord v) => (Int -> TRule f v -> [Int] -> Maybe [(TRule f v, [Int])]) -> Problem f v -> m (Problem f v)
-replaceRulesIdx m p = runVarSupplyT (mapM f (IMap.toList (ruleGraph p))) >>= toProblem 
+replaceRulesIdx :: (Alternative m, Ord f, Ord v) => (Int -> TRule f v -> [Int] -> Maybe [(TRule f v, [Int])]) -> Problem f v -> m (Problem f v)
+replaceRulesIdx m p = toProblem (runVarSupply (foldM f (False,[]) (IMap.toList (ruleGraph p))))
   where
-    f (i,(r,ISet.toList -> ss)) = 
+    f (changed,l) (i,(r,ISet.toList -> ss)) = 
       case m i r ss of
        Nothing -> do
          j <- fresh
-         return (False, (i, [(j,r,ss)]))
+         return (changed, (i, [(j,r,ss)]):l)
        Just rs -> do
          ids <- mapM (const fresh) rs
-         return (True, (i, [ (j,r',ss') | (j,(r',ss')) <- zip ids rs ]))
+         return (True, (i, [ (j,r',ss') | (j,(r',ss')) <- zip ids rs ]):l)
 
-    toProblem l
-      | any fst l = return (removeUnusedRules (removeInstances (modifyRuleGraph (const rg) p)))
-      | otherwise = fail "Hoca.Problem.replaceRulesIdx"
-      where
-        rg = foldl ins IMap.empty (concatMap snd l')
-        l' = map snd l
+    toProblem (False,_) = empty
+    toProblem (True,l) = pure (removeUnusedRules (modifyRuleGraph (const rg) p))
+       where
+        rg = foldl ins IMap.empty (concatMap snd l)
         ins is (j,r,ss) = IMap.insert j (r, newSuccs ss) is
         newSuccs = foldl (\ ss' s -> newIds s `ISet.union` ss') ISet.empty
         newIds i = 
-          case lookup i l' of
+          case lookup i l of
            Nothing -> ISet.empty
            Just ers -> ISet.fromList [ j | (j,_,_) <- ers]
 
-replaceRules :: (Monad m, Ord f, Ord v) => (TRule f v -> Maybe [(TRule f v, [Int])]) -> Problem f v -> m (Problem f v)
+replaceRules :: (Alternative m, Ord f, Ord v) => (TRule f v -> Maybe [(TRule f v, [Int])]) -> Problem f v -> m (Problem f v)
 replaceRules f = replaceRulesIdx (\ _ r _ -> f r)

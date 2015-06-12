@@ -141,7 +141,7 @@ ruleDeleting p ns =
 -- cfaur =
 --   cfa >=> logMsg "CFA" >=> try ur
 
-ur :: Eq f => P.Problem f Int :=> P.Problem f Int
+ur :: Ord f => P.Problem f Int :=> P.Problem f Int
 ur = usableRulesSyntactic >=> logMsg "UR"
 
 cfa :: Problem :=> Problem

@@ -18,10 +18,11 @@ import           Control.Arrow (second)
 import           Data.Maybe (listToMaybe, catMaybes)
 import qualified Data.Rewriting.Applicative.Rule as R
 import qualified Data.Rewriting.Applicative.Term as T
+import qualified Data.Rewriting.Applicative.Rules as TRS
 import qualified Data.Rewriting.Problem as P
 import qualified Data.Rewriting.Rules as RS
 import           Hoca.Data.MLTypes (Signature, Type, Substitutable (..))
-import           Hoca.Utils (runVarSupplyT, fresh,ppSeq)
+import           Hoca.Utils (ppSeq)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 
 
@@ -53,25 +54,31 @@ prettyTerm False _ _ (T.atermM -> Just (T.TVar v)) =
 prettyTerm st _ env (T.atermM -> Just (T.TFun f ts)) = 
   PP.pretty f PP.<> PP.parens (ppSeq (PP.text ", ") [ prettyTerm st id env ti | ti <- ts])
 prettyTerm st par env (T.atermM -> Just (t1 T.:@ t2)) = 
-  par (prettyTerm st id env t1 PP.<+> prettyTerm st PP.parens env t2) where
+  par (prettyTerm st id env t1 PP.</> prettyTerm st PP.parens env t2) where
 prettyTerm _ _ _ _ = PP.text "NON-WELL-FORMED-TERM"    
   
 
-instance (PP.Pretty f) => PP.Pretty (Problem f Int) where
+instance (Eq f, PP.Pretty f) => PP.Pretty (Problem f Int) where
   pretty p =
     PP.vcat
-    [ PP.int i PP.<+> PP.text ":" 
-      PP.<+> prettyTerm False id env (R.lhs rl)
-      PP.<+> PP.text "-->" 
-      PP.<+> PP.hang 2 (prettyTerm False id env (R.rhs rl))
-      PP.<+> PP.text ":"
-      PP.<+> PP.pretty (theType trl)
-    | (i,(trl,_)) <- IMap.toList (ruleGraph p)
+    [ PP.int i 
+      PP.<> PP.text ":" 
+      PP.<+> PP.hang 2 (prettyTerm False id env (R.lhs rl)
+                        PP.<+> PP.text "-->" 
+                        PP.</> PP.align (prettyTerm False id env (R.rhs rl)
+                                         PP.<+> PP.text ":"
+                                         PP.<+> PP.pretty (theType trl)))
+    | (i,trl) <- rs
     , let rl = theRule trl
     , let env = theEnv trl ]
     PP.<$> PP.text ""
     PP.<$> PP.text "where"
-    PP.<$> PP.indent 2 (PP.align (PP.pretty (signature p)))
+    PP.<$> PP.indent 2 (PP.align (PP.pretty sig))
+      where 
+        syms = TRS.funs (map (theRule . snd) rs)
+        sig = Map.filterWithKey (\ k _ -> k `elem` syms) (signature p) 
+        rs = [(i,trl) | (i,(trl,_)) <- IMap.toList (ruleGraph p)]
+      
     -- where
     --   ppVar i = PP.text "x" PP.<> PP.int i
 

@@ -1,17 +1,12 @@
-{-# LANGUAGE NoMonomorphismRestriction #-}
-
 module Hoca.Transform.UsableRules (
   usableRulesSyntactic
   , usableRulesDFA
   , usableRulesDFA'
-  , isRecursive
-  , calls
+  -- , isRecursive
+  -- , calls
   ) where
 
-import           Control.Applicative (empty)
 import           Control.Monad (guard)
-import           Data.Function (on)
-import           Data.List (partition)
 import           Data.Maybe (isJust)
 import qualified Data.Rewriting.Rule as R
 import qualified Data.Rewriting.Rules as RS
@@ -43,43 +38,44 @@ cap rs t = runVarSupply (capM t)
       s <- T.Fun f <$> mapM tcapM ts
       if any (isUnifiableWith s) lhss then freshVar else return s
 
-calls :: (Eq f, Ord v1, Ord v2) => T.Term f v1 -> [R.Rule f v2] -> [R.Rule f v2]
-calls t trs = concatMap (\ ti -> filter (\ rl -> ti `isUnifiableWith` R.lhs rl) trs) caps
-  where caps = [ cap trs ti | ti@T.Fun{} <- T.subterms t ]    
+-- calls :: (Eq f, Ord v1, Ord v2) => T.Term f v1 -> [R.Rule f v2] -> [R.Rule f v2]
+-- calls t trs = concatMap (\ ti -> filter (\ rl -> ti `isUnifiableWith` R.lhs rl) trs) caps
+--   where caps = [ cap trs ti | ti@T.Fun{} <- T.subterms t ]    
 
-usableFor :: (Eq f, Ord v1, Ord v2) => [T.Term f v1] -> [R.Rule f v2] -> [R.Rule f v2]
-usableFor ts trs = walk (caps trs ts) [] trs
-  where
-    walk []     ur _  = ur
-    walk (s:ss) ur rs = walk (caps trs (RS.rhss ur') ++ ss) (ur' ++ ur) rs' where
-        (ur',rs') = partition (\ rl -> s `isUnifiableWith` R.lhs rl) rs
-    caps rs ss = [ cap rs s | si <- ss, s@T.Fun{} <- T.subterms si ]    
+-- usableFor :: (Eq f, Ord v1, Ord v2) => [T.Term f v1] -> [R.Rule f v2] -> [R.Rule f v2]
+-- usableFor ts trs = walk (caps trs ts) [] trs
+--   where
+--     walk []     ur _  = ur
+--     walk (s:ss) ur rs = walk (caps trs (RS.rhss ur') ++ ss) (ur' ++ ur) rs' where
+--         (ur',rs') = partition (\ rl -> s `isUnifiableWith` R.lhs rl) rs
+--     caps rs ss = [ cap rs s | si <- ss, s@T.Fun{} <- T.subterms si ]    
 
     
-isRecursive :: (Ord v1, Ord v2, Eq f) => [R.Rule f v1] -> R.Rule f v2 -> Bool
-isRecursive rs rl =
-  any (R.isVariantOf rl) (usableFor [R.rhs rl] rs)
+-- isRecursive :: (Ord v1, Ord v2, Eq f) => [R.Rule f v1] -> R.Rule f v2 -> Bool
+-- isRecursive rs rl =
+--   any (R.isVariantOf rl) (usableFor [R.rhs rl] rs)
 
-usableRulesSyntactic :: (Eq f, Ord v) => Problem f v :=> Problem f v
-usableRulesSyntactic p
-  | size p' < size p = pure p'
-  | otherwise = empty
-  where
-    p' = removeUnusedRules (withEdges (edgeP `on` theRule) p)
+usableRulesGeneric :: (Ord f, Ord v) => (Int -> TRule f v -> [Int] -> [Int]) -> Problem f v :=> Problem f v
+usableRulesGeneric urs = replaceRulesIdx replace where
+    replace idx trl succs = guard changed >> Just [(trl,newSuccs)] 
+        where
+          changed = any (`notElem` newSuccs) succs
+          newSuccs = urs idx trl succs
+    
+    
+usableRulesSyntactic :: (Ord f, Ord v) => Problem f v :=> Problem f v
+usableRulesSyntactic p = usableRulesGeneric urs p where
+    urs _ (R.rhs . theRule -> r) = filter f
+        where f (rule p -> Just trl) = or [c `isUnifiableWith` R.lhs (theRule trl) | c <- caps r]
+    caps t = [cap rs ti | ti@T.Fun{} <- T.subterms t]
     rs = theRule `map` rules p
-    r1 `edgeP` r2 = maybe False (elem r2) (lookup r1 ss)
-    ss = [(r,calls (R.rhs r) rs) | r <- rs ]
 
 usableRulesDFA' :: (Ord f) => (f -> Bool) -> Problem f Int :=> Problem f Int
-usableRulesDFA' isData prob = replaceRulesIdx replace prob where
-    tg = dfa isData prob
-  
+usableRulesDFA' isData p = usableRulesGeneric urs p where
+    tg = dfa isData p
     reachableRules = concatMap TG.nonTerminals . TG.produces tg
+    urs idx _ succs = [j | (R j) <- reachableRules (R idx), j `elem` succs ]
   
-    replace idx trl succs = guard changed >> Just [(trl,newSuccs)]
-      where
-        changed = any (`notElem` newSuccs) succs
-        newSuccs = [j | (R j) <- reachableRules (R idx) ]
 
 usableRulesDFA :: Problem Symbol Int :=> Problem Symbol Int
 usableRulesDFA = usableRulesDFA' isData where

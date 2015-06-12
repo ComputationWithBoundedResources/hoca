@@ -67,7 +67,7 @@ instance PP.Pretty Symbol where
   pretty (Bot l) = PP.text "bot" PP.<> PP.brackets (PP.pretty l)      
   pretty Main = PP.text "main"
   pretty (Labeled 0 s) = PP.pretty s
-  pretty (Labeled l s) = PP.pretty s PP.<> PP.brackets (PP.int l)  
+  pretty (Labeled l s) = PP.pretty s PP.<> PP.text "#" PP.<> PP.int l
 
 
 unlabeled :: Symbol -> Symbol
@@ -128,11 +128,13 @@ visit n = modify (\(vs,ns,i) -> (n:vs,ns,i))
 makeName :: PCF.TypedExp Context -> TM Name
 makeName = maybeFresh . name' where
   name' (PCF.Cond (Context ctx,_) _ _) = fromTopLetFrame ctx `mappend` Name [LString "cond"]
+  -- name' (PCF.Abs (Context ctx@(LetBdy{}:_),_) _ _) = fromTopLetFrame ctx
+  -- name' (PCF.Abs (Context ctx@(LetRecBdy{}:_),_) _ _) = fromTopLetFrame ctx  
   name' (PCF.Abs (Context ctx,_) _ _) = fromTopLetFrame ctx
   name' _ = mempty
 
   fromTopLetFrame (LetBdy fn vs _: _)  = Name [LString v | Variable v <- vs ++ [fn]]
-  fromTopLetFrame (LetRecBdy (Variable fn) _ _: _) = Name [LString "fix", LString fn]
+  fromTopLetFrame (LetRecBdy (Variable fn) _ _: _) = Name [LString fn]
   fromTopLetFrame (_:ctx) = fromTopLetFrame ctx
   fromTopLetFrame _ = Name [LString "main"]
 

@@ -17,6 +17,7 @@ module Hoca.Data.MLTypes (
   -- * Substitution
   , Substitution
   , idSubst
+  , singletonSubst
   -- * Declarations and Signatures
   , Signature
   , TypeDecl (..)
@@ -150,6 +151,9 @@ type Substitution = TypeVariable -> Type
 idSubst :: Substitution 
 idSubst = TyVar 
 
+singletonSubst :: TypeVariable -> Type -> Substitution
+singletonSubst v t = \ v' -> if v' == v then t else TyVar v'
+
 class Substitutable a where
   o :: Substitution -> a -> a
 
@@ -264,7 +268,7 @@ instance PP.Pretty Type where
          
 instance PP.Pretty f => PP.Pretty (Signature f) where 
     pretty ts = 
-        PP.vcat [ PP.pretty ci PP.<+> PP.text "::" PP.<+> ppTSig tins tout
+        PP.vcat [ PP.hang 2 (PP.pretty ci PP.<+> PP.text "::" PP.<+> ppTSig tins tout)
                 | ci ::: tins :~> tout <- signatureToList ts ] where
     
         ppTSig [] tout = PP.pretty tout
