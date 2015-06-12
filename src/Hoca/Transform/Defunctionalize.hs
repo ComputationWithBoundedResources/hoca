@@ -196,8 +196,8 @@ record :: TypeDeclaration Symbol -> [P.TRule Symbol Var] -> TM ()
 record td rs = tell [(td,rs)]
 
 fromExpression :: PCF.TypedExp Context -> [(TypeDeclaration Symbol, [P.TRule Symbol Var])]
-fromExpression = snd . eval . (labelM >=> mainM)
-  where
+fromExpression = snd . eval . (labelM >=> defuncMainM)
+ where
     
     name e = (,PCF.typeOf e) <$> makeName e
     
@@ -221,16 +221,16 @@ fromExpression = snd . eval . (labelM >=> mainM)
     clVars = map (var . fst)
     clTps  = map snd
 
-    mainM (PCF.Abs (_, tp :-> _) _ f) = void (withVar tp (mainM f))
-    mainM e = do
-      t <- toTRSM e
+    defuncMainM (PCF.Abs (_, tp :-> _) _ f) = void (withVar tp (defuncMainM f))
+    defuncMainM e = do
+      t <- defuncM e
       env <- environment
       let tp = PCF.typeOf e
       record (Main ::: clTps env :~> tp) [ env |- (fun Main (clVars env) --> t, tp)  ]
 
-    toTRSM (PCF.Var _ i) = var <$> fst <$> variable i
-    toTRSM e@(PCF.Abs (nm, tpe@(tin :-> tout)) _ f) = do
-      (v,tf) <- withVar tin (toTRSM f)
+    defuncM (PCF.Var _ i) = var <$> fst <$> variable i
+    defuncM e@(PCF.Abs (nm, tpe@(tin :-> tout)) _ f) = do
+      (v,tf) <- withVar tin (defuncM f)
       env <- freeVars e
       let 
         lamSym = Lambda nm
@@ -238,20 +238,21 @@ fromExpression = snd . eval . (labelM >=> mainM)
       record (lamSym ::: clTps env :~> tpe) [ ((v,tin) : env) |- (app lamTerm (var v) --> tf, tout)]
       return lamTerm
       
-    toTRSM (PCF.App _ e1 e2) = app <$> toTRSM e1 <*> toTRSM e2
-    toTRSM (PCF.Con _ g es) = fun (Con (PCF.sname g)) <$> mapM toTRSM es
-    toTRSM (PCF.Bot _) = do
+    defuncM (PCF.App _ e1 e2) = app <$> defuncM e1 <*> defuncM e2
+    defuncM (PCF.Con _ g es) = fun (Con (PCF.sname g)) <$> mapM defuncM es
+    defuncM (PCF.Bot (_,tp)) = do
       i <- freshInt
+      record (Bot i ::: [] :~> tp) []
       return (fun (Bot i) [])
     
-    toTRSM (PCF.Cond (nm,tpe) f cs) = do
+    defuncM (PCF.Cond (nm,tpe) f cs) = do
       envCl <- sort <$> nub <$> concat <$> sequence [ freeVars eg | (_,eg) <- cs ] 
       let 
         condSym = Cond nm
         condTerm t = fun condSym (t : clVars envCl)
       eqs <- forM cs $ \ (g,eg) -> do 
         let 
-          condM 0 e' = (,) [] <$> toTRSM e'
+          condM 0 e' = (,) [] <$> defuncM e'
           condM n (PCF.Abs (_,tp :-> _) _ e') = do 
             (v,(vs,te)) <- withVar tp (condM (n - 1)  e')
             return ((v,tp):vs,te)
@@ -262,9 +263,9 @@ fromExpression = snd . eval . (labelM >=> mainM)
           pat = fun con (clVars envPat)
         return ((envPat ++ envCl) |- (condTerm pat --> tg, tpe) )
       record (condSym ::: (PCF.typeOf f : clTps envCl) :~> tpe) eqs
-      condTerm <$> toTRSM f
+      condTerm <$> defuncM f
 
-    toTRSM e@(PCF.Fix (_, tpe@(tin :-> tout)) i fs)
+    defuncM e@(PCF.Fix (_, tpe@(tin :-> tout)) i fs)
       | 0 <= i && i < length fs && all isAbs fs = do          
           env <- freeVars e
           let 
@@ -275,7 +276,7 @@ fromExpression = snd . eval . (labelM >=> mainM)
           unless visitedB $ do
             visit fixSym
             let v = maximum (0 : [1 + j | (j,_) <- env] )
-            tf <- toTRSM (fromJust (foldM PCF.apply f [PCF.Fix (nm,tpe) j fs | j <- [0..length fs - 1]]))
+            tf <- defuncM (fromJust (foldM PCF.apply f [PCF.Fix (nm,tpe) j fs | j <- [0..length fs - 1]]))
             record (fixSym ::: clTps env :~> tpe) [ ((v,tin) : env) |- (app fixTerm (var v) --> app tf (var v), tout) ]
           return fixTerm
       where
@@ -285,7 +286,7 @@ fromExpression = snd . eval . (labelM >=> mainM)
           | i >= length fs = error "fix-point index out of scope"
           | otherwise = fs!!i
 
-    toTRSM (PCF.Fix {}) =
+    defuncM (PCF.Fix {}) =
       error "non-lambda abstraction given to fixpoint combinator"
 
 
