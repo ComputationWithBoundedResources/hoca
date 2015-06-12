@@ -1,5 +1,14 @@
 (* from Sereni: Size-Change Termination of Higher-Order Functional Programs; PRG-RR-04-20 *)
 
+type 'a tree = Leaf of 'a | Node of 'a tree * 'a tree
+;;
+
+type nat = 0 | S of nat
+;;
+
+type ('a,'b) pair = P of 'a * 'b
+;;    
+
 let fix f =
   let rec x = lazy (force (f x))
   in x
