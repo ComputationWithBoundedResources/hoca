@@ -1,3 +1,10 @@
+
+type 'a list = Nil | Cons of 'a * 'a list
+;;
+
+type nat = 0 | S of nat
+;;
+
 let rec fold f z xs = 
   match xs with
   | Nil -> z

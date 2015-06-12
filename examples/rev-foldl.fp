@@ -1,5 +1,8 @@
 (* Richard Bird: Introduction to functional programming using Haskell, Section 7.2 *)
 
+type 'a list = Nil | Cons of 'a * 'a list
+;;
+
 let rec foldl f z xs = 
   match xs with 
   | Nil -> z

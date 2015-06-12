@@ -1,3 +1,15 @@
+type 'a list = Nil | Cons of 'a * 'a list
+;;
+
+type Unit = Unit
+;;
+
+type 'a lazy_list = NilL | ConsL of 'a * (Unit -> 'a lazy_list)
+;;
+
+type nat = 0 | S of nat
+;;
+
 let rec take_l n xs =
   match force xs with
   | NilL -> Nil

@@ -1,3 +1,6 @@
+type 'a list = Nil | Cons of 'a * 'a list
+;;
+
 let rec foldr f z xs = 
   match xs with 
   | Nil -> z

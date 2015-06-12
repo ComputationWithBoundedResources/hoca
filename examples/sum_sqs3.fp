@@ -1,3 +1,12 @@
+type 'a list = Nil | Cons of 'a * 'a list
+;;
+
+type nat = 0 | S of nat
+;;
+
+type 'a option = None | Some of 'a
+;;
+
 let rec plus x y = 
   match x with
   | 0 -> y
@@ -15,14 +24,14 @@ let square x = mult x x
 
 let rec unfoldr f z =
   match f z with
-  | Nothing -> Nil
-  | Just(z') -> Cons(z',unfoldr f z')
+  | None -> Nil
+  | Some(z') -> Cons(z',unfoldr f z')
 ;;
 
 let countdown m =
   match m with
-  | 0 -> Nothing
-  | S(m') -> Just(m')
+  | 0 -> None
+  | S(m') -> Some(m')
 ;;
 
 let enum n =

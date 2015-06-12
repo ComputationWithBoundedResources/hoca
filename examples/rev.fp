@@ -1,3 +1,6 @@
+type 'a list = Nil | Cons of 'a * 'a list
+;;
+
 let rec append xs ys = 
   match xs with 
   | Nil -> ys
