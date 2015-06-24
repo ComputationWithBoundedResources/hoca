@@ -1,9 +1,7 @@
--- | 
-
 module Hoca.Problem.DMInfer (
-  infer
-  , inferR
-  , inferT
+  inferWith
+  , inferWithR
+  , inferWithT
 ) where
 
 import Control.Monad (when)
@@ -66,15 +64,16 @@ inferRuleM rl = do
                , theEnv = env'
                , theType = (s' `o` s) v}
 
-inferR :: (Ord f, Eq v) => Signature f -> ARule f v -> Either (TypingError f v) (TRule f v)
-inferR sig = runInferM sig . inferRuleM
+inferWithR :: (Ord f, Eq v) => Signature f -> ARule f v -> Either (TypingError f v) (TRule f v)
+inferWithR sig = runInferM sig . inferRuleM
 
-inferT :: (Ord f, Eq v) => Signature f -> ATerm f v -> Either (TypingError f v) (Type,TypingEnv v)
-inferT sig t = runInferM sig $ do 
+inferWithT :: (Ord f, Eq v) => Signature f -> ATerm f v -> Either (TypingError f v) (Type,TypingEnv v)
+inferWithT sig t = runInferM sig $ do 
   v <- freshVar
   (s,env) <- [] |- (t,TyVar v)
   return (s v,env)
 
 
-infer :: (Ord f, Eq v) => Signature f -> [ARule f v] -> Either (TypingError f v) [TRule f v]
-infer sig = runInferM sig . mapM inferRuleM
+inferWith :: (Ord f, Eq v) => Signature f -> [ARule f v] -> Either (TypingError f v) [TRule f v]
+inferWith sig = runInferM sig . mapM inferRuleM
+

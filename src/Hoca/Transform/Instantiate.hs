@@ -65,7 +65,7 @@ instantiate' isData refineP prob = replaceRulesIdx replace prob where
                       , let lhs' = s `apply` lhs
                       , let rhs' = s `apply` rhs
                       , argumentNormalised lhs'
-                      , let Right trl' = inferR sig (R.Rule lhs' rhs') ]
+                      , let Right trl' = inferWithR sig (R.Rule lhs' rhs') ]
 
 
     newSuccs = [j | (R j) <- reachableRules (R idx) ]
