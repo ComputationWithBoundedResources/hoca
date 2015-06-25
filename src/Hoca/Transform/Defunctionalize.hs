@@ -86,9 +86,11 @@ isConstructor f = case unlabeled f of {Con{} -> True; _ -> False }
 (-->) = R.rule
 
 pcfToProblem :: PCF.TypedProgram Context -> Problem
-pcfToProblem p = P.fromRules [Main] (signatureFromList (cdecls ++ fdecls)) (concat defs) where
+pcfToProblem p = P.fromRules sts (signatureFromList (cdecls ++ fdecls)) (concat defs) where
   (fdecls, defs) = unzip (fromExpression (PCF.expression p))
   cdecls = [ Con (PCF.sname c) ::: td | c ::: td <- signatureToList (PCF.signature p)]
+  sts = P.StartTerms { P.defs = [Main]
+                     , P.constrs = [c | c ::: _ <- cdecls]}
 
 -- -- transformation ----------------------------------------------------------------------
 

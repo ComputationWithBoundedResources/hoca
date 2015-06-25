@@ -79,8 +79,11 @@ etaSaturate p =
 uncurried' :: Problem Symbol Int :=> Problem Symbol Int 
 uncurried' p = do 
   (trs,ds) <- runWriterT (uncurryRulesM `mapM` rules p) 
-  return (fromRules [f | f@(Labeled _ g) ::: _ <- ds, g `elem` mains p] (signatureFromList ds) trs)
+  return (fromRules (translateStartTerms ds) (signatureFromList ds) trs)
   where 
+    translateStartTerms ds = 
+        StartTerms { defs = fromDS defs, constrs = fromDS constrs } where
+               fromDS sel = [f | f@(Labeled _ g) ::: _ <- ds, g `elem` sel (startTerms p)]
     uncurryRulesM trl = do 
       let 
         rl = theRule trl

@@ -69,7 +69,7 @@ narrow rl rs = catMaybes [ narrowAt ci ri | (ci,ri) <- contexts (rhs rl), isFun 
                          }
 
 
-inline :: (Ord f, Ord v, Num v) => (Problem f v -> NarrowedRule (ASym f) v v -> Bool) -> Problem f v :=> Problem f v
+inline :: (Ord f) => (Problem f Int -> NarrowedRule (ASym f) Int Int -> Bool) -> Problem f Int :=> Problem f Int
 inline sensible p = removeInstances <$> replaceRulesIdx narrowRule p where
   renameRule = R.rename ren where
      ren (Left v) = v * 2 + 1
@@ -88,7 +88,7 @@ inline sensible p = removeInstances <$> replaceRulesIdx narrowRule p where
                      ]
 
 
-rewrite :: (Ord f, Ord v, Num v) => (Problem f v -> NarrowedRule (ASym f) v v -> Bool) -> Problem f v :=> Problem f v
+rewrite :: (Ord f) => (Problem f Int -> NarrowedRule (ASym f) Int Int -> Bool) -> Problem f Int :=> Problem f Int
 rewrite sensible = inline sensible' where
   sensible' rs nr = all (\ nw -> lhs (narrowedRule nr) `isVariantOf` lhs (narrowing nw)) (narrowings nr)
                     && sensible rs nr

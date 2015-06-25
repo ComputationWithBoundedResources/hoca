@@ -28,12 +28,14 @@ module Hoca.Problem.Ops (
   , replaceRulesIdx
   , withEdges
   , withEdgesIdx
-  , modifyMains
+  -- , modifyMains
   , modifySignature
   -- * Typed Rules
   , renameTRule
   , (|-)
   , tvsFromTRule
+  -- -- Parsing
+  -- , fromFile
 ) where
 
 import           Control.Arrow (first, second)
@@ -43,8 +45,9 @@ import qualified Data.IntMap as IMap
 import qualified Data.IntSet as ISet
 import           Data.Maybe (listToMaybe)
 import qualified Data.Rewriting.Applicative.Rule as R
+import qualified Data.Rewriting.Applicative.Problem as P
 import qualified Data.Rewriting.Applicative.Term as T
-import qualified Data.Rewriting.Rules as RS
+import qualified Data.Rewriting.Applicative.Rules as RS
 import           Hoca.Data.MLTypes (Signature, Type, TypeVariable,tvs)
 import           Hoca.Problem.Type
 import           Hoca.Utils (runVarSupply, fresh)
@@ -71,25 +74,24 @@ rules = map fst . IMap.elems . ruleGraph
 rulesEnum :: Problem f v -> [(Int, TRule f v)]
 rulesEnum = IMap.toList . IMap.map fst . ruleGraph
 
-fromRules :: (Ord f, Ord v) => [f] -> Signature f -> [TRule f v] -> Problem f v
-fromRules fs sig rs = 
+fromRules :: (Ord f, Ord v) => StartTerms f -> Signature f -> [TRule f v] -> Problem f v
+fromRules sts sig rs = 
   Problem { ruleGraph = IMap.map (\ r -> (r,is)) (IMap.fromList irs)
-          , mains = fs
+          , startTerms = sts
           , signature = sig } where
     irs = zip [1..] rs
     is = ISet.fromList (map fst irs)
 
-fromGraph :: [f] -> Signature f -> [(Int,TRule f v)] -> (Int -> Int -> Bool) -> Problem f v
-fromGraph fs sig ns edgeP = 
+fromGraph :: StartTerms f -> Signature f -> [(Int,TRule f v)] -> (Int -> Int -> Bool) -> Problem f v
+fromGraph sts sig ns edgeP = 
   Problem { ruleGraph = IMap.fromList [ (n, (trl, ISet.fromList [ m | m <- idxs, edgeP n m]))
                                       | (n,trl) <- ns ] 
-          , mains = fs
+          , startTerms = sts                                      
           , signature = sig } where
     idxs = map fst ns
 
 funs :: Problem f v -> [(f,Int)]
-funs rs = [ (f,n) 
-          | (T.Sym f, n) <- RS.funs ((R.mapRule T.withArity . theRule) `map` rules rs)]
+funs rs = RS.funs ((R.mapRule T.withArity . theRule) `map` rules rs)
           
 leftHandSides :: Problem f v -> [T.ATerm f v]
 leftHandSides = map (R.lhs . theRule) . rules
@@ -100,8 +102,8 @@ rightHandSides = map (R.rhs . theRule) . rules
 modifySignature :: (Signature f -> Signature f) -> Problem f v -> Problem f v 
 modifySignature f p = p { signature = f (signature p)}
 
-modifyMains :: ([f] -> [f]) -> Problem f v -> Problem f v 
-modifyMains f p = p { mains = f (mains p)}
+-- modifyMains :: ([f] -> [f]) -> Problem f v -> Problem f v 
+-- modifyMains f p = p { mains = f (mains p)}
 
 ---------------------------------------------------------------------- 
 -- graph ops
@@ -164,7 +166,7 @@ removeUnusedRules p = modifyRuleGraph (IMap.filterWithKey (\ k _ ->  (k `elem` u
   used = initial ++ usableIdx p initial
   initial = [i | (i,(r,_)) <- IMap.toList (ruleGraph p)
                , case T.atermM (R.lhs (theRule r)) of
-                  Just (T.TFun f _) -> f `elem` mains p
+                  Just (T.TFun f _) -> f `elem` defs (startTerms p)
                   _ -> False ]
                   
 removeInstances :: (Ord f, Ord v) => Problem f v -> Problem f v

@@ -1,5 +1,6 @@
 module Hoca.Problem.Type (
   Problem (..)
+  , StartTerms (..)
   , TRule (..)
   , RuleGraph 
   , TypingEnv
@@ -39,9 +40,14 @@ instance Substitutable (TypingEnv v) where
 
 type RuleGraph f v = IntMap (TRule f v,IntSet)
 
+data StartTerms f = 
+    StartTerms { defs :: [f]
+               , constrs :: [f]
+               }
+
 data Problem f v = 
   Problem { ruleGraph :: RuleGraph f v
-          , mains :: [f]
+          , startTerms :: StartTerms f
           , signature :: Signature f
           }
 

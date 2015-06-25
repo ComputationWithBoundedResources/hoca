@@ -2,7 +2,6 @@
 
 module Hoca.Transform.Instantiate (
   instantiate
-  , instantiate'
 ) where
 
 import           Control.Monad (guard)
@@ -18,13 +17,12 @@ import qualified Hoca.Data.TreeGrammar as TG
 import           Hoca.Problem
 import           Hoca.Problem.DFA
 import           Hoca.Strategy
-import           Hoca.Transform.Defunctionalize (Symbol (..), unlabeled)
 import           Hoca.Utils (runVarSupply, fresh)
 
-instantiate' :: (Ord f) => (f -> Bool) -> (TRule f Int -> Int -> [T.ATerm f ()] -> Bool) -> Problem f Int :=> Problem f Int
-instantiate' isData refineP prob = replaceRulesIdx replace prob where
+instantiate :: (Ord f) => (TRule f Int -> Int -> [T.ATerm f ()] -> Bool) -> Problem f Int :=> Problem f Int
+instantiate refineP prob = replaceRulesIdx replace prob where
 
-  tg = dfa isData prob
+  tg = dfa prob
   sig = signature prob
   
   reducts s =
@@ -75,13 +73,7 @@ instantiate' isData refineP prob = replaceRulesIdx replace prob where
           | refineP trl v assigns = assigns
           | otherwise = [T.Var ()]
           where assigns = L.nub (map unliftTerm (reducts (V v idx)))
-  
 
-  
-instantiate :: (TRule Symbol Int -> Int -> [T.ATerm Symbol ()] -> Bool) -> Problem Symbol Int :=> Problem Symbol Int
-instantiate = instantiate' isData where
-   isData (unlabeled -> (Con {})) = True
-   isData _ = False 
 
 
 

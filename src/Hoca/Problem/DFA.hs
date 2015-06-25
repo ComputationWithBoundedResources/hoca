@@ -16,7 +16,7 @@ import qualified Data.Set as S
 import qualified Hoca.Data.TreeGrammar as TG
 import           Hoca.Problem.Type
 import           Hoca.Problem.Ops
-import           Hoca.Utils (runVarSupply, fresh, andM, orM, tracePretty, tracePretty')
+import           Hoca.Utils (andM, orM)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Hoca.Data.MLTypes
 
@@ -145,8 +145,8 @@ complete prog = exec (fixM makeClosure) where
         unless r (modify (S.insert t))
         return r
 
-dfa :: (Ord f, Ord v) => (f -> Bool) -> Problem f v -> DFAGrammar f v Type
-dfa isConstructor prob = complete prob initialTG where
+dfa :: (Ord f, Ord v) => Problem f v -> DFAGrammar f v Type
+dfa prob = complete prob initialTG where
 
   fun f = TG.Terminal (Sym f)
   nt = TG.NonTerminal
@@ -159,9 +159,9 @@ dfa isConstructor prob = complete prob initialTG where
     fs = funs prob
     dataNT = auxNonTerminal (TyCon "*" [])
     startTG = [ startNonTerminal --> fun f (replicate ar (nt dataNT))
-              | (f,ar) <- fs, f `elem` mains prob] 
+              | (f,ar) <- fs, f `elem` defs (startTerms prob)] 
     dataTG = [ dataNT --> fun f (replicate ar (nt dataNT))
-             | (f,ar) <- fs, isConstructor f]
+             | (f,ar) <- fs, f `elem` constrs (startTerms prob)]
     
   -- initialTG = maybe initialUntyped initialTyped (signature prob) 
   

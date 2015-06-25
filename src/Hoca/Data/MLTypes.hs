@@ -152,7 +152,7 @@ idSubst :: Substitution
 idSubst = TyVar 
 
 singletonSubst :: TypeVariable -> Type -> Substitution
-singletonSubst v t = \ v' -> if v' == v then t else TyVar v'
+singletonSubst v t v' = if v' == v then t else TyVar v'
 
 class Substitutable a where
   o :: Substitution -> a -> a

@@ -1,9 +1,6 @@
 module Hoca.Transform.UsableRules (
   usableRulesSyntactic
   , usableRulesDFA
-  , usableRulesDFA'
-  -- , isRecursive
-  -- , calls
   ) where
 
 import           Control.Monad (guard)
@@ -16,7 +13,6 @@ import qualified Hoca.Data.TreeGrammar as TG
 import           Hoca.Problem
 import           Hoca.Problem.DFA
 import           Hoca.Strategy
-import           Hoca.Transform.Defunctionalize (Symbol (..), unlabeled)
 import           Hoca.Utils (runVarSupply, fresh)
 
 -- assumes that variables are disjoint
@@ -38,23 +34,6 @@ cap rs t = runVarSupply (capM t)
       s <- T.Fun f <$> mapM tcapM ts
       if any (isUnifiableWith s) lhss then freshVar else return s
 
--- calls :: (Eq f, Ord v1, Ord v2) => T.Term f v1 -> [R.Rule f v2] -> [R.Rule f v2]
--- calls t trs = concatMap (\ ti -> filter (\ rl -> ti `isUnifiableWith` R.lhs rl) trs) caps
---   where caps = [ cap trs ti | ti@T.Fun{} <- T.subterms t ]    
-
--- usableFor :: (Eq f, Ord v1, Ord v2) => [T.Term f v1] -> [R.Rule f v2] -> [R.Rule f v2]
--- usableFor ts trs = walk (caps trs ts) [] trs
---   where
---     walk []     ur _  = ur
---     walk (s:ss) ur rs = walk (caps trs (RS.rhss ur') ++ ss) (ur' ++ ur) rs' where
---         (ur',rs') = partition (\ rl -> s `isUnifiableWith` R.lhs rl) rs
---     caps rs ss = [ cap rs s | si <- ss, s@T.Fun{} <- T.subterms si ]    
-
-    
--- isRecursive :: (Ord v1, Ord v2, Eq f) => [R.Rule f v1] -> R.Rule f v2 -> Bool
--- isRecursive rs rl =
---   any (R.isVariantOf rl) (usableFor [R.rhs rl] rs)
-
 usableRulesGeneric :: (Ord f, Ord v) => (Int -> TRule f v -> [Int] -> [Int]) -> Problem f v :=> Problem f v
 usableRulesGeneric urs = replaceRulesIdx replace where
     replace idx trl succs = guard changed >> Just [(trl,newSuccs)] 
@@ -70,14 +49,10 @@ usableRulesSyntactic p = usableRulesGeneric urs p where
     caps t = [cap rs ti | ti@T.Fun{} <- T.subterms t]
     rs = theRule `map` rules p
 
-usableRulesDFA' :: (Ord f) => (f -> Bool) -> Problem f Int :=> Problem f Int
-usableRulesDFA' isData p = usableRulesGeneric urs p where
-    tg = dfa isData p
+usableRulesDFA :: (Ord f, Ord v) => Problem f v :=> Problem f v
+usableRulesDFA p = usableRulesGeneric urs p where
+    tg = dfa p
     reachableRules = concatMap TG.nonTerminals . TG.produces tg
     urs idx _ succs = [j | (R j) <- reachableRules (R idx), j `elem` succs ]
   
 
-usableRulesDFA :: Problem Symbol Int :=> Problem Symbol Int
-usableRulesDFA = usableRulesDFA' isData where
-   isData (unlabeled -> (Con {})) = True
-   isData _ = False 
