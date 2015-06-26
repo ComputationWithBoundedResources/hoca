@@ -7,7 +7,6 @@ import qualified Data.Rewriting.Context as C
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Debug.Trace (trace)
 import Control.Monad.State (MonadState,State,StateT,evalState,evalStateT,get,modify)
-import Data.Monoid (Monoid(..))
 import Control.Monad ((>=>))
 import qualified Data.Rewriting.Rule as R
 

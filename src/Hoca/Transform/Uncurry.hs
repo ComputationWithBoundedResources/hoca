@@ -15,7 +15,7 @@ import Control.Monad.State (evalStateT, put, get)
 import Control.Monad.Writer (tell, runWriterT)
 import Control.Applicative (empty)
 import Hoca.Strategy 
-import Hoca.Transform.Defunctionalize (Symbol (..))
+import Hoca.Data.Symbol
 import Data.Maybe (fromJust)
 
 applicativeArity :: Ord f => Problem f v -> f -> Int

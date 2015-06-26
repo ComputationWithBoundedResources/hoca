@@ -28,7 +28,8 @@ import qualified Hoca.PCF.Core.DMInfer as DMInfer
 import           Hoca.PCF.Sugar.Types (Context)
 import           Hoca.Problem
 import           Hoca.Strategy
-import           Hoca.Transform.Defunctionalize (defunctionalize, Symbol(..))
+import           Hoca.Transform.Defunctionalize (defunctionalize)
+import           Hoca.Data.Symbol (Symbol(..))
 import           Hoca.Transform.Inlining
 import           Hoca.Transform.Instantiate (instantiate)
 import           Hoca.Transform.Uncurry

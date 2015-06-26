@@ -57,7 +57,8 @@ library
                      Hoca.Transform.UsableRules
                      Hoca.Transform.Inlining                     
                      Hoca.Transform.Uncurry
-                     Hoca.Transform.Instantiate                     
+                     Hoca.Transform.Instantiate
+                     Hoca.Data.Symbol                              
                      Hoca.Data.MLTypes                     
                      Hoca.Data.TreeGrammar
     other-modules:

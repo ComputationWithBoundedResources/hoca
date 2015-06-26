@@ -105,6 +105,3 @@ toWST p = P.Problem {
 prettyWST :: (PP.Pretty f, Eq f) => Problem f Int -> PP.Doc
 prettyWST = P.prettyWST PP.pretty ppVar . toWST where
   ppVar i = PP.text "x" PP.<> PP.int i
-
-
-

@@ -3,6 +3,7 @@ module Hoca.Problem.DMInfer (
   , inferWithR
   , inferWithT
   , infer
+  , TypingError (..)
 ) where
 
 import Control.Monad (when, mplus, replicateM, foldM)
@@ -15,19 +16,42 @@ import Data.Rewriting.Applicative.Rule
 import qualified Data.Rewriting.Applicative.Rules as RS
 import qualified Data.Map as Map
 import Data.List (nub)
+import qualified Text.PrettyPrint.ANSI.Leijen as PP
 
 data TypingError f v = 
-  NonUnifiable Type Type
+  NonUnifiable Type Type (ATerm f v)
   | DeclarationMissing f 
   | InvalidNumArguments Int Int f
   | NonApplicativeTerm (ATerm f v)
 
+instance (PP.Pretty f, PP.Pretty v) => PP.Pretty (TypingError f v) where
+    pretty err = 
+        PP.text "Cannot type term, exception was:"
+        PP.<$$> pp err 
+        where
+          pp (NonUnifiable t1 t2 e) = 
+              PP.text "Could not match expected type" 
+              PP.<+> PP.squotes (PP.pretty t2)
+              PP.<+> PP.text "with actual type"
+              PP.<+> PP.squotes (PP.pretty t1)
+              PP.<> PP.text "."
+              PP.<$$> PP.text "In the term" PP.<+> PP.squotes (PP.pretty e)
+          pp (DeclarationMissing f) = 
+              PP.text "Cannot find function declaration of symbol" PP.<+> PP.squotes (PP.pretty f)
+          pp (InvalidNumArguments i j f) = 
+              PP.text "The symbol" PP.<+> PP.squotes (PP.pretty f) 
+              PP.<+> PP.text "expects" PP.<+> PP.int i PP.<+> PP.text "arguments, but"
+              PP.<+> PP.int j PP.<+> PP.text "were given."        
+          pp (NonApplicativeTerm _) = 
+              PP.text "Non-applicative term given."
+
+
 type TInferM f v a = InferM f (TypingError f v) a
 
-unifyM :: Type -> Type -> TInferM f v Substitution
-unifyM tp1 tp2 = 
+unifyM :: Type -> Type -> ATerm f v -> TInferM f v Substitution
+unifyM tp1 tp2 t = 
   case unify [(tp1,tp2)] of 
-   Left (t1,t2) -> throwError (NonUnifiable t1 t2)
+   Left (t1,t2) -> throwError (NonUnifiable t1 t2 t)
    Right mgu -> return mgu
 
 type DeclEnv f = Signature f
@@ -40,7 +64,7 @@ instance Substitutable (DeclEnv f) where
   case lookup v env of 
    Nothing -> return (idSubst,(v,tp):env, denv)
    Just tp' -> do 
-     s <- unifyM tp tp'
+     s <- unifyM tp tp' (Var v)
      return (s, s `o` env, s `o` denv)
 (env,denv) |- (atermM -> Just (TFun f ts), tp) = do
   mtd <- freshInstanceFor f
@@ -49,7 +73,7 @@ instance Substitutable (DeclEnv f) where
     Just (_ ::: fins :~> fout) -> do 
        when (length fins /= length ts) $ 
          throwError (InvalidNumArguments (length fins) (length ts) f)
-       mgu <- unifyM fout tp
+       mgu <- unifyM fout tp (Fun (Sym f) ts)
        (mgu `o` env, mgu `o` denv) ||- (zip ts (map (mgu `o`) fins), mgu)
 (env,denv) |- (atermM -> Just (t1 :@ t2), tp) = do
   v <- TyVar <$> freshVar

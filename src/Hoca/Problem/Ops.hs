@@ -10,6 +10,7 @@ module Hoca.Problem.Ops (
   , funs
   , leftHandSides
   , rightHandSides
+  , renameRules
   -- ** Call Graph Operations
   , rule
   , toAssocList
@@ -34,14 +35,18 @@ module Hoca.Problem.Ops (
   , renameTRule
   , (|-)
   , tvsFromTRule
-  -- -- Parsing
-  -- , fromFile
+  -- * Parsing
+ , fromFile
 ) where
+
 
 import           Control.Arrow (first, second)
 import           Control.Applicative (empty, Alternative)
 import           Control.Monad (foldM)
+import Control.Monad.State (evalState,get, put)
 import qualified Data.IntMap as IMap
+import qualified Data.Map as Map
+import  Data.List ((\\))
 import qualified Data.IntSet as ISet
 import           Data.Maybe (listToMaybe)
 import qualified Data.Rewriting.Applicative.Rule as R
@@ -50,7 +55,9 @@ import qualified Data.Rewriting.Applicative.Term as T
 import qualified Data.Rewriting.Applicative.Rules as RS
 import           Hoca.Data.MLTypes (Signature, Type, TypeVariable,tvs)
 import           Hoca.Problem.Type
+import           Hoca.Problem.DMInfer (TypingError (..),infer)
 import           Hoca.Utils (runVarSupply, fresh)
+import qualified Text.PrettyPrint.ANSI.Leijen as PP
 
 renameTRule :: (v -> v') -> TRule f v -> TRule f v'
 renameTRule f tr = 
@@ -109,7 +116,7 @@ modifySignature f p = p { signature = f (signature p)}
 -- graph ops
 ---------------------------------------------------------------------- 
 
-modifyRuleGraph :: (RuleGraph f v -> RuleGraph f v) -> Problem f v -> Problem f v
+modifyRuleGraph :: (RuleGraph f v -> RuleGraph f v') -> Problem f v -> Problem f v'
 modifyRuleGraph f p = p { ruleGraph = f (ruleGraph p) }
 
 restrictIdx :: [Int] -> Problem f v -> Problem f v
@@ -193,6 +200,22 @@ withEdgesIdx edgeP = removeUnusedRules . modifyRuleGraph (IMap.mapWithKey f) whe
   f i (r,ss) = (r, ISet.filter (edgeP i) ss)
 
 
+renameRules :: Ord v => Problem f v -> Problem f Int 
+renameRules p = p { ruleGraph = IMap.map (first renameTRl) (ruleGraph p) }  where
+    renameTRl trl = flip evalState (Map.empty,0) $ do 
+      rl <- renameRl (theRule trl)
+      env <- renameEnv (theEnv trl)
+      return trl { theEnv = env, theRule = rl }
+    renamed v = do 
+      (m,i) <- get
+      case Map.lookup v m of 
+        Nothing -> put (Map.insert v i m, i+1) >> return (i+1)
+        Just j -> return j
+    renameEnv = mapM (\ (v,t) -> (, t) <$> renamed v)
+    renameRl rl = R.Rule <$> renameTerm (R.lhs rl) <*> renameTerm (R.rhs rl)
+    renameTerm (T.Var v) = T.Var <$> renamed v
+    renameTerm (T.Fun f ts) = T.Fun f <$> mapM renameTerm ts
+
 
 ---------------------------------------------------------------------- 
 -- traversal
@@ -223,3 +246,42 @@ replaceRulesIdx m p = toProblem (runVarSupply (foldM f (False,[]) (IMap.toList (
 
 replaceRules :: (Alternative m, Ord f, Ord v) => (TRule f v -> Maybe [(TRule f v, [Int])]) -> Problem f v -> m (Problem f v)
 replaceRules f = replaceRulesIdx (\ _ r _ -> f r)
+
+---------------------------------------------------------------------- 
+-- parsing
+---------------------------------------------------------------------- 
+
+data FromFileError = NoParse P.ProblemParseError
+                   | NoType (TypingError String String)
+
+instance PP.Pretty P.ProblemParseError where
+    pretty err = PP.text "Error parsing file, problem is:"
+                 PP.<$$> pp err 
+        where pp (P.UnknownParseError str) = PP.text str
+              pp (P.UnsupportedStrategy str) = PP.text "Unsupported strategy" 
+                                               PP.<+> PP.squotes (PP.text str)
+              pp (P.UnsupportedDeclaration str) = PP.text "Unsupported declaration" 
+                                                  PP.<+> PP.squotes (PP.text str)
+              pp (P.FileReadError _) = PP.text "Error reading file"
+              pp (P.SomeParseError e) = PP.text (show err)
+              
+instance PP.Pretty FromFileError where
+    pretty (NoParse err) = PP.pretty err
+    pretty (NoType err) = PP.pretty err    
+    
+
+fromFile :: FilePath -> IO (Either FromFileError (Problem String Int))
+fromFile fp = 
+  either (Left . NoParse) (problemFromRules . P.allRules . P.rules) <$> P.fromFile fp isApp
+    where       
+      isApp f = f `elem` ["@",".","app"]    
+      
+      problemFromRules rs = case infer rs of 
+                              Left err -> Left (NoType err)
+                              Right (sig,trls) -> Right (renameRules (fromRules sts sig trls) )
+          where
+            sts = StartTerms { defs = ds, constrs = cs }
+            fs = filter isApp (RS.funs rs)
+            ds = [ f | Right (T.Sym f) <- map (T.root . R.lhs) rs]
+            hs = [ f | Just f <- map (T.headSymbol . R.lhs) rs]
+            cs = fs \\ (ds ++ hs)
