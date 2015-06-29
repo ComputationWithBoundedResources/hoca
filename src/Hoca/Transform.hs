@@ -53,7 +53,7 @@ neededRules p = replaceRulesIdx (\ _ trl succs -> if needed (theRule trl) then N
 
 compress :: (Ord f, Ord v) => Problem f v :=> Problem f v
 compress p = modifySignature (mapSignature modifyDecl) <$> replaceRulesIdx replace p where
-  replace _ trl ss = Just [ (trl { theRule = R.mapRule compressTerm (theRule trl)} ,ss)]
+  replace _ trl ss = Just [ (trl { theRule = R.mapSides compressTerm (theRule trl)} ,ss)]
   compressTerm (aterm -> TFun f ts) =
     case Map.lookup f cm of
      Just as -> fun f [compressTerm ti | (Nothing,ti) <- zip as ts ]

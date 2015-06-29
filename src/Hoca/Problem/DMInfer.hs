@@ -113,7 +113,7 @@ inferWith sig = runInferM sig . mapM (fmap snd . inferRuleM Map.empty)
 
 infer :: (Ord f, Eq v) => [ARule f v] -> Either (TypingError f v) (Signature f,[TRule f v])
 infer rs = runInferM Map.empty $ do 
-  denv <- initialDeclEnv (nub (RS.funs (mapRule withArity `map` rs)))
+  denv <- initialDeclEnv (nub (RS.funs (mapSides withArity `map` rs)))
   foldM (\ (denv',trs) rl -> do 
               (denv'',trl) <- inferRuleM denv' rl
               return (denv'', trl:trs))

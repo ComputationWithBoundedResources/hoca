@@ -5,6 +5,7 @@ module Hoca.Data.Symbol (
    Lbl (..)
    , Name (..)
    , Symbol (..)
+   , symbolFromString
    , unlabeled
    , isCaseSym
    , isFixSym
@@ -62,3 +63,5 @@ isFixSym f = case unlabeled f of {Fix{} -> True; _ -> False }
 isMainSym f = case unlabeled f of {Main{} -> True; _ -> False }
 isConstructor f = case unlabeled f of {Con{} -> True; _ -> False }
 
+symbolFromString :: String -> Symbol
+symbolFromString n = Unknown (Name [LString n])

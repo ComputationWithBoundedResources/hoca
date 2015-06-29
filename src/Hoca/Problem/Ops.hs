@@ -55,13 +55,14 @@ import qualified Data.Rewriting.Applicative.Term as T
 import qualified Data.Rewriting.Applicative.Rules as RS
 import           Hoca.Data.MLTypes (Signature, Type, TypeVariable,tvs)
 import           Hoca.Problem.Type
+import           Hoca.Data.Symbol
 import           Hoca.Problem.DMInfer (TypingError (..),infer)
 import           Hoca.Utils (runVarSupply, fresh)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 
 renameTRule :: (v -> v') -> TRule f v -> TRule f v'
 renameTRule f tr = 
-  TRule { theRule = R.mapRule (T.amap id f) (theRule tr) 
+  TRule { theRule = R.mapSides (T.amap id f) (theRule tr) 
         , theEnv = map (first f) (theEnv tr)
         , theType = theType tr }
 
@@ -98,7 +99,7 @@ fromGraph sts sig ns edgeP =
     idxs = map fst ns
 
 funs :: Problem f v -> [(f,Int)]
-funs rs = RS.funs ((R.mapRule T.withArity . theRule) `map` rules rs)
+funs rs = RS.funs ((R.mapSides T.withArity . theRule) `map` rules rs)
           
 leftHandSides :: Problem f v -> [T.ATerm f v]
 leftHandSides = map (R.lhs . theRule) . rules
@@ -252,7 +253,7 @@ replaceRules f = replaceRulesIdx (\ _ r _ -> f r)
 ---------------------------------------------------------------------- 
 
 data FromFileError = NoParse P.ProblemParseError
-                   | NoType (TypingError String String)
+                   | NoType (TypingError Symbol String)
 
 instance PP.Pretty P.ProblemParseError where
     pretty err = PP.text "Error parsing file, problem is:"
@@ -270,18 +271,20 @@ instance PP.Pretty FromFileError where
     pretty (NoType err) = PP.pretty err    
     
 
-fromFile :: FilePath -> IO (Either FromFileError (Problem String Int))
+fromFile :: FilePath -> IO (Either FromFileError (Problem Symbol Int))
 fromFile fp = 
-  either (Left . NoParse) (problemFromRules . P.allRules . P.rules) <$> P.fromFile fp isApp
+  either (Left . NoParse) problemFromRules <$> P.fromFile fp (`elem` applys)
     where       
-      isApp f = f `elem` ["@",".","app"]    
+      applys = ["@",".","app"]
       
-      problemFromRules rs = case infer rs of 
-                              Left err -> Left (NoType err)
-                              Right (sig,trls) -> Right (renameRules (fromRules sts sig trls) )
+      problemFromRules = mkProblem . RS.mapRules symbolFromString id . P.allRules . P.rules
+      mkProblem rs = 
+         case infer rs of 
+           Left err -> Left (NoType err)
+           Right (sig,trls) -> Right (renameRules (fromRules sts sig trls) )
           where
             sts = StartTerms { defs = ds, constrs = cs }
-            fs = filter isApp (RS.funs rs)
+            fs = RS.funs rs \\ map symbolFromString applys
             ds = [ f | Right (T.Sym f) <- map (T.root . R.lhs) rs]
             hs = [ f | Just f <- map (T.headSymbol . R.lhs) rs]
             cs = fs \\ (ds ++ hs)

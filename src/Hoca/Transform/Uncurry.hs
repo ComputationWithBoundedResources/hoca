@@ -52,7 +52,7 @@ etaSaturate' p =
       (tv1:tv2:ntvs, v:vs) <- get
       put (ntvs,vs)
       let 
-        rl' = mapRule (`app` Var v) (theRule trl)
+        rl' = mapSides (`app` Var v) (theRule trl)
         trl' = case theType trl of 
                  tp1 :-> tp2 -> TRule { theRule = rl', theEnv = (v,tp1) : theEnv trl              , theType = tp2 }
                  TyVar tv    -> TRule { theRule = rl', theEnv = (v,TyVar tv1) : (s `o` theEnv trl), theType = TyVar tv2 } where

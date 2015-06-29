@@ -31,7 +31,7 @@ import           Hoca.PCF.Sugar (programFromString, expressionFromString, Contex
 import qualified Hoca.Problem as P
 import           Hoca.Problem hiding (Problem,TRule)
 import           Hoca.Transform
-import           Hoca.Transform.Defunctionalize
+import           Hoca.Data.Symbol
 import           Hoca.Utils (putDocLn, writeDocFile, render)
 import qualified Prelude
 import           Prelude hiding ((&&),(||), not)
@@ -236,13 +236,19 @@ defunctionalizedFromFile fn m a = do
         Nothing -> error "Defunctionalization failed!"
         Just p -> return p
       
-load' :: FilePath -> IO ()
-load' fn = do 
-  p <- defunctionalizedFromFile fn Nothing []
+loadWith :: (FilePath -> IO Problem) -> FilePath -> IO ()
+loadWith ld fn = do 
+  p <- ld fn
   writeIORef stateRef (STATE (Loaded p) [] (Just p))
-
+  printState
+  
 load :: FilePath -> IO ()
-load fn = load' fn >> printState
+load = loadWith (\ fn -> defunctionalizedFromFile fn Nothing [])
+
+loadWST :: FilePath -> IO ()
+loadWST = loadWith (\ fn -> P.fromFile fn >>= either err return)
+    where err e = putDocLn e >> error "Loading failed."
+
 
 withProblemM :: (Problem -> IO a) -> IO a
 withProblemM f = do
