@@ -277,7 +277,7 @@ fromFile fp =
     where       
       applys = ["@",".","app"]
       
-      problemFromRules = mkProblem . RS.mapRules symbolFromString id . P.allRules . P.rules
+      problemFromRules = mkProblem . RS.amap symbolFromString id . P.allRules . P.rules
       mkProblem rs = 
          case infer rs of 
            Left err -> Left (NoType err)
