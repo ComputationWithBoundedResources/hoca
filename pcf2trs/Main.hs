@@ -152,6 +152,11 @@ cfa = instantiate abstractP >=> logMsg "CFA" where
     && (var v == r || v `elem` headVars r) 
     where
       r = rhs (theRule trl)
+      
+cfaUR :: Problem :=> Problem
+cfaUR = instantiate abstractP >=> logMsg "CFA" where
+  abstractP _ _ e = length e <= 1
+
 
 simplifyATRS :: P.Problem Symbol Int :=> P.Problem Symbol Int
 simplifyATRS =
@@ -168,7 +173,7 @@ urDFA = usableRulesDFA >=> logMsg "UR-DFA"
 simplifyTRS :: P.Problem Symbol Int :=> P.Problem Symbol Int
 simplifyTRS = 
   try (exhaustive (inline (withRule leafRule)) >=> try ur) 
-  >=> try (exhaustive ((inline (sizeDecreasing || ruleDeleting) <=> urDFA) >=> try ur))
+  >=> try (exhaustive ((inline (sizeDecreasing || ruleDeleting) <=> cfaUR) >=> try ur))
 
 simplify :: P.Problem Symbol Int :=> P.Problem Symbol Int
 simplify = try simplifyATRS >=> toTRS >=> try simplifyTRS >=> try compress

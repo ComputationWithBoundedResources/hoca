@@ -264,7 +264,7 @@ instance PP.Pretty P.ProblemParseError where
               pp (P.UnsupportedDeclaration str) = PP.text "Unsupported declaration" 
                                                   PP.<+> PP.squotes (PP.text str)
               pp (P.FileReadError _) = PP.text "Error reading file"
-              pp (P.SomeParseError e) = PP.text (show err)
+              pp (P.SomeParseError e) = PP.text (show e)
               
 instance PP.Pretty FromFileError where
     pretty (NoParse err) = PP.pretty err
