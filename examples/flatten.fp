@@ -1,3 +1,6 @@
+type 'a list = Nil | Cons of 'a * 'a list;;
+type 'a tree = Leaf of 'a | Node of 'a tree * 'a tree;;
+
 let cons x xs = Cons(x,xs) ;;		    
 
 let comp f g x = f (g x) ;;
