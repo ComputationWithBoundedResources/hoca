@@ -4,3 +4,7 @@ ghc:
   - '7.10'
 notifications:
 email: true
+
+before_install:
+  - git clone https://github.com/ComputationWithBoundedResources/term-rewriting-applicative.git
+  - cd term-rewriting-applicative && cabal install
