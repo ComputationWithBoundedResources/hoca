@@ -2,12 +2,14 @@ module Hoca.PCF.Core.DMInfer where
 
 import           Control.Arrow (second)
 import           Control.Monad.Except
+import           Control.Monad.RWS
 
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import           Hoca.PCF.Sugar.Types (Context)
 import           Hoca.PCF.Sugar.Pretty ()
 import           Hoca.PCF.Core.Types
 import           Hoca.Data.MLTypes
+import qualified Data.Map as Map
 
 
 type TContext = [TypeSchema]
@@ -54,24 +56,56 @@ instance PP.Pretty (TypingError Context) where
         
 
 ---------------------------------------------------------------------- 
--- Inference Utils
+-- Inference Monad
 ---------------------------------------------------------------------- 
 
-type DMInferM l = InferM Symbol (TypingError l)
+newtype InferM l a = InferM { runIM :: RWST (Signature Symbol) () TypeVariable (Either (TypingError l)) a } deriving
+    ( Applicative, Functor, Monad
+    , MonadReader (Signature Symbol)
+    , MonadState TypeVariable -- next fresh variable
+    , MonadError (TypingError l) )
 
-freshForSymbol :: Exp l -> Symbol -> DMInferM l TypeDecl
+runInferM :: Signature Symbol -> InferM l a -> Either (TypingError l) a
+runInferM sig e = fst <$> evalRWST (runIM e) sig 0
+
+freshVar :: InferM l TypeVariable
+freshVar = do { n <- get; modify (+1); return n }
+
+setNonFresh :: [TypeVariable] -> InferM l ()
+setNonFresh vs = modify (\ v -> maximum (v:[vi + 1 | vi <- vs]))
+
+instantiateSchemas :: [TypeSchema] -> InferM l [Type]
+instantiateSchemas tts = do 
+    n <- get
+    modify (+ f) 
+    return (map (bindTypeInst (\ b -> TyVar (b + n))) tts)
+    where 
+      f = 1 + maximum (0:concatMap boundTV tts)
+      bindTypeInst s = substitute s' where
+         s' (BVar n) = s n
+         s' (FVar n) = TyVar n
+      
+freshInstanceFor :: Symbol -> InferM l (Maybe (TypeDeclaration Symbol))
+freshInstanceFor f = 
+  (Map.lookup f <$> ask) >>= maybe err inst where
+    err = return Nothing 
+    inst (tsins :~> tsout) = do 
+      (tout : tins) <- instantiateSchemas (substitute bvar `map`  (tsout:tsins))
+      return (Just (f ::: tins :~> tout))
+
+freshForSymbol :: Exp l -> Symbol -> InferM l TypeDecl
 freshForSymbol e f = 
   freshInstanceFor f >>= maybe (throwError err) (return . mk) where
     err = ConstructorNotInScope f e
     mk (_ ::: td) = td
 
-unifyML :: Exp l -> [(Type,Type)] -> DMInferM l Substitution
+unifyML :: Exp l -> [(Type,Type)] -> InferM l Substitution
 unifyML e ts = 
     case unify ts of 
       Left (t1',t2') -> throwError (NonUnifiable t1' t2' e)
       Right s -> return s
                      
-unifyM :: Exp l -> Type -> Type -> DMInferM l Substitution
+unifyM :: Exp l -> Type -> Type -> InferM l Substitution
 unifyM e t1 t2 = unifyML e [(t1,t2)]
       
 
@@ -79,7 +113,7 @@ unifyM e t1 t2 = unifyML e [(t1,t2)]
 -- Type inference
 ---------------------------------------------------------------------- 
 
-(|-) :: TContext -> Exp l -> DMInferM l (Substitution,TypedExp l)
+(|-) :: TContext -> Exp l -> InferM l (Substitution,TypedExp l)
 ctx |- Var l n 
     | n >= length ctx = throwError ExpressionNotClosed
     | otherwise = do 
@@ -125,7 +159,7 @@ ctx |- Fix l i es = do
   (s,es') <- ctx ||- zip es tis
   return (s,Fix (l, s `o` (fs!!i)) i es')
       
-(||-) :: TContext -> [(Exp l,Type)] -> DMInferM l (Substitution,[TypedExp l])      
+(||-) :: TContext -> [(Exp l,Type)] -> InferM l (Substitution,[TypedExp l])      
 (||-) = go idSubst [] where
     go s es _ [] = return (s,reverse es)
     go s es ctx ((e1,t1):eqs) = do 

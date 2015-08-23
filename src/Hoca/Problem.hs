@@ -1,11 +1,6 @@
-module Hoca.Problem (
-   module Hoca.Problem.Type
-   , module Hoca.Problem.Ops
-   , module Hoca.Problem.DFA
-   , module Hoca.Problem.DMInfer   
-   ) where
+module Hoca.Problem ( module Problem ) where
 
-import Hoca.Problem.Type
-import Hoca.Problem.DFA (dfa, DFAGrammar (..), DFAProduction)
-import Hoca.Problem.Ops
-import Hoca.Problem.DMInfer
+import Hoca.Problem.Type as Problem
+import Hoca.Problem.DFA as Problem (dfa, DFAGrammar, DFAProduction)
+import Hoca.Problem.Ops as Problem
+import Hoca.Problem.DMInfer as Problem

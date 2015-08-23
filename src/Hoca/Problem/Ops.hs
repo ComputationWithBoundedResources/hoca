@@ -46,14 +46,14 @@ import           Control.Monad (foldM)
 import Control.Monad.State (evalState,get, put)
 import qualified Data.IntMap as IMap
 import qualified Data.Map as Map
-import  Data.List ((\\))
+import  Data.List ((\\),nub)
 import qualified Data.IntSet as ISet
 import           Data.Maybe (listToMaybe)
 import qualified Data.Rewriting.Applicative.Rule as R
 import qualified Data.Rewriting.Applicative.Problem as P
 import qualified Data.Rewriting.Applicative.Term as T
 import qualified Data.Rewriting.Applicative.Rules as RS
-import           Hoca.Data.MLTypes (Signature, Type, TypeVariable,tvs)
+import           Hoca.Data.MLTypes (Signature, Type, MLType(..),TypeVariable,tvs,decl,TypeDecl(..), signatureToList, TypeDeclaration(..))
 import           Hoca.Problem.Type
 import           Hoca.Data.Symbol
 import           Hoca.Problem.DMInfer (TypingError (..),infer)
@@ -210,7 +210,7 @@ renameRules p = p { ruleGraph = IMap.map (first renameTRl) (ruleGraph p) }  wher
     renamed v = do 
       (m,i) <- get
       case Map.lookup v m of 
-        Nothing -> put (Map.insert v i m, i+1) >> return (i+1)
+        Nothing -> put (Map.insert v (i+1) m, i+1) >> return (i+1)
         Just j -> return j
     renameEnv = mapM (\ (v,t) -> (, t) <$> renamed v)
     renameRl rl = R.Rule <$> renameTerm (R.lhs rl) <*> renameTerm (R.rhs rl)
@@ -280,11 +280,23 @@ fromFile fp =
       problemFromRules = mkProblem . RS.amap symbolFromString id . P.allRules . P.rules
       mkProblem rs = 
          case infer rs of 
-           Left err -> Left (NoType err)
-           Right (sig,trls) -> Right (renameRules (fromRules sts sig trls) )
+         Left err -> Left (NoType err)
+         Right (trls,sig) -> Right (renameRules (fromRules sts sig trls) )
           where
-            sts = StartTerms { defs = ds, constrs = cs }
-            fs = RS.funs rs \\ map symbolFromString applys
-            ds = [ f | Right (T.Sym f) <- map (T.root . R.lhs) rs]
+            sts = StartTerms { defs = [d | d <- ds, firstOrder d], constrs = cs }
+            fs = nub (RS.funs rs \\ map symbolFromString applys)
+            ds = nub [ f | Right (T.Sym f) <- map (T.root . R.lhs) rs]
             hs = [ f | Just f <- map (T.headSymbol . R.lhs) rs]
             cs = fs \\ (ds ++ hs)
+            firstOrder (flip decl sig -> Just (ins :~> out)) = allBaseTypes (out:ins) [] where
+            firstOrder _ = False
+
+            allBaseTypes [] _ = True
+            allBaseTypes ((_ :-> _) : _) _ = False
+            allBaseTypes ((TyVar _):ts) seen = allBaseTypes ts seen
+            allBaseTypes ((TyCon nm as):ts) seen
+                | nm `elem` seen = allBaseTypes (as++ts) (nm:seen)
+                | otherwise = allBaseTypes (constrArgs nm ++ as ++ ts) seen
+
+            constrDecls = [ td | (c ::: td) <- signatureToList sig, c `elem` cs ]
+            constrArgs nm = concat [ ins | ins :~> TyCon nm' _ <- constrDecls, nm == nm' ]

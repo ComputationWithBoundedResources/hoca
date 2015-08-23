@@ -48,7 +48,6 @@ newtype TM a = TM { execute :: RWS [(Var, Type)] [(TypeDeclaration Symbol, [P.TR
                                    , Int    -- fresh integer, for dealing with Bot
                                    ))
 
--- MA: TODO
 eval :: TM a -> (a, [(TypeDeclaration Symbol, [P.TRule Symbol Var])])
 eval m = evalRWS (execute m) [] ([],[], 0)
 

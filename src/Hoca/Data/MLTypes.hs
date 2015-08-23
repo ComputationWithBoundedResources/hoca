@@ -3,6 +3,7 @@ module Hoca.Data.MLTypes (
   TypeVariable 
   , TypeName
   , MLType (..)
+  , SchemaVar (..)
   , isTArrow
   , isTVar
   , isTCon
@@ -12,6 +13,9 @@ module Hoca.Data.MLTypes (
   -- * Type Schemas
   , TypeSchema
   , tsMatrix
+  , curryType
+  , uncurryType
+  , uncurryUpto
   , bvar
   , fvar
   -- * Substitution
@@ -25,35 +29,30 @@ module Hoca.Data.MLTypes (
   , signatureToList
   , signatureFromList
   , mapSignature
+  , decl
   -- * Classes
   , TypeTerm (..)
+  , substitute
   , Substitutable (..)
-  -- * Type Inference Utilities
-  , InferM
-  , runInferM
-  , instantiateSchemas
-  , freshVar
-  , setNonFresh
-  , freshInstanceFor
+  -- * Misc
+  , variableNames
 ) where
 
 import Data.Foldable (toList)
 import           Control.Monad.Except
-import           Control.Monad.RWS
 import           Data.List (nub)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Hoca.Utils (ppSeq)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
-
-
+import Control.Arrow (first)
+ 
 ---------------------------------------------------------------------- 
 -- General
 ---------------------------------------------------------------------- 
 
 type TypeVariable = Int
 type TypeName = String
-
 
 data MLType v = 
   TyVar v
@@ -100,7 +99,6 @@ instance TypeTerm Type where
 -- Type schemas, i.e., types with bound variables
 ---------------------------------------------------------------------- 
 
-
 data SchemaVar = BVar TypeVariable | FVar TypeVariable
   deriving (Eq, Ord)
 
@@ -121,6 +119,19 @@ tsMatrix = fmap f where
   f (BVar i) = i
   f (FVar i) = i
 
+curryType :: [Type] -> Type -> Type
+curryType = flip (foldr (:->))
+
+uncurryType :: Type -> ([Type], Type)
+uncurryType (p :-> n) = first ((:) p) (uncurryType n)
+uncurryType t = ([],t)
+
+uncurryUpto :: Type -> Int -> Maybe ([Type], Type)
+uncurryUpto tpe i | i <= 0 = Just ([],tpe)
+uncurryUpto (n :-> t) i = do 
+  (as,t') <- t `uncurryUpto` (i - 1)
+  return (n:as,t')
+uncurryUpto _ _ = Nothing  
 
 ---------------------------------------------------------------------- 
 -- Type Declarations and signatures
@@ -142,6 +153,10 @@ signatureFromList = foldl (\ sig (f ::: td) -> Map.insert f td sig) Map.empty
 
 mapSignature :: (TypeDeclaration f -> TypeDecl) -> Signature f -> Signature f
 mapSignature fun = Map.mapWithKey (\ f td -> fun (f ::: td))
+
+decl :: Ord f => f -> Signature f -> Maybe TypeDecl
+decl = Map.lookup
+
 ---------------------------------------------------------------------- 
 -- Type substitutions
 ---------------------------------------------------------------------- 
@@ -158,9 +173,7 @@ class Substitutable a where
   o :: Substitution -> a -> a
 
 instance Substitutable Type where  
-  s `o` (TyVar m) = s m
-  s `o` (TyCon n ts) = TyCon n (map (o s) ts)
-  s `o` (t1 :-> t2) = (s `o` t1) :-> (s `o` t2)
+  o = substitute
 
 instance Substitutable TypeSchema where  
   s `o` (TyVar (FVar m)) = fromType (s m) where
@@ -197,45 +210,6 @@ unify = go idSubst where
     step t1 t2 = throwError (t1,t2)
 
 ----------------------------------------------------------------------
--- Type inference utilities
-----------------------------------------------------------------------
-
-newtype InferM f e a = InferM { runIM :: RWST (Signature f) () TypeVariable (Either e) a } deriving
-    ( Applicative, Functor, Monad
-    , MonadReader (Signature f)
-    , MonadState TypeVariable -- next fresh variable
-    , MonadError e )
-
-runInferM :: Signature f -> InferM f e a -> Either e a
-runInferM sig e = fst <$> evalRWST (runIM e) sig 0
-
-freshVar :: InferM f e TypeVariable
-freshVar = do { n <- get; modify (+1); return n }
-
-setNonFresh :: [TypeVariable] -> InferM f e ()
-setNonFresh vs = modify (\ v -> maximum (v:[vi + 1 | vi <- vs]))
-
-instantiateSchemas :: [TypeSchema] -> InferM f e [Type]
-instantiateSchemas tts = do 
-    n <- get
-    modify (+ f) 
-    return (map (bindTypeInst (\ b -> TyVar (b + n))) tts)
-    where 
-      f = 1 + maximum (0:concatMap boundTV tts)
-      bindTypeInst s = substitute s' where
-         s' (BVar n) = s n
-         s' (FVar n) = TyVar n
-      
-freshInstanceFor :: Ord f => f -> InferM f e (Maybe (TypeDeclaration f))
-freshInstanceFor f = 
-  (Map.lookup f <$> ask) >>= maybe err inst where
-    err = return Nothing 
-    inst (tsins :~> tsout) = do 
-      (tout : tins) <- instantiateSchemas (substitute bvar `map`  (tsout:tsins))
-      return (Just (f ::: tins :~> tout))
-
-
-----------------------------------------------------------------------
 -- prettyprinting
 ----------------------------------------------------------------------
 
@@ -250,7 +224,6 @@ prettyTyCon n ts = PP.parens (ppSeq PP.comma [PP.pretty t | t <- ts]) PP.<+> PP.
 prettyTyVar :: TypeVariable -> PP.Doc
 prettyTyVar v = PP.text ("'" ++ variableNames !! v)
 
-
 instance PP.Pretty TypeSchema where
   pretty t = ppBVars btvs PP.<> PP.text "." PP.<+> PP.pretty (tsMatrix t) where
     btvs = nub [ m | BVar m <- toList t]
@@ -260,7 +233,8 @@ instance PP.Pretty TypeSchema where
 instance PP.Pretty Type where 
   pretty t = ppType t False where
     ppType (TyVar i) _ = prettyTyVar i
-    ppType (TyCon n ts) _ = prettyTyCon n ts
+    ppType (TyCon
+            n ts) _ = prettyTyCon n ts
     ppType (t1 :-> t2) a = maybeParens (ppType t1 True PP.<+> PP.text "->" PP.<+> ppType t2 False) where
       maybeParens
         | a = PP.parens

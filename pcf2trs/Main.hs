@@ -32,13 +32,14 @@ import qualified Hoca.Problem as P
 import           Hoca.Problem hiding (Problem,TRule)
 import           Hoca.Transform
 import           Hoca.Data.Symbol
-import           Hoca.Utils (putDocLn, writeDocFile, render)
+import           Hoca.Utils (putDocLn, writeDocFile, renderPretty)
 import qualified Prelude
 import           Prelude hiding ((&&),(||), not)
 import           System.Environment (getArgs)
 import           System.Exit (exitSuccess,exitFailure)
 import           System.IO (hPutStrLn, stderr)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
+import qualified Hoca.SizeTypes.Infer as SizeType
 
 type Problem = P.Problem Symbol Int
 type TRule = P.TRule Symbol Int
@@ -82,39 +83,28 @@ fixRule = headSymbolSatisfies p where
    p _ = False
 anyRule _ _ = True  
 
-definingRule :: String -> Problem -> TRule -> Bool
-definingRule name _ (theRule -> rl) = 
+definingRule :: String -> Problem -> ARule Symbol v -> Bool
+definingRule name _ rl = 
   case unlabeled <$> headSymbol (lhs rl) of
-   Just f -> render f == name
+   Just f -> renderPretty f == name
    _ -> False
 
--- recursiveRule = isRecursive
 
-
--- oneOfIdx :: [Int] -> Problem -> Rule -> Bool
--- oneOfIdx is p r = maybe False (`elem` is) (indexOf p r)
+oneOfIdx :: (Eq f, Eq v) => [Int] -> P.Problem f v -> ARule f v -> Bool
+oneOfIdx is p r = maybe False (`elem` is) (indexOf p r)
 
 leafRule :: (Eq f, Eq v) => P.Problem f v -> ARule f v -> Bool
 leafRule p r = maybe True (null . cgSuccs p) (indexOf p r)
 
-
 tsize :: ATerm f v -> Int
 tsize = fold (const 1) (const ((+1) . sum))
 
-type NR f v = NarrowedRule (ASym f) v v 
+type NR f v = NarrowedRule (ASym f) v v
+
 sizeDecreasing :: P.Problem f v -> NR f v -> Bool
 sizeDecreasing _ ns = all (\ n -> sz (narrowing n) < sz (narrowedRule ns)) (narrowings ns) where
   sz rl = tsize (rhs rl)
 
--- sizeNonIncreasing :: Problem -> NarrowedRule -> Bool
--- sizeNonIncreasing _ ns = all (\ n -> sz (N.narrowing n) <= sz (N.narrowedRule ns)) (N.narrowings ns) where
---   sz rl = size (R.lhs rl) + size (R.rhs rl)
-
--- branching :: Problem -> NarrowedRule -> Bool
--- branching _ ns = length (N.narrowings ns) > 1
-
--- selfInlining :: Problem -> NarrowedRule -> Bool
--- selfInlining _ ns = N.narrowedRule ns `elem` map N.narrowedWith (N.narrowings ns)
 
 ruleDeleting :: (Eq f, Eq v) => P.Problem f v-> NR f v -> Bool
 ruleDeleting p ns =
@@ -123,23 +113,6 @@ ruleDeleting p ns =
    _ -> False
    where
      nwIds = mapMaybe (indexOf p . narrowedWith) (narrowings ns)
-
--- withRule,onRule :: (Problem -> Rule -> Bool) -> Problem -> NarrowedRule -> Bool
--- withRule p rs = all (p rs) . map N.narrowedWith . N.narrowings
--- onRule p rs = p rs . N.narrowedRule
-
--- narrowWith,narrowOn,rewriteWith,rewriteOn :: (Problem -> Rule -> Bool) -> Problem :~> Problem
--- narrowWith = narrow . withRule
--- narrowOn = narrow . onRule
--- rewriteWith = rewrite . withRule
--- rewriteOn = rewrite . onRule
-
--- ur :: Problem :~> Problem
--- ur = usableRules >=> logMsg "USABLE"
-
--- cfaur :: Problem :~> Problem
--- cfaur =
---   cfa >=> logMsg "CFA" >=> try ur
 
 ur :: Ord f => P.Problem f Int :=> P.Problem f Int
 ur = usableRulesSyntactic >=> logMsg "UR"
@@ -431,4 +404,18 @@ s = save "/home/zini/op.trs" >> saveCG Nothing "/home/zini/op.svg"
 a p = apply p >> s
 sel p = save "/home/zini/op.trs" >> saveCG (Just p) "/home/zini/op.svg" >> void (select p)
 
-simp = simplifyATRS >=> cfa
+simp = simplifyATRS >=> try urDFA
+
+-- inferSize n = withProblemM (SizeType.inferSizeType (SizeType.rankedPoly n))
+
+-- tst = do
+--   load "/home/zini/sources/hoca/examples/rev-dl.fp"
+--   apply simp
+--   inferSize 1
+ 
+-- checkSize = do
+--   apply (simplifyATRS >=> try urDFA)
+--   res <- withProblemM SizeType.checkProblem
+--   case res of
+--     Left err -> error (renderPretty err)
+--     Right (_,cs) -> return cs

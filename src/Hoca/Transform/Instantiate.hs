@@ -1,5 +1,3 @@
--- | 
-
 module Hoca.Transform.Instantiate (
   instantiate
 ) where
@@ -21,10 +19,10 @@ import           Hoca.Utils (runVarSupply, fresh)
 
 instantiate :: (Ord f) => (TRule f Int -> Int -> [T.ATerm f ()] -> Bool) -> Problem f Int :=> Problem f Int
 instantiate refineP prob = replaceRulesIdx replace prob where
-
   tg = dfa prob
+
   sig = signature prob
-  
+
   reducts s =
     case TG.produces' tg s of 
      [] -> [TG.NonTerminal s]
@@ -59,11 +57,13 @@ instantiate refineP prob = replaceRulesIdx replace prob where
        [trl'] -> any (`notElem` newSuccs) succs || lhs `properInstOf` R.lhs (theRule trl')
        _ -> True
 
+    -- TODO: add only typable rules, check!
     newRules = [ trl' | s <- substs
                       , let lhs' = s `apply` lhs
                       , let rhs' = s `apply` rhs
                       , argumentNormalised lhs'
-                      , let Right trl' = inferWithR sig (R.Rule lhs' rhs') ]
+                      , Right trl' <- [inferWith sig [] (R.Rule lhs' rhs')]]
+                      -- , let Right (trl',_) = inferWithR sig (R.Rule lhs' rhs')]
 
 
     newSuccs = [j | (R j) <- reachableRules (R idx) ]

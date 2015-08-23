@@ -9,6 +9,7 @@ import Debug.Trace (trace)
 import Control.Monad.State (MonadState,State,StateT,evalState,evalStateT,get,modify)
 import Control.Monad ((>=>))
 import qualified Data.Rewriting.Rule as R
+import Control.Monad.Except (throwError, MonadError)
 
 
 orM :: Monad m => [m Bool] -> m Bool
@@ -21,6 +22,13 @@ andM (mb:ms) = do {b <- mb; if b then andM ms else return False}
 
 composeM :: Monad m => [a -> m a] -> a -> m a 
 composeM = foldr (>=>) return
+
+assert :: MonadError e m => e -> Bool -> m ()
+assert e False = throwError e
+assert _ True = return ()
+
+assertJust :: MonadError e m => e -> Maybe a -> m a
+assertJust err m = maybe (throwError err) return m
 
 prod :: [[a]] -> [[a]]
 prod [] = [[]]
@@ -37,6 +45,8 @@ contexts = walk id
     parts _ [] = []
     parts ls (t:rs) = (ls,t,rs) : parts (ls ++ [t]) rs
 
+
+-- TODO: use transformers-supply
 fresh :: MonadState Int m => m Int
 fresh = modify succ >> get
 
@@ -48,8 +58,7 @@ runVarSupply = flip evalState 0
 
 
 tracePretty :: PP.Pretty e => e -> a -> a
-tracePretty e = trace (render (PP.pretty e) "")
-  where render = PP.displayS . PP.renderSmart 1.0 80
+tracePretty e = trace (renderPretty e)
 
 tracePretty' :: PP.Pretty a => a -> a
 tracePretty' e = tracePretty e e 
@@ -93,13 +102,13 @@ tsToList :: TS f v -> [T.Term f v]
 tsToList (TS l) = l
 
 putDocLn :: PP.Pretty e => e -> IO ()
-putDocLn = putStrLn . render
+putDocLn = putStrLn . renderPretty
 
-render :: PP.Pretty e => e -> String
-render d = PP.displayS (PP.renderSmart 1.0 80 (PP.pretty d)) ""
+renderPretty :: PP.Pretty e => e -> String
+renderPretty d = PP.displayS (PP.renderSmart 1.0 80 (PP.pretty d)) ""
 
 writeDocFile :: PP.Pretty e => FilePath -> e -> IO ()
-writeDocFile fn = writeFile fn . render
+writeDocFile fn = writeFile fn . renderPretty
 
 ($$) :: PP.Doc -> PP.Doc -> PP.Doc
 pa $$ pb = PP.align (pa PP.<$> PP.indent 1 pb)

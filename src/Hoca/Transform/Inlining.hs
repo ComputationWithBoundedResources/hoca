@@ -68,7 +68,7 @@ narrow rl rs = catMaybes [ narrowAt ci ri | (ci,ri) <- contexts (rhs rl), isFun 
                          , narrowing = Rule lhs' rhs'
                          }
 
-
+-- TODO: check that types match
 inline :: (Ord f) => (Problem f Int -> NarrowedRule (ASym f) Int Int -> Bool) -> Problem f Int :=> Problem f Int
 inline sensible p = removeInstances <$> replaceRulesIdx narrowRule p where
   renameRule = R.rename ren where
@@ -84,9 +84,10 @@ inline sensible p = removeInstances <$> replaceRulesIdx narrowRule p where
     applyNarrowing ni = [ (trl', ss ++ cgSuccs p nidx )
                         | n <- narrowings ni
                         , let nidx = fromMaybe err (lookup (narrowedWith n) rsEnum) where err = error "narrow rule id not found"
-                        , let trl' = either (\ _-> error "Inlining: failed typing rule") id (inferWithR sig (renameRule (narrowing n)))
+                        , Right trl' <- [inferWith sig [] (renameRule (narrowing n))]
+                        -- , let trl' = either (const (error "Inlining: failed typing rule.")) fst (inferWithR sig (renameRule (narrowing n)))
+                        -- , Right (trl',_) <- inferWithR sig (renameRule (narrowing n))
                      ]
-
 
 rewrite :: (Ord f) => (Problem f Int -> NarrowedRule (ASym f) Int Int -> Bool) -> Problem f Int :=> Problem f Int
 rewrite sensible = inline sensible' where

@@ -12,11 +12,10 @@ module Hoca.Problem.Type (
 import           Data.IntMap (IntMap)
 import qualified Data.IntMap as IMap
 import           Data.IntSet (IntSet)
-import qualified Data.IntSet as ISet
+
 import qualified Data.Map as Map
 import           Data.List (nub)
 import           Control.Arrow (second)
-import           Data.Maybe (listToMaybe, catMaybes)
 import qualified Data.Rewriting.Applicative.Rule as R
 import qualified Data.Rewriting.Applicative.Term as T
 import qualified Data.Rewriting.Applicative.Rules as TRS
@@ -38,12 +37,12 @@ instance Substitutable (TypingEnv v) where
   o s = map (second (o s))
   
 
-type RuleGraph f v = IntMap (TRule f v,IntSet)
+type RuleGraph f v = IntMap (TRule f v, IntSet)
 
 data StartTerms f = 
     StartTerms { defs :: [f]
-               , constrs :: [f]
-               }
+               , constrs :: [f] }
+    deriving (Show)
 
 data Problem f v = 
   Problem { ruleGraph :: RuleGraph f v
@@ -60,7 +59,7 @@ prettyTerm False _ _ (T.atermM -> Just (T.TVar v)) =
 prettyTerm st _ env (T.atermM -> Just (T.TFun f ts)) = 
   PP.pretty f PP.<> PP.parens (ppSeq (PP.text ", ") [ prettyTerm st id env ti | ti <- ts])
 prettyTerm st par env (T.atermM -> Just (t1 T.:@ t2)) = 
-  par (prettyTerm st id env t1 PP.</> prettyTerm st PP.parens env t2) where
+  par (prettyTerm st id env t1 PP.</> prettyTerm st PP.parens env t2)
 prettyTerm _ _ _ _ = PP.text "NON-WELL-FORMED-TERM"    
   
 

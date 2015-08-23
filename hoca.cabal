@@ -29,7 +29,7 @@ executable pcf2trs
               , term-rewriting-applicative >= 0.1 && < 0.2
               , text >= 1.1
  extensions: TypeOperators
-           , FlexibleContexts 
+           , FlexibleContexts
                
  ghc-options:       
    -threaded -Wall -O2 -fno-warn-orphans -fno-spec-constr-count -rtsopts -with-rtsopts=-N
@@ -53,6 +53,7 @@ library
                      Hoca.PCF.Core.DMInfer                     
                      Hoca.PCF.Desugar
                      Hoca.Transform
+                     Hoca.SizeTypes.Infer                     
                      Hoca.Transform.Defunctionalize
                      Hoca.Transform.UsableRules
                      Hoca.Transform.Inlining                     
@@ -72,10 +73,14 @@ library
                  , term-rewriting >= 0.2 && < 0.3
                  , term-rewriting-applicative >= 0.1 && < 0.2                 
                  , text >= 1.1
+                 , slogic >= 0.0 && < 0.1
+                 , tct-common >= 3.0 && < 3.1
+                 , tct-core >= 3.0 && < 3.1                 
     extensions: TypeSynonymInstances
               , FlexibleContexts 
               , FlexibleInstances
               , GeneralizedNewtypeDeriving
+              , MultiParamTypeClasses
               , TypeOperators
               , ViewPatterns
               , TupleSections
@@ -84,5 +89,6 @@ library
               , GADTs
               , DeriveFunctor
               , DeriveFoldable
+              , DeriveTraversable
     ghc-options:       
      -threaded -Wall -O2 -fno-warn-orphans -fno-spec-constr-count -rtsopts -with-rtsopts=-N
