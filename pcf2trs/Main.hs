@@ -21,6 +21,7 @@ import           Data.Maybe (mapMaybe, fromJust, isJust)
 import           Data.Monoid (mempty)
 import           Data.Rewriting.Applicative.Rule
 import           Data.Rewriting.Applicative.Term
+import qualified Data.Rewriting.Applicative.Term as T
 import           Data.Text.Lazy (pack)
 import           GHC.IO (unsafePerformIO)
 import           Hoca.Data.MLTypes
@@ -129,6 +130,10 @@ cfa = instantiate abstractP >=> logMsg "CFA" where
 cfaUR :: Problem :=> Problem
 cfaUR = instantiate abstractP >=> logMsg "CFA" where
   abstractP _ _ e = length e <= 1
+
+cfaUR' :: Problem :=> Problem
+cfaUR' = instantiate abstractP >=> logMsg "CFA" where
+  abstractP _ _ e = length e <= 1 && null (concatMap T.vars e)
 
 
 simplifyATRS :: P.Problem Symbol Int :=> P.Problem Symbol Int
