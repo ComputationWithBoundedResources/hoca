@@ -47,118 +47,115 @@ type ATRS = Problem Symbol
 type TRS = Problem TRSSymbol
 type TRule = P.TRule Symbol Int
 
-class Boolean a where
-  (&&) :: a -> a -> a
-  (||) :: a -> a -> a  
-  not :: a -> a
+-- class Boolean a where
+--   (&&) :: a -> a -> a
+--   (||) :: a -> a -> a  
+--   not :: a -> a
   
-infixr 3 &&
-infixr 2 ||
+-- infixr 3 &&
+-- infixr 2 ||
 
-instance Boolean Bool where
-  (&&) = (Prelude.&&)
-  (||) = (Prelude.||)
-  not = Prelude.not
+-- instance Boolean Bool where
+--   (&&) = (Prelude.&&)
+--   (||) = (Prelude.||)
+--   not = Prelude.not
 
-instance Boolean b => Boolean (a -> b) where
-  f && g = \ a -> f a && g a
-  f || g = \ a -> f a || g a
-  not f = not . f
-
-
-headSymbolSatisfies :: (Symbol -> Bool) -> ATRS -> ARule Symbol Int -> Bool
-headSymbolSatisfies p _ rl = 
-  case headSymbol (lhs rl) of
-   Just f -> p f
-   _ -> False
-
-anyRule, caseRule, lambdaRule, fixRule :: ATRS -> ARule Symbol Int -> Bool 
-caseRule = headSymbolSatisfies p where 
-   p Cond {} = True
-   p _ = False
-
-lambdaRule = headSymbolSatisfies p where 
-   p Lambda {} = True
-   p _ = False
-
-fixRule = headSymbolSatisfies p where 
-   p Fix {} = True
-   p _ = False
-anyRule _ _ = True  
-
-definingRule :: String -> ATRS -> ARule Symbol v -> Bool
-definingRule name _ rl = 
-  case headSymbol (lhs rl) of
-   Just f -> renderPretty f == name
-   _ -> False
+-- instance Boolean b => Boolean (a -> b) where
+--   f && g = \ a -> f a && g a
+--   f || g = \ a -> f a || g a
+--   not f = not . f
 
 
-oneOfIdx :: (Eq f, Eq v) => [Int] -> P.Problem f v -> ARule f v -> Bool
-oneOfIdx is p r = maybe False (`elem` is) (indexOf p r)
+-- headSymbolSatisfies :: (Symbol -> Bool) -> ATRS -> ARule Symbol Int -> Bool
+-- headSymbolSatisfies p _ rl = 
+--   case headSymbol (lhs rl) of
+--    Just f -> p f
+--    _ -> False
 
-leafRule :: (Eq f, Eq v) => P.Problem f v -> ARule f v -> Bool
-leafRule p r = maybe True (null . cgSuccs p) (indexOf p r)
+-- anyRule, caseRule, lambdaRule, fixRule :: ATRS -> ARule Symbol Int -> Bool 
+-- caseRule = headSymbolSatisfies p where 
+--    p Cond {} = True
+--    p _ = False
 
-tsize :: ATerm f v -> Int
-tsize = fold (const 1) (const ((+1) . sum))
+-- lambdaRule = headSymbolSatisfies p where 
+--    p Lambda {} = True
+--    p _ = False
 
-type NR f v = NarrowedRule (ASym f) v v
+-- fixRule = headSymbolSatisfies p where 
+--    p Fix {} = True
+--    p _ = False
+-- anyRule _ _ = True  
 
-sizeDecreasing :: P.Problem f v -> NR f v -> Bool
-sizeDecreasing _ ns = all (\ n -> sz (narrowing n) < sz (narrowedRule ns)) (narrowings ns) where
-  sz rl = tsize (rhs rl)
+-- definingRule :: String -> ATRS -> ARule Symbol v -> Bool
+-- definingRule name _ rl = 
+--   case headSymbol (lhs rl) of
+--    Just f -> renderPretty f == name
+--    _ -> False
 
 
-ruleDeleting :: (Eq f, Eq v) => P.Problem f v-> NR f v -> Bool
-ruleDeleting p ns =
-  case nub (concatMap (cgPreds p) nwIds) of
-   [i] -> i `notElem` nwIds
-   _ -> False
-   where
-     nwIds = mapMaybe (indexOf p . narrowedWith) (narrowings ns)
+-- oneOfIdx :: (Eq f, Eq v) => [Int] -> P.Problem f v -> ARule f v -> Bool
+-- oneOfIdx is p r = maybe False (`elem` is) (indexOf p r)
+
+-- leafRule :: (Eq f, Eq v) => P.Problem f v -> ARule f v -> Bool
+-- leafRule p r = maybe True (null . cgSuccs p) (indexOf p r)
+
+-- tsize :: ATerm f v -> Int
+-- tsize = fold (const 1) (const ((+1) . sum))
+
+-- type NR f v = NarrowedRule (ASym f) v v
+
+-- sizeDecreasing :: P.Problem f v -> NR f v -> Bool
+-- sizeDecreasing _ ns = all (\ n -> sz (narrowing n) < sz (narrowedRule ns)) (narrowings ns) where
+--   sz rl = tsize (rhs rl)
+
+
+-- ruleDeleting :: (Eq f, Eq v) => P.Problem f v-> NR f v -> Bool
+-- ruleDeleting p ns =
+--   case nub (concatMap (cgPreds p) nwIds) of
+--    [i] -> i `notElem` nwIds
+--    _ -> False
+--    where
+--      nwIds = mapMaybe (indexOf p . narrowedWith) (narrowings ns)
 
 
 -- shorthands
-ur :: Ord f => Problem f :=> Problem f
-ur = usableRulesSyntactic >=> logMsg "UR"
+-- ur :: Ord f => Problem f :=> Problem f
+-- ur = usableRulesSyntactic >=> logMsg "UR"
 
-cfa :: Ord f => Problem f :=> Problem f
-cfa = instantiate abstractP >=> logMsg "CFA" where
-  abstractP _ _ [_] = True
-  abstractP trl v _ = 
-    maybe False isTArrow (lookup v (theEnv trl)) 
-    && (var v == r || v `elem` headVars r) 
-    where
-      r = rhs (theRule trl)
+-- cfa :: Ord f => Problem f :=> Problem f
+-- cfa = instantiate abstractP >=> logMsg "CFA" where
+--   abstractP _ _ [_] = True
+--   abstractP trl v _ = 
+--     maybe False isTArrow (lookup v (theEnv trl)) 
+--     && (var v == r || v `elem` headVars r) 
+--     where
+--       r = rhs (theRule trl)
       
-cfaUR :: Ord f => Problem f :=> Problem f
-cfaUR = instantiate abstractP >=> logMsg "CFA" where
-  abstractP _ _ e = length e <= 1
+-- cfaUR :: Ord f => Problem f :=> Problem f
+-- cfaUR = instantiate abstractP >=> logMsg "CFA" where
+--   abstractP _ _ e = length e <= 1
 
-cfaUR' :: ATRS :=> ATRS
-cfaUR' = instantiate abstractP >=> logMsg "CFA" where
-  abstractP _ _ e = length e <= 1 && null (concatMap T.vars e)
+-- cfaUR' :: ATRS :=> ATRS
+-- cfaUR' = instantiate abstractP >=> logMsg "CFA" where
+--   abstractP _ _ e = length e <= 1 && null (concatMap T.vars e)
 
 
-simplifyATRS :: P.Problem Symbol Int :=> P.Problem Symbol Int
-simplifyATRS =
-  try (exhaustive (rewrite (withRule lambdaRule) >=> logMsg "lambda"))
-  >=> try (exhaustive (inline (withRule caseRule) >=> logMsg "case"))
-  >=> try ur
+-- simplifyATRS :: P.Problem Symbol Int :=> P.Problem Symbol Int
+-- simplifyATRS =
+--   try (exhaustive (rewrite (withRule lambdaRule) >=> logMsg "lambda"))
+--   >=> try (exhaustive (inline (withRule caseRule) >=> logMsg "case"))
+--   >=> try ur
 
-toTRS :: ATRS :=> TRS
-toTRS = try cfa >=> try ur >=> uncurried >=> try ur
+-- urDFA :: P.Problem Symbol Int :=> P.Problem Symbol Int
+-- urDFA = usableRulesDFA >=> logMsg "UR-DFA"
 
-urDFA :: P.Problem Symbol Int :=> P.Problem Symbol Int
-urDFA = usableRulesDFA >=> logMsg "UR-DFA"
+-- simplifyTRS :: (Eq f, Ord f) => Problem f :=> Problem f
+-- simplifyTRS = 
+--   try (exhaustive (inline (withRule leafRule)) >=> try ur) 
+--   >=> try (exhaustive ((inline (sizeDecreasing || ruleDeleting) <=> cfaUR) >=> try ur))
 
-simplifyTRS :: (Eq f, Ord f) => Problem f :=> Problem f
-simplifyTRS = 
-  try (exhaustive (inline (withRule leafRule)) >=> try ur) 
-  >=> try (exhaustive ((inline (sizeDecreasing || ruleDeleting) <=> cfaUR) >=> try ur))
-
-simplify :: ATRS :=> TRS
-simplify = try simplifyATRS >=> toTRS >=> try simplifyTRS >=> try compress
+transform :: ATRS :=> TRS
+transform = try simplifyATRS >=> toTRS >=> try simplify >=> try compress
 
 programFromArgs :: FilePath -> Maybe String -> [String] -> IO (PCF.Program Context)
 programFromArgs fname mname args = do
@@ -382,25 +379,25 @@ main = do
        Right p' -> putDocLn (PP.pretty p')
    "--pcf" : _ -> putStrLn helpMsg     
    "--no-simp" : fname : [] -> 
-     transform False fname Nothing
+     trans False fname Nothing
    "--no-simp" : fname : name : [] -> 
-     transform False fname (Just name)
+     trans False fname (Just name)
    "--no-simp" : _ -> putStrLn helpMsg          
    fname : []  ->
-     transform True fname Nothing
+     trans True fname Nothing
    fname : name : []  ->
-     transform True fname (Just name)
+     trans True fname (Just name)
    _ -> error helpMsg
   exitSuccess
   where
-    transform True fname mname = do
+    trans True fname mname = do
       prob <- defunctionalizedFromFile fname mname []
-      case run simplify prob of
+      case run transform prob of
         Nothing -> do
          putErrLn "the program cannot be transformed"
          exitFailure
         Just res -> putDocLn (prettyWST res)
-    transform False fname mname = do
+    trans False fname mname = do
       prob <- defunctionalizedFromFile fname mname []
       putDocLn (prettyWST prob)
  
@@ -411,13 +408,13 @@ main = do
       --    putErrLn "the program cannot be transformed"
       --    exitFailure
 
-norm p = p { PCF.expression = fromJust $ PCF.nf step (PCF.expression p)} where
-     step = \ e -> PCF.beta e <|> PCF.fixCBV e <|> PCF.cond e
+-- norm p = p { PCF.expression = fromJust $ PCF.nf step (PCF.expression p)} where
+--      step = \ e -> PCF.beta e <|> PCF.fixCBV e <|> PCF.cond e
 
-typeProgram p = 
-    case DM.infer p of 
-      Left e -> putDocLn e >> error "program not typable"
-      Right p' -> putDocLn (PCF.typeOf (PCF.expression p')) >> return p'
+-- typeProgram p = 
+--     case DM.infer p of 
+--       Left e -> putDocLn e >> error "program not typable"
+--       Right p' -> putDocLn (PCF.typeOf (PCF.expression p')) >> return p'
                 
 -- TODO
 -- s = save "/home/zini/op.trs" >> saveCG Nothing "/home/zini/op.svg"
