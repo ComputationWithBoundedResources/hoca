@@ -20,7 +20,7 @@ import           Hoca.PCF.Sugar.Types (Context (..), Variable (..), ProgramPoint
 import           Hoca.Problem ((|-))
 import qualified Hoca.Problem as P
 import           Hoca.Strategy hiding ((>=>))
-import qualified Text.PrettyPrint.ANSI.Leijen as PP
+
 
 
 type Var = Int
