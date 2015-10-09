@@ -2,7 +2,8 @@
 
 module Hoca.Transform.Uncurry ( 
   etaSaturate
-  , uncurried 
+  , uncurried
+  , TRSSymbol
   ) where
 
 import Hoca.Problem
@@ -15,8 +16,15 @@ import Control.Monad.State (evalStateT, put, get)
 import Control.Monad.Writer (tell, runWriterT)
 import Control.Applicative (empty)
 import Hoca.Strategy 
-import Hoca.Data.Symbol
+import qualified Hoca.Data.Symbol as PCFSym
 import Data.Maybe (fromJust)
+import qualified Text.PrettyPrint.ANSI.Leijen as PP
+
+data TRSSymbol = TRSSymbol String Int deriving (Eq, Ord)
+
+instance PP.Pretty TRSSymbol where
+  pretty (TRSSymbol s i) = PP.pretty s
+  pretty (TRSSymbol s i) = PP.pretty s PP.<> PP.text "#" PP.<> PP.int i
 
 applicativeArity :: Ord f => Problem f v -> f -> Int
 applicativeArity prob = \ f -> Map.findWithDefault 0 f m
@@ -74,16 +82,19 @@ etaSaturate p =
                     | trl' <- fromJust (lookup idx rs)
                     , not (any (theRule trl' `isInstanceOf`) prs) ]
 
-        
 
-uncurried' :: Problem Symbol Int :=> Problem Symbol Int 
+sym :: PCFSym.Symbol -> Int -> TRSSymbol
+sym f = TRSSymbol (PCFSym.symbolToName f)
+
+uncurried' :: Problem PCFSym.Symbol Int :=> Problem TRSSymbol Int 
 uncurried' p = do 
   (trs,ds) <- runWriterT (uncurryRulesM `mapM` rules p) 
   return (fromRules (translateStartTerms ds) (signatureFromList ds) trs)
   where 
     translateStartTerms ds = 
         StartTerms { defs = fromDS defs, constrs = fromDS constrs } where
-               fromDS sel = [f | f@(Labeled _ g) ::: _ <- ds, g `elem` sel (startTerms p)]
+               fromDS sel = [ f | f@(TRSSymbol g _) ::: _ <- ds
+                                , g `elem` (PCFSym.symbolToName `map` sel (startTerms p))]
     uncurryRulesM trl = do 
       let 
         rl = theRule trl
@@ -97,13 +108,13 @@ uncurried' p = do
           case Map.lookup f (signature p) >>= shiftDecl n of 
            Nothing -> empty
            Just (tins :~> tret) -> 
-             tell [ Labeled n f ::: tins :~> tret] >> return tret
+             tell [ sym f n ::: tins :~> tret] >> return tret
           
         uc (atermM -> Just (TVar v)) = return (var v, fromJust (lookup v env))
         uc (aform -> Just (atermM -> Just (TFun f ts), as)) = do
           (ss,_) <- unzip <$> uc `mapM` (ts ++ as)
           tp <- recordTypeDecl f (length as)
-          return (fun (Labeled (length as) f) ss, tp)
+          return (fun (sym f (length as)) ss, tp)
         uc _ = empty
         
       (l,tp) <- uc (lhs rl)
@@ -111,7 +122,7 @@ uncurried' p = do
       return (env |- (Rule l r, tp))
       
 
-uncurried :: Problem Symbol Int :=> Problem Symbol Int 
+uncurried :: Problem PCFSym.Symbol Int :=> Problem TRSSymbol Int 
 uncurried = try (exhaustive etaSaturate) >=> uncurried'
 
      

@@ -75,12 +75,3 @@ compress p = modifySignature (mapSignature modifyDecl) <$> replaceRulesIdx repla
       case Map.lookup f cm of
        Nothing -> td
        Just at -> [ti | (Nothing,ti) <- zip at tins] :~> tout
-
--- removeUnusedRules :: Problem Symbol v -> Problem Symbol v
--- removeUnusedRules p = p { pRules = IMap.filterWithKey (\ k _ ->  (k `elem` used)) (pRules p) } where
---   used = initial ++ usableIdxs p initial
---   initial = [i | (i,(r,_)) <- IMap.toList (pRules p)
---                , case T.atermM (R.lhs r) of
---                   Just (T.Fun f _) -> unlabeled f == Main
---                   _ -> False ]
-   
