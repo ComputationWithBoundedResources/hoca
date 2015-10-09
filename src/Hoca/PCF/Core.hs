@@ -38,7 +38,7 @@ import           Data.Maybe (isJust)
 import           Control.Monad (foldM,guard)
 import           Data.Function (on)
 import           Data.List (sortBy)
-import           Hoca.Data.MLTypes
+
 
 constructors :: Exp l -> Set.Set Symbol
 constructors (Con _ g _) = Set.singleton g
