@@ -16,15 +16,9 @@ import Control.Monad.State (evalStateT, put, get)
 import Control.Monad.Writer (tell, runWriterT)
 import Control.Applicative (empty)
 import Hoca.Strategy 
-import qualified Hoca.Data.Symbol as PCFSym
+import Hoca.Data.Symbol
 import Data.Maybe (fromJust)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
-
-data TRSSymbol = TRSSymbol String Int deriving (Eq, Ord)
-
-instance PP.Pretty TRSSymbol where
-  pretty (TRSSymbol s 0) = PP.pretty s
-  pretty (TRSSymbol s i) = PP.pretty s PP.<> PP.text "#" PP.<> PP.int i
 
 applicativeArity :: Ord f => Problem f v -> f -> Int
 applicativeArity prob = \ f -> Map.findWithDefault 0 f m
@@ -83,10 +77,10 @@ etaSaturate p =
                     , not (any (theRule trl' `isInstanceOf`) prs) ]
 
 
-sym :: PCFSym.Symbol -> Int -> TRSSymbol
-sym f = TRSSymbol (PCFSym.symbolToName f)
+sym :: Symbol -> Int -> TRSSymbol
+sym f = TRSSymbol (symbolToName f)
 
-uncurried' :: Problem PCFSym.Symbol Int :=> Problem TRSSymbol Int 
+uncurried' :: Problem Symbol Int :=> Problem TRSSymbol Int 
 uncurried' p = do 
   (trs,ds) <- runWriterT (uncurryRulesM `mapM` rules p) 
   return (fromRules (translateStartTerms ds) (signatureFromList ds) trs)
@@ -94,7 +88,7 @@ uncurried' p = do
     translateStartTerms ds = 
         StartTerms { defs = fromDS defs, constrs = fromDS constrs } where
                fromDS sel = [ f | f@(TRSSymbol g _) ::: _ <- ds
-                                , g `elem` (PCFSym.symbolToName `map` sel (startTerms p))]
+                                , g `elem` (symbolToName `map` sel (startTerms p))]
     uncurryRulesM trl = do 
       let 
         rl = theRule trl
@@ -122,7 +116,7 @@ uncurried' p = do
       return (env |- (Rule l r, tp))
       
 
-uncurried :: Problem PCFSym.Symbol Int :=> Problem TRSSymbol Int 
+uncurried :: Problem Symbol Int :=> Problem TRSSymbol Int 
 uncurried = try (exhaustive etaSaturate) >=> uncurried'
 
      

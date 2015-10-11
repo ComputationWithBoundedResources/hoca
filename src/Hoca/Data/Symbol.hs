@@ -1,7 +1,7 @@
 -- | 
 
 module Hoca.Data.Symbol (
-  -- * Symbols
+  -- * PCF Symbols
    Lbl (..)
    , Name (..)
    , Symbol (..)
@@ -11,7 +11,9 @@ module Hoca.Data.Symbol (
    , isCaseSym
    , isFixSym
    , isMainSym
-   , isConstructor  
+   , isConstructor
+     -- * TRS symbols
+   , TRSSymbol (..)
   ) where
 
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
@@ -77,3 +79,10 @@ symbolFromString n = Unknown (Name [LString n])
 
 symbolToName :: Symbol -> String
 symbolToName f = PP.displayS (PP.renderCompact (PP.pretty f)) ""
+
+
+data TRSSymbol = TRSSymbol String Int deriving (Eq, Ord, Show)
+
+instance PP.Pretty TRSSymbol where
+  pretty (TRSSymbol s 0) = PP.pretty s
+  pretty (TRSSymbol s i) = PP.pretty s PP.<> PP.text "#" PP.<> PP.int i
