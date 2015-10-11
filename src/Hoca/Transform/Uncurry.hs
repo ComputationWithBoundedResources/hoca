@@ -23,7 +23,7 @@ import qualified Text.PrettyPrint.ANSI.Leijen as PP
 data TRSSymbol = TRSSymbol String Int deriving (Eq, Ord)
 
 instance PP.Pretty TRSSymbol where
-  pretty (TRSSymbol s i) = PP.pretty s
+  pretty (TRSSymbol s 0) = PP.pretty s
   pretty (TRSSymbol s i) = PP.pretty s PP.<> PP.text "#" PP.<> PP.int i
 
 applicativeArity :: Ord f => Problem f v -> f -> Int

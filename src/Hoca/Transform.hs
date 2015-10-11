@@ -25,20 +25,18 @@ module Hoca.Transform (
 
 import           Control.Applicative (empty)
 import qualified Data.Map as Map
-import Data.List (nub)
-import Data.Maybe (mapMaybe)
 import qualified Data.Rewriting.Applicative.Rule as R
 import           Data.Rewriting.Applicative.Term
-import           Hoca.Data.MLTypes hiding (instantiate)
 import           Hoca.PCF.Core (Program, TypedProgram)
 import qualified Hoca.PCF.Core.DMInfer as DMInfer
 import           Hoca.PCF.Sugar.Types (Context)
 import           Hoca.Problem
+import           Hoca.Data.MLTypes
 import           Hoca.Strategy
 import           Hoca.Transform.Defunctionalize (defunctionalize)
 import           Hoca.Data.Symbol (Symbol(..))
 import           Hoca.Transform.Inlining
-import           Hoca.Transform.Instantiate (instantiate)
+import           Hoca.Transform.Instantiate
 import           Hoca.Transform.Uncurry
 import           Hoca.Transform.UsableRules (usableRulesSyntactic, usableRulesDFA)
 
@@ -87,36 +85,11 @@ compress p = modifySignature (mapSignature modifyDecl) <$> replaceRulesIdx repla
 
 -- strategies
 
-headSymbolSatisfies :: (f -> Bool) -> Problem f v -> R.ARule f v -> Bool
-headSymbolSatisfies p _ rl = 
-  case headSymbol (R.lhs rl) of
-   Just f -> p f
-   _ -> False
-
-anyRule, caseRule, lambdaRule, fixRule :: Problem Symbol v -> R.ARule Symbol v -> Bool 
-caseRule = headSymbolSatisfies p where 
-   p Cond {} = True
-   p _ = False
-
-lambdaRule = headSymbolSatisfies p where 
-   p Lambda {} = True
-   p _ = False
-
-fixRule = headSymbolSatisfies p where 
-   p Fix {} = True
-   p _ = False
-anyRule _ _ = True  
-
-leafRule :: (Eq f, Eq v) => Problem f v -> R.ARule f v -> Bool
-leafRule p r = maybe True (null . cgSuccs p) (indexOf p r)
-
-
 simplifyATRS :: Problem Symbol Int :=> Problem Symbol Int
 simplifyATRS =
   try (exhaustive (rewrite (withRule lambdaRule)))
   >=> try (exhaustive (inline (withRule caseRule)))
   >=> try usableRulesSyntactic
-
 
 simplify :: (Eq f, Ord f) => Problem f Int :=> Problem f Int
 simplify = 
@@ -124,28 +97,10 @@ simplify =
   >=> try (exhaustive ((inline decreasing <=> cfaUR) >=> try usableRulesSyntactic))
   >=> try compress
   where
-    cfaUR = instantiate abstractP where
-      abstractP _ _ e = length e <= 1
-    decreasing p ns = sizeDecreasing p ns || ruleDeleting p ns 
-    sizeDecreasing _ ns = all (\ n -> sz (narrowing n) < sz (narrowedRule ns)) (narrowings ns) where
-      sz :: R.ARule f v -> Int
-      sz rl = tsize (R.rhs rl)
-      tsize = fold (const 1) (const ((+1) . sum))
-    ruleDeleting p ns =
-      case nub (concatMap (cgPreds p) nwIds) of
-      [i] -> i `notElem` nwIds
-      _ -> False
-      where
-        nwIds = mapMaybe (indexOf p . narrowedWith) (narrowings ns)
+    cfaUR = instantiate refineND
 
 cfa :: Ord f => Problem f Int :=> Problem f Int
-cfa = instantiate abstractP where
-  abstractP _ _ [_] = True
-  abstractP trl v _ = 
-    maybe False isTArrow (lookup v (theEnv trl)) 
-    && (var v == r || v `elem` headVars r) 
-    where
-      r = R.rhs (theRule trl)
+cfa = instantiate (refineND `orRefine` refineHOVars) where
 
 toTRS :: Problem Symbol Int :=> Problem TRSSymbol Int
 toTRS = try cfa >=> try usableRulesSyntactic >=> uncurried >=> try usableRulesSyntactic

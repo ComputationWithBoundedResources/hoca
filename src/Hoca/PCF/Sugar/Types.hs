@@ -1,9 +1,7 @@
--- | 
-
 module Hoca.PCF.Sugar.Types where
 
 import qualified Data.Set as Set
-import Data.Monoid (Monoid)
+
 
 -- | constructors
 newtype Symbol = Symbol String deriving (Eq, Ord, Show) 
