@@ -58,7 +58,7 @@ data MLType v =
   TyVar v
   | TyCon TypeName [MLType v]
   | MLType v :-> MLType v
-  deriving (Eq, Ord, Functor, Foldable)  
+  deriving (Eq, Ord, Show, Functor, Foldable)  
 
 substitute :: (v -> MLType v') -> MLType v -> MLType v'
 substitute s (TyVar n) = s n
