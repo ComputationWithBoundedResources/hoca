@@ -235,7 +235,7 @@ instance PP.Pretty Type where
     ppType (TyVar i) _ = prettyTyVar i
     ppType (TyCon
             n ts) _ = prettyTyCon n ts
-    ppType (t1 :-> t2) a = maybeParens (ppType t1 True PP.<+> PP.text "->" PP.<+> ppType t2 False) where
+    ppType (t1 :-> t2) a = maybeParens (ppType t1 True PP.<+> PP.text "->" PP.</> ppType t2 False) where
       maybeParens
         | a = PP.parens
         | otherwise = id
