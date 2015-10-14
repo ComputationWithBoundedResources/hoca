@@ -46,7 +46,7 @@ import qualified Data.Map as Map
 import           Hoca.Utils (ppSeq)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Control.Arrow (first)
- 
+import Hoca.Utils ((//)) 
 ---------------------------------------------------------------------- 
 -- General
 ---------------------------------------------------------------------- 
@@ -235,7 +235,7 @@ instance PP.Pretty Type where
     ppType (TyVar i) _ = prettyTyVar i
     ppType (TyCon
             n ts) _ = prettyTyCon n ts
-    ppType (t1 :-> t2) a = maybeParens (ppType t1 True PP.<+> PP.text "->" PP.</> ppType t2 False) where
+    ppType (t1 :-> t2) a = maybeParens (ppType t1 True PP.<+> PP.text "->" // ppType t2 False) where
       maybeParens
         | a = PP.parens
         | otherwise = id
