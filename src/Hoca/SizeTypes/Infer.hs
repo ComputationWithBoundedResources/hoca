@@ -20,10 +20,8 @@ import Data.List ((\\), nub, intersperse)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Control.Monad.State (evalStateT)
 import qualified Data.Traversable as Traversable
-import           Tct.Common.Ring
-import qualified Tct.Common.Polynomial as P
-import qualified Tct.Common.SMT as SMT hiding (minismt',yices')
-import qualified SLogic.Smt as SMT (minismt',yices')
+import qualified GUBS as GUBS
+import qualified GUBS.Solver.SMTLib as GUBS
 
 ----------------------------------------------------------------------
 -- positions in terms and types
@@ -459,14 +457,9 @@ withTypingContext tc m = do
 withSkolemVars :: [IxVarId] -> Tc 'RuleCtx f v a -> Tc 'RuleCtx f v a
 withSkolemVars vs = local (\ (RuleC sig tc) -> RuleC sig tc { tcFreeIxVars = vs ++ tcFreeIxVars tc} )
 
--- getCurRule :: Tc 'RuleCtx f v (ARule f v)
--- getCurRule = do {RuleC _ _ _ rl _ <- ask; return rl }
-
 getTypingContext :: Tc 'RuleCtx f v (TypingContext f v)
 getTypingContext = do {RuleC _ tc <- ask; return tc }
 
--- getEnvImages :: Tc 'RuleCtx f v [NegType (IxTerm f)]
--- getEnvImages =  Map.elems <$> tcEnv <$> getTypingContext
 
 lookupEnv :: Ord v => v -> Tc 'RuleCtx f v (NegType (IxTerm f))
 lookupEnv v = do
@@ -624,12 +617,10 @@ footprint thelhs declTpe =
 -- inference
 -----------------------------------------------------------------------
 
---TODO
-subtypeOf :: (Eq f, PP.Pretty f) => Type (IxTerm f) -> Type (IxTerm f) -> Tc ctx f v ()
+subtypeOf :: (Eq f) => Type (IxTerm f) -> Type (IxTerm f) -> Tc ctx f v ()
 subtypeOf = subtypeOf_
 
---TODO
-subtypeOf_ :: (Eq f, PP.Pretty f) => SizeType knd (IxTerm f) -> SizeType knd (IxTerm f) -> Tc ctx f v ()
+subtypeOf_ :: (Eq f) => SizeType knd (IxTerm f) -> SizeType knd (IxTerm f) -> Tc ctx f v ()
 TyVar a `subtypeOf_` TyVar b | a == b = 
   return ()
 TyCon nm1 ix1 bs1 `subtypeOf_` TyCon nm2 ix2 bs2 | nm1 == nm2 = do
@@ -643,8 +634,7 @@ TyQ vs1 t1 `subtypeOf_` TyQ vs2 t2  | length vs1 == length vs2 = do
   let t1' = inst (substFromList (zip vs1 vs)) t1 
   let t2' = inst (substFromList (zip vs2 vs)) t2
   t1' `subtypeOf_` t2'
-t1 `subtypeOf_` t2  = error $ "subtypeOf_: comparing incompatible types:\n"
-                    ++ renderPretty t1 ++ " with " ++ renderPretty t2
+_ `subtypeOf_` _  = error $ "subtypeOf_: comparing incompatible types:\n"
 
 instantiateQ :: NegType (IxTerm f) -> Tc 'RuleCtx f v (Type (IxTerm f))
 instantiateQ (TyVar v) = return (TyVar v)
@@ -656,12 +646,10 @@ instantiateQ (TyQ vs t) = do
     uniqueSkolemTerm = IxFun <$> (IxSkolem <$> uniqueFunId)
                              <*> (map fvar <$> tcFreeIxVars <$> getTypingContext)
 
---TODO
-check :: (PP.Pretty f, Ord v, Ord f) => Pos -> TTerm f v -> Type (IxTerm f) -> Tc 'RuleCtx f v ()
+check :: (Ord v, Ord f) => Pos -> TTerm f v -> Type (IxTerm f) -> Tc 'RuleCtx f v ()
 check pos t tpe = do { tpe' <- infer pos t; tpe' `subtypeOf` tpe}
 
---TODO
-infer :: (PP.Pretty f, Ord v, Ord f) => Pos -> TTerm f v -> Tc 'RuleCtx f v (Type (IxTerm f))
+infer :: (Ord v, Ord f) => Pos -> TTerm f v -> Tc 'RuleCtx f v (Type (IxTerm f))
 infer _   (TpVar _ v) = lookupEnv v >>= instantiateQ
 infer pos (TpFun stout f ts) = do
   let stpe = MLTypes.curryType (DMInfer.typeOf `map` ts) stout
@@ -680,9 +668,9 @@ infer pos (TpApp _ t1 t2) = do
       return retTpe
     _ -> error "SizeTypes.Infer: application with non-functional type"
 
-simplify :: [Constraint f] -> [Constraint f]
--- simplify = id
-simplify = uncurry inlineCs . walk [] [] where
+-- TODO
+simplify :: Eq f => [Constraint f] -> [Constraint f]
+simplify = inlineSkolem . constifySkolem where 
   
   walk sks ds [] = (sks, ds)
   walk sks ds (c@(IxFun (IxSkolem uid) _ :>=: _) : cs) =
@@ -690,6 +678,18 @@ simplify = uncurry inlineCs . walk [] [] where
      Just (c',sks') -> walk sks' (c:c':ds) cs
      Nothing -> walk (c:sks) ds cs
   walk sks ds (c:cs) = walk sks (c:ds) cs
+
+  constifySkolem cs = [ l :>=: constify r | l :>=: r <- cs ] where
+    lfuns = [ f | l :>=: _ <- cs, f <- indexSyms l ]
+    constify IxZero = IxZero
+    constify (IxSum ixs) = ixSum (constify `map` ixs)
+    constify (IxSucc ix) = ixSucc (constify ix)
+    constify (IxFun f@(IxSkolem _) ixs)
+      | (f,length ixs) `notElem` lfuns = IxZero
+    constify (IxFun f ixs) = IxFun f (constify `map` ixs)
+    constify (IxVar v) = IxVar v
+
+  inlineSkolem = uncurry inlineCs . walk [] []
 
   findDef _ _ [] = Nothing
   findDef uid sks (c@(IxFun (IxSkolem uid') _ :>=: _) : sks')
@@ -717,83 +717,50 @@ simplify = uncurry inlineCs . walk [] [] where
 -- constraint solving
 ----------------------------------------------------------------------
 
-type PolyVar = IxVarId
-
-type Polynomial c = P.Polynomial c PolyVar
-                             
-newtype Interpretation f c =
-  Interpretation { interpretationToMap :: Map (IxSym f) (Polynomial c) }
-
-instance (SMT.Decode m c a, Eq a, Additive a) => SMT.Decode m (Polynomial c) (Polynomial a) where
-  decode = P.mapCoefficientsM SMT.decode
-
-instance (SMT.Decode m c a, Eq a, Additive a) => SMT.Decode m (Interpretation f c) (Interpretation f a) where
-  decode (Interpretation m) = Interpretation <$> Traversable.traverse SMT.decode m
 
 
-interpretationFromList :: Ord f => [(IxSym f, Polynomial c)] -> Interpretation f c
-interpretationFromList = Interpretation . Map.fromList
+data GSym f = GSum Int | GSym (IxSym f) deriving (Show, Eq, Ord)
 
-type IExp  = SMT.IExpr PolyVar
-type AbstractInterpretation f = Interpretation f IExp
-type ConcreteInterpretation f = Interpretation f Int
+type Interpretation f = GUBS.Interpretation (GSym f)
+type Polynomial = GUBS.Polynomial IxVarId -- TODO IxVar
+type CS f = GUBS.ConstraintSystem (GSym f) IxVar
 
-interpretIxTerm :: (Additive c, Multiplicative c, Eq c, Ord f) => Interpretation f c -> IxTerm f -> Polynomial c
-interpretIxTerm _   (IxVar (BVar i)) = P.variable i
-interpretIxTerm _   (IxVar (FVar i)) = P.variable i
-interpretIxTerm _   IxZero           = zero
-interpretIxTerm int (IxSucc ix)      = one `add` interpretIxTerm int ix
-interpretIxTerm int (IxSum ixs)      = bigAdd [ interpretIxTerm int ix | ix <- ixs]
-interpretIxTerm int@(Interpretation m) (IxFun f ixs) = P.substituteVariables p s where
-  p = fromMaybe err (Map.lookup f m)
-  err = error "Infer.interpretIxTerm symbol not found in interpretation"
-  s = Map.fromList (zip [0..] [ interpretIxTerm int ix | ix <- ixs ])
 
-interpretType :: (Additive c, Multiplicative c, Eq c, Ord f) => Interpretation f c -> SizeType knd (IxTerm f) -> SizeType knd (Polynomial c)
+toCS :: [Constraint f] -> CS f
+toCS cs = [ gterm l GUBS.:>=: gterm r | l :>=: r <- cs ] where
+  gterm IxZero = GUBS.Const 0
+  gterm (IxSucc ix) = sumT [GUBS.Const 1, gterm ix]
+  gterm (IxSum ixs) = sumT (gterm `map` ixs)
+  gterm (IxVar v) = GUBS.Var v
+  gterm (IxFun f ixs) = GUBS.Fun (GSym f) (gterm `map` ixs)
+  sumT ts = GUBS.Fun (GSum (length ts)) ts 
+
+interpretIx :: (Ord f, Eq c, Num c) => Interpretation f c -> IxTerm f -> Polynomial c
+interpretIx _ IxZero = GUBS.constant 0
+interpretIx _ (IxVar (BVar i)) = GUBS.variable i
+interpretIx _ (IxVar (FVar i)) = GUBS.variable i
+interpretIx inter (IxSum ixs) = sum (interpretIx inter `map` ixs)
+interpretIx inter (IxSucc ix) = GUBS.constant 1 + interpretIx inter ix
+interpretIx inter (IxFun f ixs) = GUBS.get' inter (GSym f) `GUBS.apply` (interpretIx inter `map` ixs)
+
+interpretType :: (Ord f, Eq c, Num c) => Interpretation f c -> SizeType knd (IxTerm f) -> SizeType knd (Polynomial c)
 interpretType _ (TyVar v) = TyVar v
-interpretType int (TyCon nm ix bs) = TyCon nm (interpretIxTerm int ix) (interpretType int `map` bs)
-interpretType int (TyArr n t) = TyArr (interpretType int n) (interpretType int t)
-interpretType int (TyQ vs t) = TyQ vs (interpretType int t)
+interpretType inter (TyCon nm ix bs) = TyCon nm (interpretIx inter ix) (interpretType inter `map` bs)
+interpretType inter (TyArr n t) = TyArr (interpretType inter n) (interpretType inter t)
+interpretType inter (TyQ vs t) = TyQ vs (interpretType inter t)
   
-type PolyShape = [PolyVar] -> [P.MView PolyVar]
 
-rankedPoly :: Int -> PolyShape
-rankedPoly degree vs = concat (mk degree) where
-  mk 0 = [[[]]]
-  mk d = [ v `mult` mono | mono <- lead, v <- vs ] : ps
-    where
-      ps@(lead:_) = mk (d - 1)
-      v `mult` [] = [(v,1)]
-      v `mult` ((v',i) : mono) | v == v' = (v',i+1) : mono
-                               | otherwise = (v',i) : v `mult` mono
+-- TODO 
+solveConstraints :: (MonadIO m, Ord f, PP.Pretty f) => [Constraint f] -> m (Maybe (Interpretation f Integer))
+solveConstraints cs = GUBS.z3 (GUBS.solve initialInterpretation (toCS cs)) where
+  initialInterpretation = GUBS.fromList [ (f, sum [GUBS.variable v | v <- take n GUBS.variables])
+                                        | f@(GSum n) <- GSum 2 : concatMap (\ (l :>=: r) -> sums l ++ sums r) cs]
+  sums IxZero = []
+  sums (IxSucc ix) = sums ix
+  sums (IxSum ixs) = (GSum (length ixs)) : sums `concatMap` ixs
+  sums (IxVar _) = []
+  sums (IxFun _ ixs) = sums `concatMap` ixs
 
-linearPoly :: PolyShape
-linearPoly = rankedPoly 1
-
-
-solveSMT solver m = do
-  r <- SMT.solve solver s (SMT.decode a)
-  return $ case r of {SMT.Sat r -> Just r; _ -> Nothing}
-  where (a,s) = SMT.runSolverSt m SMT.initialState
-
-solveConstraints :: (Ord f, MonadIO m) => SMT.SmtSolver m PolyVar -> [Constraint f] -> PolyShape -> m (Maybe (ConcreteInterpretation f))
-solveConstraints smtsolver cs shape =
-  solveSMT smtsolver $ do
-    ai <- interpretationFromList <$> sequence [(,) f <$> fromShape f [0..ar-1]
-                                              | (f,ar) <- syms ]
-    forM_ cs $ \ (l :>=: r) -> SMT.assert (interpret ai l `geq` interpret ai r)
-    return ai
-  where 
-    fromShape _ vs = P.fromViewWithM (const SMT.nvarM') pview where
-      pview = [ (undefined, mono) | mono <- shape vs ]
-
-    interpret :: Ord f => AbstractInterpretation f -> IxTerm f -> Polynomial IExp
-    interpret = interpretIxTerm 
-
-    geq p1 p2 = SMT.bigAnd [ c SMT..>= SMT.zero | c <- P.coefficients $ p1 `sub` p2 ]
-
-    syms = nub (concatMap csSyms cs) where
-      csSyms (l :>=: r) = indexSyms l ++ indexSyms r
 
 
 withSimpleTypes :: (PP.Pretty v, Eq v, Ord f, PP.Pretty f) => Env v f -> ATerm f v -> SizeType knd ix -> Tc ctx f v (TTerm f v)
@@ -836,36 +803,42 @@ generateConstraints prob = do
 -- putting things together
 ----------------------------------------------------------------------
 
-instance (PP.Pretty f) => PP.Pretty (Signature (f,CallingContext) (Polynomial Int)) where
+instance PP.Pretty v => PP.Pretty (GUBS.Monomial v) where
+  pretty mono = pretty' (GUBS.toPowers mono) where
+    pretty' [] = PP.char '1'
+    pretty' ps = PP.hcat (PP.punctuate (PP.char '*') (map ppPower ps))
+    ppPower (v,i) = PP.pretty v PP.<> if i == 1 then PP.empty else PP.char '^' PP.<> PP.int i      
+  
+
+instance (Eq c, Num c, PP.Pretty c, PP.Pretty v) => PP.Pretty (GUBS.Polynomial v c) where
+  pretty poly = pretty' (GUBS.toMonos poly) where 
+    pretty' [] = PP.char '0'
+    pretty' ps = PP.hcat (PP.punctuate (PP.char '+') (map ppMono ps))
+    ppMono (c,GUBS.toPowers -> []) = PP.pretty c
+    ppMono (c,mono) = PP.pretty c PP.<> PP.char '*' PP.<> PP.pretty mono
+
+instance (PP.Pretty f) => PP.Pretty (Signature (f,CallingContext) (Polynomial Integer)) where
   pretty (Signature m) = PP.vcat [PP.hang 2 $ PP.pretty f PP.<+> PP.text ":" PP.</> prettyType ppPoly n
                                  | ((f,_),n) <- Map.toList m]
     where 
-      ppPoly p = PP.pretty (P.rename BVar p)
+      ppPoly p = PP.pretty (GUBS.rename BVar p)
 
 instance (PP.Pretty f) => PP.Pretty (Signature (f,CallingContext) (IxTerm f)) where
   pretty (Signature m) = PP.vcat [PP.hang 2 $ PP.pretty f PP.<+> PP.text ":" PP.</> PP.pretty n
                                  | ((f,_),n) <- Map.toList m]
 
-instance (PP.Pretty f) => PP.Pretty (Interpretation f Int) where
-  pretty (Interpretation m) = PP.vcat [PP.hang 2 $ PP.pretty f PP.<+> PP.text ":" PP.</> ppPoly n
-                                      | (f,n) <- Map.toList m]
+instance (PP.Pretty f) => PP.Pretty (Interpretation f Integer) where
+  pretty inter = PP.vcat [PP.hang 2 $ PP.pretty f PP.<+> PP.text ":" PP.</> ppPoly n
+                         | (GSym f,n) <- GUBS.toList inter]
     where 
-      ppPoly p = PP.pretty (P.rename BVar p)
+      ppPoly p = PP.pretty (GUBS.rename BVar p)
 
-minismtWithBits :: MonadIO m => Maybe Int -> SMT.SmtSolver m PolyVar
-minismtWithBits mb = SMT.minismt' (["-d", "-m", "-v2","-simp", "2"] ++ bitOpts) where
-  bitOpts = maybe [] (\ n -> ["-ib", show n]) mb
-
-minismt :: MonadIO m => SMT.SmtSolver m PolyVar
-minismt = minismtWithBits Nothing
-
-inferSizeTypeWith :: (Ord f, Ord v, PP.Pretty f, PP.Pretty v) => SMT.SmtSolver (ExceptT (TypingError f v) IO) PolyVar -> PolyShape -> Problem f v
-                     -> IO (Either (TypingError f v) (Signature (f,CallingContext) (Polynomial Int)))
-inferSizeTypeWith smtsolver shape prob = runExceptT $ do
+inferSize :: (Show f, Ord f, Ord v, PP.Pretty f, PP.Pretty v) => Problem f v -> IO (Either (TypingError f v) (Signature (f,CallingContext) (Polynomial Integer)))
+inferSize prob = runExceptT $ do
   (Signature sig,cs) <- runTc (generateConstraints prob) prob
   tracePretty (Signature sig) (return ())
   tracePretty cs (return ())
-  int <- assertJust ConstraintsUnsolvable =<< solveConstraints smtsolver cs shape
+  int <- assertJust ConstraintsUnsolvable =<< solveConstraints cs
   tracePretty int (return ())
   return (Signature (interpretType int `fmap` sig))
 

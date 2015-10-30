@@ -1,5 +1,3 @@
--- | 
-
 module Hoca.Data.Symbol (
   -- * PCF Symbols
    Lbl (..)
