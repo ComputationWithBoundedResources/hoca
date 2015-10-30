@@ -25,8 +25,6 @@ module Hoca.Transform (
 
 import           Control.Applicative (empty)
 import qualified Data.Map as Map
-import Data.List (nub)
-import Data.Maybe (mapMaybe)
 import qualified Data.Rewriting.Applicative.Rule as R
 import           Data.Rewriting.Applicative.Term
 import           Hoca.PCF.Core (Program, TypedProgram)

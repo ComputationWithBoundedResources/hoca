@@ -1,18 +1,14 @@
--- | 
-
 module Hoca.PCF.Sugar.Parse
        (
          programFromString
        , expressionFromString
        ) where
 
-import Hoca.PCF.Sugar.Types
-
-import           Text.Parsec
-import           Text.ParserCombinators.Parsec (CharParser)
-import Control.Applicative ((<$>), (<*>))
 import Control.Monad (void)
 import Data.Either (partitionEithers)
+import Hoca.PCF.Sugar.Types
+import Text.Parsec
+import Text.ParserCombinators.Parsec (CharParser)
 
 -- | parser for programs with syntactic suggar. Stores
 -- already parsed types, together with the number of free variables.
@@ -24,9 +20,6 @@ type Parser = CharParser [(TypeName,Int)]
 
 reservedWords :: [String]
 reservedWords = words "type let rec in = of fun match with | -> and ;; lazy force error"
-
-whiteSpace :: Parser String
-whiteSpace = many ((space <|> tab <|> newline) <?> "whitespace")
 
 whiteSpace1 :: Parser String
 whiteSpace1 = many1 ((space <|> tab <|> newline) <?> "whitespace")

@@ -127,6 +127,7 @@ freeVars f = sort <$> Set.toList <$> fvs f where
   fvs (PCF.Abs (_, tp :-> _) _ e) = do 
     (v,tps) <- withVar tp (fvs e)
     return (Set.filter ((/=) v . fst) tps)
+  fvs (PCF.Abs {}) = error "ill-typed expression"
   fvs (PCF.App _ e1 e2) =
     Set.union <$> fvs e1 <*> fvs e2
   fvs (PCF.Con _ _ es) =
@@ -183,7 +184,7 @@ fromExpression = snd . eval . (labelM >=> defuncMainM)
         lamTerm = fun lamSym (clVars env)
       record (lamSym ::: clTps env :~> tpe) [ ((v,tin) : env) |- (app lamTerm (var v) --> tf, tout)]
       return lamTerm
-      
+    defuncM PCF.Abs{} = error "ill-typed expression"  
     defuncM (PCF.App _ e1 e2) = app <$> defuncM e1 <*> defuncM e2
     defuncM (PCF.Con _ g es) = fun (Con (PCF.sname g)) <$> mapM defuncM es
     defuncM (PCF.Bot (_,tp)) = do

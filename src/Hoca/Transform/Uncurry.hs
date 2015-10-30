@@ -18,7 +18,6 @@ import Control.Applicative (empty)
 import Hoca.Strategy 
 import Hoca.Data.Symbol
 import Data.Maybe (fromJust)
-import qualified Text.PrettyPrint.ANSI.Leijen as PP
 
 applicativeArity :: Ord f => Problem f v -> f -> Int
 applicativeArity prob = \ f -> Map.findWithDefault 0 f m
@@ -59,6 +58,7 @@ etaSaturate' p =
                  tp1 :-> tp2 -> TRule { theRule = rl', theEnv = (v,tp1) : theEnv trl              , theType = tp2 }
                  TyVar tv    -> TRule { theRule = rl', theEnv = (v,TyVar tv1) : (s `o` theEnv trl), theType = TyVar tv2 } where
                                 s = singletonSubst tv (TyVar tv1 :-> TyVar tv2)
+                 _           -> error "Hoca.Transform.Uncurry: Rule not properly typed"
       (:) trl' <$> saturateM trl' (n - 1)
 
 etaSaturate :: Ord f  => Problem f Int :=> Problem f Int

@@ -141,12 +141,12 @@ complexityPreserving p nr = all redexReflecting (narrowings nr) where
     withCall = reducibleVars p n
 
 decreasing :: (Eq f, Eq v) => Selector f v
-decreasing p ns = sizeDecreasing p ns || ruleDeleting p ns  where
-  sizeDecreasing _ ns = all (\ n -> sz (narrowing n) < sz (narrowedRule ns)) (narrowings ns) where
+decreasing p ns = sizeDecreasing || ruleDeleting  where
+  sizeDecreasing = all (\ n -> sz (narrowing n) < sz (narrowedRule ns)) (narrowings ns) where
     sz :: R.ARule f v -> Int
     sz rl = tsize (R.rhs rl)
     tsize = fold (const 1) (const ((+1) . sum))
-  ruleDeleting p ns =
+  ruleDeleting =
     case nub (concatMap (cgPreds p) nwIds) of
       [i] -> i `notElem` nwIds
       _ -> False

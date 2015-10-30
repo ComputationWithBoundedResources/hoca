@@ -6,7 +6,7 @@ module Hoca.SizeTypes.Infer where
 import           Control.Monad.Except
 import           Control.Monad.RWS
 import           Data.Map (Map)
-import           Data.Maybe (mapMaybe, fromMaybe)
+import           Data.Maybe (mapMaybe)
 import           Data.Rewriting.Applicative.Rule hiding (funs)
 import           Data.Rewriting.Applicative.Term hiding (funs)
 import qualified Hoca.Data.MLTypes as MLTypes
@@ -19,7 +19,6 @@ import Hoca.Utils (ppSeq,renderPretty, assertJust, assert, tracePretty)
 import Data.List ((\\), nub, intersperse)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Control.Monad.State (evalStateT)
-import qualified Data.Traversable as Traversable
 import qualified GUBS as GUBS
 import qualified GUBS.Solver.SMTLib as GUBS
 

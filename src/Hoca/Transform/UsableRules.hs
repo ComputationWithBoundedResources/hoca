@@ -46,6 +46,7 @@ usableRulesSyntactic :: (Ord f, Ord v) => Problem f v :=> Problem f v
 usableRulesSyntactic p = usableRulesGeneric urs p where
     urs _ (R.rhs . theRule -> r) = filter f
         where f (rule p -> Just trl) = or [c `isUnifiableWith` R.lhs (theRule trl) | c <- caps r]
+              f _                    = error "usable rules: rule not found in problem"
     caps t = [cap rs ti | ti@T.Fun{} <- T.subterms t]
     rs = theRule `map` rules p
 

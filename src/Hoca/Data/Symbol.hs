@@ -49,14 +49,7 @@ instance PP.Pretty Symbol where
   pretty (Fix l) = PP.pretty l
   pretty (Bot l) = PP.text "bot" PP.<> PP.brackets (PP.pretty l)      
   pretty Main = PP.text "main"
-  -- pretty (Labeled 0 s) = PP.pretty s
-  -- pretty (Labeled l s) = PP.pretty s PP.<> PP.text "#" PP.<> PP.int l
   pretty (Unknown n) = PP.pretty n PP.<> PP.text "#"
-
-
--- unlabeled :: Symbol -> Symbol
--- unlabeled (Labeled _ s) = unlabeled s
--- unlabeled s = s
 
 isCaseSym,isFixSym,isMainSym,isConstructor :: Symbol -> Bool
 isCaseSym Cond{} = True
@@ -66,11 +59,7 @@ isFixSym _ = False
 isMainSym Main{} = True
 isMainSym _ = False
 isConstructor Con{} = True
-isConstructorSym _ = False
--- isCaseSym f = case unlabeled f of {Cond{} -> True; _ -> False }
--- isFixSym f = case unlabeled f of {Fix{} -> True; _ -> False }
--- isMainSym f = case unlabeled f of {Main{} -> True; _ -> False }
--- isConstructor f = case unlabeled f of {Con{} -> True; _ -> False }
+isConstructor _ = False
 
 symbolFromString :: String -> Symbol
 symbolFromString n = Unknown (Name [LString n])

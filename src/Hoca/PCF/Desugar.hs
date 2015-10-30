@@ -1,5 +1,3 @@
--- | 
-
 module Hoca.PCF.Desugar (
   desugar
   , desugarExpression
@@ -12,7 +10,6 @@ import           Control.Monad.Reader (ReaderT, MonadReader, runReaderT, ask, lo
 import           Control.Monad.Except (MonadError, throwError)
 import           Control.Arrow (first, second)
 import           Data.Maybe (isNothing)
-import qualified Data.Map as Map
 
 -- desugaring monad
 newtype DesugarM a =

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverlappingInstances #-}
-
 module Hoca.PCF.Core.Types where
 
 import qualified Data.IntMap as IntMap
@@ -71,7 +69,7 @@ instance PP.Pretty (Exp l) where
                $$ PP.braces (ppSeq (PP.text " | ") [ PP.pretty g PP.<+> PP.text "->" PP.<+> PP.pretty e'
                                                    | (g,e') <- cs ]))
 
-instance PP.Pretty (TypedExp l) where
+instance {-# OVERLAPPING #-} PP.Pretty (TypedExp l) where
   pretty (Var _ i) = PP.underline (PP.int i)
   pretty (Con _ f as) =
     PP.pretty f PP.<> PP.tupled [PP.pretty ai | ai <- as]
@@ -79,6 +77,7 @@ instance PP.Pretty (TypedExp l) where
   pretty (Abs (_,t :-> _) n e) = PP.align (PP.nest 2 (PP.parens (PP.bold (PP.text "λ" PP.<> pp n) PP.<+> PP.text ":" PP.<+> PP.pretty t PP.<> PP.text "." PP.</> PP.pretty e)))
     where pp (Just name) = PP.text name
           pp Nothing = PP.empty
+  pretty (Abs {}) = error "expression not well-typed"
   pretty (App _ e1 e2) =
     PP.align (PP.nest 2 (PP.parens (PP.pretty e1 PP.</> PP.pretty e2)))
   pretty (Fix _ i es) =
@@ -117,7 +116,7 @@ typeOf = snd . label
         
 type TypedProgram l = Program (l,Type)
 
-instance PP.Pretty (TypedProgram l) where 
+instance {-# OVERLAPPING #-} PP.Pretty (TypedProgram l) where 
   pretty p =
     PP.pretty e 
     PP.<+> PP.text ":" PP.<+> PP.pretty (typeOf e)
