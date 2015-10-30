@@ -37,8 +37,7 @@ executable pcf2trs
 library
     hs-source-dirs:
         src
-    exposed-modules: Hoca
-                     Hoca.Utils
+    exposed-modules: Hoca.Utils
                      Hoca.Strategy
                      Hoca.Problem
                      Hoca.Problem.DFA

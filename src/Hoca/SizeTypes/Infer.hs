@@ -21,6 +21,7 @@ import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Control.Monad.State (evalStateT)
 import qualified Data.Traversable as Traversable
 import qualified GUBS as GUBS
+import qualified GUBS.Solver.SMTLib as GUBS
 
 ----------------------------------------------------------------------
 -- positions in terms and types
@@ -751,7 +752,7 @@ interpretType inter (TyQ vs t) = TyQ vs (interpretType inter t)
 
 -- TODO 
 solveConstraints :: (MonadIO m, Ord f, PP.Pretty f) => [Constraint f] -> m (Maybe (Interpretation f Integer))
-solveConstraints cs = either (const Nothing) Just <$> GUBS.solve initialInterpretation (toCS cs) where
+solveConstraints cs = GUBS.z3 (GUBS.solve initialInterpretation (toCS cs)) where
   initialInterpretation = GUBS.fromList [ (f, sum [GUBS.variable v | v <- take n GUBS.variables])
                                         | f@(GSum n) <- GSum 2 : concatMap (\ (l :>=: r) -> sums l ++ sums r) cs]
   sums IxZero = []
