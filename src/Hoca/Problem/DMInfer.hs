@@ -10,15 +10,18 @@ module Hoca.Problem.DMInfer (
   , TypingError (..)
 ) where
 
-import Control.Monad.Except
-import Control.Arrow (second)
-import Hoca.Problem.Type
-import Hoca.Data.MLTypes
-import Data.Rewriting.Applicative.Term
-import Data.Rewriting.Applicative.Rule
+import           Control.Arrow (second)
+import           Control.Monad.Except
+import           Control.Monad.RWS
+import           Data.List (nub, (\\))
 import qualified Data.Map as Map
+import           Data.Maybe (catMaybes)
+import           Data.Rewriting.Applicative.Rule hiding (funs)
+import           Data.Rewriting.Applicative.Term hiding (funs)
+import           Data.Rewriting.Applicative.Rules (funs, applicativeArity)
+import           Hoca.Data.MLTypes
+import           Hoca.Problem.Type
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
-import Control.Monad.RWS
 
 data TTerm f v =
   TpVar Type v
@@ -189,4 +192,13 @@ inferWith :: (Inferrable c f v, Eq v, Ord f) => Signature f -> TypingEnv v -> c 
 inferWith sig tenv c = fst <$> execInferM sig tenv (withEmptyDeclEnvAsserted ((TyVar <$> unique) >>= typeCheckM c))
 
 infer :: (Eq v, Ord f) => [ARule f v] -> Either (TypingError f v) ([TRule f v], Signature f)
-infer rs = execInferM Map.empty [] (forM rs $ \ r -> (TyVar <$> unique) >>= checkRuleM r)
+infer rs = execInferM defaultSignature [] (forM rs $ \ r -> (TyVar <$> unique) >>= checkRuleM r) where
+  rs' = map (mapSides withArity) rs
+  dfs = catMaybes [ headSymbol (lhs r) | r <- rs ]
+  defaultSignature = signatureFromList [ defaultDecl c ar (aa c) | (c,ar) <- (nub (funs rs')), c `notElem` dfs ]
+  defaultDecl c ar aar = c ::: argts :~> foldr (:->) baseType aargts where
+    argts = take ar tyVars
+    aargts = take aar (drop ar tyVars)
+  baseType = TyCon "#B" []
+  tyVars = [TyVar i | i <- [0..]]
+  aa = applicativeArity rs

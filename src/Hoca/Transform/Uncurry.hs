@@ -10,6 +10,7 @@ import Hoca.Problem
 import Hoca.Data.MLTypes
 import Data.Rewriting.Applicative.Term hiding (isInstanceOf)
 import Data.Rewriting.Applicative.Rule hiding (vars)
+import Data.Rewriting.Applicative.Rules (applicativeArity)
 import qualified Data.Map as Map
 import Control.Monad (forM)
 import Control.Monad.State (evalStateT, put, get)
@@ -19,27 +20,13 @@ import Hoca.Strategy
 import Hoca.Data.Symbol
 import Data.Maybe (fromJust)
 
-applicativeArity :: Ord f => Problem f v -> f -> Int
-applicativeArity prob = \ f -> Map.findWithDefault 0 f m
-  where
-    m = Map.fromListWith max (aa [] terms)
-   
-    aa l [] = l
-    aa l ((aterm -> TVar _ ):ts) = aa l ts    
-    aa l ((aterm -> (TFun _ ts')):ts) = aa l (ts'++ts)
-    aa l ((aform -> Just (atermM -> Just (TFun f thd),tas)):ts) = 
-      aa ((f,length tas) : l) (thd ++ tas ++ ts)
-    aa l ((aform -> Just (_,tas)):ts) = aa l (tas ++ ts)
-    aa l (_:ts) = aa l ts
-    terms = leftHandSides prob ++ rightHandSides prob
-
 etaSaturate' :: Ord f => Problem f Int -> Maybe [(Int, [TRule f Int])]
 etaSaturate' p =
   forM (rulesEnum p) $ \ (idx,trl) -> do 
     trls <- aaTerm (lhs (theRule trl)) >>= saturate trl
     return (idx,trls)
   where
-    aa = applicativeArity p
+    aa = applicativeArity (theRule `map` rules p)
 
     aaTerm (aform -> Just (atermM -> Just (TFun f _),as)) = Just (aa f - length as)
     aaTerm _ = Nothing
