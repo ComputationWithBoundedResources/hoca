@@ -22,7 +22,6 @@ executable pcf2trs
  build-depends: ansi-wl-pprint >= 0.6 && < 0.7
               , base >= 4.7 && < 5
               , containers >= 0.5 && < 0.6
-              , graphviz >= 2999.17.0.1
               , hoca == 0.4
               , multiset >= 0.2 && < 0.3
               , term-rewriting >= 0.2 && < 0.3
@@ -30,7 +29,21 @@ executable pcf2trs
               , text >= 1.1
  extensions: TypeOperators
            , FlexibleContexts
-               
+
+executable sizeinfer
+ hs-source-dirs: sizeinfer
+ main-is: Main.hs
+ build-depends: ansi-wl-pprint >= 0.6 && < 0.7
+              , base >= 4.7 && < 5
+              , containers >= 0.5 && < 0.6
+              , hoca == 0.4
+              , multiset >= 0.2 && < 0.3
+              , term-rewriting >= 0.2 && < 0.3
+              , term-rewriting-applicative >= 0.1 && < 0.2
+              , text >= 1.1
+ extensions: TypeOperators
+           , FlexibleContexts
+                          
  ghc-options:       
    -threaded -Wall -O2 -fno-warn-orphans -fno-spec-constr-count -rtsopts -with-rtsopts=-N
 

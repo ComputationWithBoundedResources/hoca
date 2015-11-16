@@ -14,7 +14,6 @@ import qualified Hoca.Problem as P
 import           Hoca.Problem hiding (Problem,TRule)
 import           Hoca.Transform
 import           Hoca.Utils (putDocLn)
-import           Prelude hiding ((&&),(||), not)
 import           System.Environment (getArgs)
 import           System.Exit (exitSuccess,exitFailure)
 import           System.IO (hPutStrLn, stderr)

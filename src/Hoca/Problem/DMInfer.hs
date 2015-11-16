@@ -103,6 +103,9 @@ unifyM tp1 tp2 t =
    Left (t1,t2) -> throwError (NonUnifiable t1 t2 t)
    Right mgu -> return mgu
 
+insertDecl :: Ord f => f -> TypeDecl -> InferM f v ()
+insertDecl f td = modify ( \ st -> st { declEnv = Map.insert f td (declEnv st) } )
+
 declarationOf :: Ord f => (f,Int) -> InferM f v TypeDecl
 declarationOf (f,ar) = do
   m1 <- decl f <$> ask
@@ -121,7 +124,7 @@ declarationOf (f,ar) = do
       
     create = do
       td <- (:~>) <$> (map TyVar <$> uniques ar) <*> (TyVar <$> unique)
-      modify ( \ st -> st { declEnv = Map.insert f td (declEnv st) } )
+      insertDecl f td 
       return td
 
 checkM :: (Ord f, Eq v) => ATerm f v -> Type -> InferM f v (Substitution, TTerm f v)
@@ -192,13 +195,18 @@ inferWith :: (Inferrable c f v, Eq v, Ord f) => Signature f -> TypingEnv v -> c 
 inferWith sig tenv c = fst <$> execInferM sig tenv (withEmptyDeclEnvAsserted ((TyVar <$> unique) >>= typeCheckM c))
 
 infer :: (Eq v, Ord f) => [ARule f v] -> Either (TypingError f v) ([TRule f v], Signature f)
-infer rs = execInferM defaultSignature [] (forM rs $ \ r -> (TyVar <$> unique) >>= checkRuleM r) where
-  rs' = map (mapSides withArity) rs
-  dfs = catMaybes [ headSymbol (lhs r) | r <- rs ]
-  defaultSignature = signatureFromList [ defaultDecl c ar (aa c) | (c,ar) <- (nub (funs rs')), c `notElem` dfs ]
-  defaultDecl c ar aar = c ::: argts :~> foldr (:->) baseType aargts where
-    argts = take ar tyVars
-    aargts = take aar (drop ar tyVars)
-  baseType = TyCon "#B" []
-  tyVars = [TyVar i | i <- [0..]]
-  aa = applicativeArity rs
+infer rs = execInferM Map.empty [] $ do
+  sequence_ [ do
+                as <- map TyVar <$> uniques ar
+                let mkT 0 = return baseType
+                    mkT i = (:->) <$> (TyVar <$> unique) <*> mkT (i-1)
+                r <-  mkT (aa c)
+                insertDecl c (as :~> r)
+            | (c,ar) <- (nub (funs rs')), c `notElem` dfs ]
+  forM rs $ \ r -> (TyVar <$> unique) >>= checkRuleM r
+  where  
+    rs' = map (mapSides withArity) rs
+    dfs = catMaybes [ headSymbol (lhs r) | r <- rs ]
+    baseType = TyCon "#B" []
+    aa = applicativeArity rs
+  

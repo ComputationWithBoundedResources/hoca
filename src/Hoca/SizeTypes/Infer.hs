@@ -270,11 +270,11 @@ curryTpe :: ([NegType ix], Type ix) -> Type ix
 curryTpe ([],t) = t
 curryTpe (n:ns,t) = TyArr n (curryTpe (ns,t))
 
-simpleTypeOf :: SizeType knd ix -> MLTypes.Type
-simpleTypeOf (TyVar v) = MLTypes.TyVar v
-simpleTypeOf (TyCon nm _ ts) = MLTypes.TyCon nm (simpleTypeOf `map` ts)
-simpleTypeOf (TyArr n p) = simpleTypeOf n MLTypes.:-> simpleTypeOf p
-simpleTypeOf (TyQ  _ t) = simpleTypeOf t
+skeleton :: SizeType knd ix -> MLTypes.Type
+skeleton (TyVar v) = MLTypes.TyVar v
+skeleton (TyCon nm _ ts) = MLTypes.TyCon nm (skeleton `map` ts)
+skeleton (TyArr n p) = skeleton n MLTypes.:-> skeleton p
+skeleton (TyQ  _ t) = skeleton t
 
 instance Substitutable (SizeType knd (IxTerm f)) where
   type Image (SizeType knd (IxTerm f)) = IxTerm f
@@ -492,7 +492,6 @@ frId = do
 usedIds :: MonadState ([Int],Int) m => m [Int]
 usedIds = reverse <$> fst <$> get
 
--- TODO: allow type arguments in constructors
 freshConstructorDeclaration :: f -> MLTypes.Type -> Tc ctx f v (NegType (IxTerm f))
 freshConstructorDeclaration c stpe = flip evalStateT ([],0) $ do
   tpe <- annotate stpe
@@ -609,7 +608,7 @@ footprint thelhs declTpe =
             ps <- instantiateSkeleton subst `mapM` as
             return (TyCon m (fvar v) ps)
         instantiateSkeleton _ _ =  throwError (NonBasicConstructor c)
-    spezialisePattern (Fun (Sym c) _)  _ = throwError (IllformedConstructorDeclaration c)
+    -- spezialisePattern (Fun (Sym c) _)  _ = throwError (IllformedConstructorDeclaration c)
     spezialisePattern _                _ = throwError (IllformedLhs thelhs)
 
 
@@ -767,8 +766,8 @@ withSimpleTypes env t tpe = do
   ssig <- getStSignature
   either errOut return (DMInfer.check ssig senv t stpe) 
   where
-    stpe = simpleTypeOf tpe
-    senv = [ (v, simpleTypeOf n) | (v,n) <- Map.toList env ]
+    stpe = skeleton tpe
+    senv = [ (v, skeleton n) | (v,n) <- Map.toList env ]
     errOut err = error $ "SizeTypes.checkRuleWith incompatible types: " ++ renderPretty err
 
 

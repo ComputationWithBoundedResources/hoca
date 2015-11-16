@@ -253,7 +253,7 @@ replaceRules f = replaceRulesIdx (\ _ r _ -> f r)
 ---------------------------------------------------------------------- 
 
 data FromFileError = NoParse P.ProblemParseError
-                   | NoType (TypingError Symbol String)
+                   | NoType (TypingError TRSSymbol String)
 
 instance PP.Pretty P.ProblemParseError where
     pretty err = PP.text "Error parsing file, problem is:"
@@ -271,20 +271,22 @@ instance PP.Pretty FromFileError where
     pretty (NoType err) = PP.pretty err    
     
 
-fromFile :: FilePath -> IO (Either FromFileError (Problem Symbol Int))
+fromFile :: FilePath -> IO (Either FromFileError (Problem TRSSymbol Int))
 fromFile fp = 
   either (Left . NoParse) problemFromRules <$> P.fromFile fp (`elem` applys)
     where       
       applys = ["@",".","app"]
       
-      problemFromRules = mkProblem . RS.amap symbolFromString id . P.allRules . P.rules
+      toSym = flip TRSSymbol 0
+      
+      problemFromRules = mkProblem . RS.amap toSym id . P.allRules . P.rules
       mkProblem rs = 
          case infer rs of 
          Left err -> Left (NoType err)
          Right (trls,sig) -> Right (renameRules (fromRules sts sig trls) )
           where
             sts = StartTerms { defs = [d | d <- ds, firstOrder d], constrs = cs }
-            fs = nub (RS.funs rs \\ map symbolFromString applys)
+            fs = nub (RS.funs rs \\ map toSym applys)
             ds = nub [ f | Right (T.Sym f) <- map (T.root . R.lhs) rs]
             hs = [ f | Just f <- map (T.headSymbol . R.lhs) rs]
             cs = fs \\ (ds ++ hs)
