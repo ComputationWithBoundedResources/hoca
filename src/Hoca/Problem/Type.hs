@@ -52,8 +52,8 @@ data Problem f v =
 
 prettyTerm :: (PP.Pretty f, PP.Pretty v, Eq v) => Bool -> (PP.Doc -> PP.Doc) -> TypingEnv v -> T.ATerm f v -> PP.Doc
 prettyTerm True _ env (T.atermM -> Just (T.TVar v)) = 
-  PP.text "x" PP.<> PP.pretty v
-  PP.<> PP.text ":" PP.<> maybe (PP.text "?a") PP.pretty (lookup v env)
+  PP.parens (PP.text "x" PP.<> PP.pretty v
+             PP.<> PP.text ":" PP.<> maybe (PP.text "?a") PP.pretty (lookup v env))
 prettyTerm False _ _ (T.atermM -> Just (T.TVar v)) = 
   PP.text "x" PP.<> PP.pretty v
 prettyTerm st _ env (T.atermM -> Just (T.TFun f ts)) = 
@@ -68,7 +68,7 @@ instance (Eq f, PP.Pretty f) => PP.Pretty (Problem f Int) where
     PP.vcat
     [ PP.int i 
       PP.<> PP.text ":" 
-      PP.<+> PP.hang 2 (prettyTerm False id env (R.lhs rl)
+      PP.<+> PP.hang 2 (prettyTerm True id env (R.lhs rl)
                         PP.<+> PP.text "-->" 
                         PP.</> PP.align (prettyTerm False id env (R.rhs rl)
                                          PP.<+> PP.text ":"

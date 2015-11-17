@@ -13,7 +13,7 @@ module Hoca.Problem.DMInfer (
 import           Control.Arrow (second)
 import           Control.Monad.Except
 import           Control.Monad.RWS
-import           Data.List (nub, (\\))
+import           Data.List (nub)
 import qualified Data.Map as Map
 import           Data.Maybe (catMaybes)
 import           Data.Rewriting.Applicative.Rule hiding (funs)
@@ -68,6 +68,7 @@ instance (PP.Pretty f, PP.Pretty v) => PP.Pretty (TypingError f v) where
 
 data InferState f v = InferState {
   varEnv :: TypingEnv v
+  , analysedFun :: Maybe f
   , declEnv :: Signature f
   , unused :: !Int
 }
@@ -78,6 +79,9 @@ instance Substitutable (Signature f) where
 instance Substitutable (InferState f v) where
   s `o` st = st { varEnv = s `o` varEnv st, declEnv = s `o` declEnv st }
 
+instance Substitutable (TRule f v) where
+  s `o` trl = trl { theType = s `o` theType trl, theEnv = [ (v, s `o` tp) | (v,tp) <- theEnv trl ] }
+
 
 newtype InferM f v a = InferM { execIM_ :: RWST (Signature f) () (InferState f v) (Except (TypingError f v)) a } deriving
     ( Applicative, Functor, Monad
@@ -86,7 +90,7 @@ newtype InferM f v a = InferM { execIM_ :: RWST (Signature f) () (InferState f v
     , MonadError (TypingError f v) )
 
 execInferM :: Signature f -> [(v, Type)] -> InferM f v a -> Either (TypingError f v) (a, Signature f)
-execInferM sig env m = runExcept (fst <$> evalRWST (execIM_ m') sig (InferState env Map.empty f)) where
+execInferM sig env m = runExcept (fst <$> evalRWST (execIM_ m') sig (InferState env Nothing Map.empty f)) where
   f = 1 + maximum (0 : concatMap (freeTV . snd) env)
   m' = (,) <$> m <*> (declEnv <$> get)
     
@@ -106,11 +110,20 @@ unifyM tp1 tp2 t =
 insertDecl :: Ord f => f -> TypeDecl -> InferM f v ()
 insertDecl f td = modify ( \ st -> st { declEnv = Map.insert f td (declEnv st) } )
 
-declarationOf :: Ord f => (f,Int) -> InferM f v TypeDecl
+declarationOf :: (Eq f, Ord f) => (f,Int) -> InferM f v TypeDecl
 declarationOf (f,ar) = do
-  m1 <- decl f <$> ask
-  m2 <- decl f <$> declEnv <$> get
-  maybe create instantiate (m1 `mplus` m2)
+  m1 <- fmap Left . decl f <$> ask
+  m2 <- fmap Right . decl f <$> declEnv <$> get
+  mf <- analysedFun <$> get
+  case (m1 `mplus` m2) of
+    Just (Left d) -> instantiate d
+    Just (Right d)
+      | Just f == mf -> return d
+      | otherwise -> instantiate d
+    Nothing -> do
+      td <- (:~>) <$> (map TyVar <$> uniques ar) <*> (TyVar <$> unique)
+      insertDecl f td 
+      return td
   where
     instantiate (ins :~> out)
       | length ins /= ar =
@@ -121,11 +134,6 @@ declarationOf (f,ar) = do
       where 
         n = 1 + maximum (0:concatMap freeTV (out:ins))
         mkSubst vs = \ v -> TyVar (vs!!v) 
-      
-    create = do
-      td <- (:~>) <$> (map TyVar <$> uniques ar) <*> (TyVar <$> unique)
-      insertDecl f td 
-      return td
 
 checkM :: (Ord f, Eq v) => ATerm f v -> Type -> InferM f v (Substitution, TTerm f v)
 checkM (Var v) tp = do
@@ -178,7 +186,7 @@ instance Inferrable (ATerm f v) f v where
 
 instance Inferrable (ARule f v) f v where
   type TypeAnnotated (ARule f v) = TRule f v
-  typeCheckM = checkRuleM 
+  typeCheckM = checkRuleM
 
 withEmptyDeclEnvAsserted :: InferM f v a -> InferM f v a
 withEmptyDeclEnvAsserted m = do
@@ -196,17 +204,22 @@ inferWith sig tenv c = fst <$> execInferM sig tenv (withEmptyDeclEnvAsserted ((T
 
 infer :: (Eq v, Ord f) => [ARule f v] -> Either (TypingError f v) ([TRule f v], Signature f)
 infer rs = execInferM Map.empty [] $ do
-  sequence_ [ do
-                as <- map TyVar <$> uniques ar
-                let mkT 0 = return baseType
-                    mkT i = (:->) <$> (TyVar <$> unique) <*> mkT (i-1)
-                r <-  mkT (aa c)
-                insertDecl c (as :~> r)
+  sequence_ [ insertDecl c (replicate ar baseType :~> foldr (:->) baseType (replicate (aa c) baseType))
             | (c,ar) <- (nub (funs rs')), c `notElem` dfs ]
-  forM rs $ \ r -> (TyVar <$> unique) >>= checkRuleM r
+  infer' rs [] 
   where  
     rs' = map (mapSides withArity) rs
     dfs = catMaybes [ headSymbol (lhs r) | r <- rs ]
     baseType = TyCon "#B" []
     aa = applicativeArity rs
-  
+    infer' [] trs = return trs
+    infer' (rl:ss) trs = do
+      tp <- TyVar <$> unique
+      modify (\ st -> st { analysedFun = headSymbol (lhs rl) , varEnv = [] } )
+      (s1,_) <- checkM (lhs rl) tp
+      (s2,_) <- checkM (rhs rl) (s1 `o` tp)
+      env <- varEnv <$> get
+      let s = s2 `o` s1
+          trl = TRule { theRule = rl , theEnv = env , theType = s `o` tp }
+      infer' ss (trl : map (s `o`) trs)
+    
