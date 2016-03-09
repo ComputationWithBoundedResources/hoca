@@ -53,7 +53,7 @@ import qualified Data.Rewriting.Applicative.Rule as R
 import qualified Data.Rewriting.Applicative.Problem as P
 import qualified Data.Rewriting.Applicative.Term as T
 import qualified Data.Rewriting.Applicative.Rules as RS
-import           Hoca.Data.MLTypes (Signature, Type, MLType(..),TypeVariable,tvs,decl,TypeDecl(..), signatureToList, TypeDeclaration(..))
+import           Hoca.Data.MLTypes (Signature, Type, MLType(..),TypeVariable,tvs,decl,TypeDecl(..), signatureToList, TypeDeclaration(..), uncurryType)
 import           Hoca.Problem.Type
 import           Hoca.Data.Symbol
 import           Hoca.Problem.DMInfer (TypingError (..),infer)
@@ -290,15 +290,18 @@ fromFile fp =
             ds = nub [ f | Right (T.Sym f) <- map (T.root . R.lhs) rs]
             hs = [ f | Just f <- map (T.headSymbol . R.lhs) rs]
             cs = fs \\ (ds ++ hs)
-            firstOrder (flip decl sig -> Just (ins :~> out)) = allBaseTypes (out:ins) [] where
+
+            uncurryDecl (ins :~> (uncurryType -> (ins',out))) = ins ++ ins' ++ [out]
+
+            firstOrder (flip decl sig -> Just d) = allBaseTypes (uncurryDecl d) [] where
             firstOrder _ = False
 
             allBaseTypes [] _ = True
             allBaseTypes ((_ :-> _) : _) _ = False
             allBaseTypes ((TyVar _):ts) seen = allBaseTypes ts seen
             allBaseTypes ((TyCon nm as):ts) seen
-                | nm `elem` seen = allBaseTypes (as++ts) (nm:seen)
-                | otherwise = allBaseTypes (constrArgs nm ++ as ++ ts) seen
+                | nm `elem` seen = allBaseTypes (as++ts) seen
+                | otherwise = allBaseTypes (constrArgs nm ++ as ++ ts) (nm:seen)
 
             constrDecls = [ td | (c ::: td) <- signatureToList sig, c `elem` cs ]
             constrArgs nm = concat [ ins | ins :~> TyCon nm' _ <- constrDecls, nm == nm' ]

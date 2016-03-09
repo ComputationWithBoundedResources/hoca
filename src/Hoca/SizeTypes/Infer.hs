@@ -632,7 +632,7 @@ TyQ vs1 t1 `subtypeOf_` TyQ vs2 t2  | length vs1 == length vs2 = do
   let t1' = inst (substFromList (zip vs1 vs)) t1 
   let t2' = inst (substFromList (zip vs2 vs)) t2
   t1' `subtypeOf_` t2'
-_ `subtypeOf_` _  = error $ "subtypeOf_: comparing incompatible types:\n"
+t1 `subtypeOf_` t2  = error $ "subtypeOf_: comparing incompatible types."
 
 instantiateQ :: NegType (IxTerm f) -> Tc 'RuleCtx f v (Type (IxTerm f))
 instantiateQ (TyVar v) = return (TyVar v)
@@ -750,7 +750,7 @@ interpretType inter (TyQ vs t) = TyQ vs (interpretType inter t)
 
 -- TODO 
 solveConstraints :: (MonadIO m, Ord f, PP.Pretty f) => [Constraint f] -> m (Maybe (Interpretation f Integer))
-solveConstraints cs = GUBS.z3 (GUBS.solve initialInterpretation (toCS cs)) where
+solveConstraints cs = GUBS.z3 (GUBS.solveWith GUBS.Incremental initialInterpretation (toCS cs)) where
   initialInterpretation = GUBS.fromList [ (f, sum [GUBS.variable v | v <- take n GUBS.variables])
                                         | f@(GSum n) <- GSum 2 : concatMap (\ (l :>=: r) -> sums l ++ sums r) cs]
   sums IxZero = []
@@ -772,7 +772,8 @@ withSimpleTypes env t tpe = do
 
 
 generateConstraints :: (Ord f, Ord v, PP.Pretty f, PP.Pretty v) => Problem f v -> Tc 'GlobalCtx f v (Signature (f,CallingContext) (IxTerm f))
-generateConstraints prob = do  
+generateConstraints prob = do
+  liftIO $ tracePretty ((defs (startTerms prob))) (return ())
   forM_ (defs (startTerms prob)) $ \ f -> do
     (ins MLTypes.:~> out) <- getStDeclaration f
     freshDeclaration f emptyPos [] (Signature Map.empty) (MLTypes.curryType ins out)
@@ -780,6 +781,7 @@ generateConstraints prob = do
     where
       walk [] = stSig <$> get
       walk ((f,cs,declTpe,sig):queue) = do
+        liftIO $ tracePretty "*" (return ())
         modify (\ st -> st { stQueue = queue } )
         forM_ [ (i, trl) | (i,trl) <- rulesEnum prob
                          , headSymbol (lhs (theRule trl)) == Just f ]
@@ -801,17 +803,20 @@ generateConstraints prob = do
 -- putting things together
 ----------------------------------------------------------------------
 
+ppPower (v,i) = PP.pretty v PP.<> if i == 1 then PP.empty else PP.char '^' PP.<> PP.int i
+
 instance PP.Pretty v => PP.Pretty (GUBS.Monomial v) where
   pretty mono = pretty' (GUBS.toPowers mono) where
     pretty' [] = PP.char '1'
-    pretty' ps = PP.hcat (PP.punctuate (PP.char '*') (map ppPower ps))
-    ppPower (v,i) = PP.pretty v PP.<> if i == 1 then PP.empty else PP.char '^' PP.<> PP.int i      
+    pretty' ps = PP.hcat (PP.punctuate (PP.char '*') [ppPower p | p <- ps])
+    
   
 
 instance (Eq c, Num c, PP.Pretty c, PP.Pretty v) => PP.Pretty (GUBS.Polynomial v c) where
   pretty poly = pretty' (GUBS.toMonos poly) where 
     pretty' [] = PP.char '0'
-    pretty' ps = PP.hcat (PP.punctuate (PP.char '+') (map ppMono ps))
+    pretty' ps = PP.hcat (PP.punctuate (PP.char '+') [ppMono p | p@(c,_) <- ps, c /= 0])
+    ppMono (1,mono) = PP.pretty mono
     ppMono (c,GUBS.toPowers -> []) = PP.pretty c
     ppMono (c,mono) = PP.pretty c PP.<> PP.char '*' PP.<> PP.pretty mono
 
@@ -831,8 +836,8 @@ instance (PP.Pretty f) => PP.Pretty (Interpretation f Integer) where
     where 
       ppPoly p = PP.pretty (GUBS.rename BVar p)
 
-inferSize :: (Show f, Ord f, Ord v, PP.Pretty f, PP.Pretty v) => Problem f v -> IO (Either (TypingError f v) (Signature (f,CallingContext) (Polynomial Integer)))
-inferSize prob = runExceptT $ do
+inferSizeTypes :: (Show f, Ord f, Ord v, PP.Pretty f, PP.Pretty v) => Problem f v -> IO (Either (TypingError f v) (Signature (f,CallingContext) (Polynomial Integer)))
+inferSizeTypes prob = runExceptT $ do
   (Signature sig,cs) <- runTc (generateConstraints prob) prob
   tracePretty (Signature sig) (return ())
   tracePretty cs (return ())
