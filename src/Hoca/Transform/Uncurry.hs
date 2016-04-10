@@ -28,7 +28,7 @@ etaSaturate' p =
   where
     aa = applicativeArity (theRule `map` rules p)
 
-    aaTerm (aform -> Just (atermM -> Just (TFun f _),as)) = Just (aa f - length as)
+    aaTerm (aformM -> Just (atermM -> Just (TFun f _),as)) = Just (aa f - length as)
     aaTerm _ = Nothing
 
     saturate trl n = evalStateT (saturateM trl n) (ftvs,fvs) where
@@ -92,7 +92,7 @@ uncurried' p = do
              tell [ sym f n ::: tins :~> tret] >> return tret
           
         uc (atermM -> Just (TVar v)) = return (var v, fromJust (lookup v env))
-        uc (aform -> Just (atermM -> Just (TFun f ts), as)) = do
+        uc (aformM -> Just (atermM -> Just (TFun f ts), as)) = do
           (ss,_) <- unzip <$> uc `mapM` (ts ++ as)
           tp <- recordTypeDecl f (length as)
           return (fun (sym f (length as)) ss, tp)

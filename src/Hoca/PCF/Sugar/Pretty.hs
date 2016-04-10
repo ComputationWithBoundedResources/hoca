@@ -23,11 +23,16 @@ instance PP.Pretty TypeName where
 instance PP.Pretty TypeVar where
   pretty (TypeVar v) = PP.text "'" PP.<> PP.text v
 
+ucType :: Type -> [Type]
+ucType (t1 :~> t2) = t1 : ucType t2
+ucType t = [t]                                 
+       
 instance PP.Pretty Type where
   pretty t = pp t False where
     pp (TyVar v) _ = PP.pretty v
     pp (TyCon n ts) _ = prettyTyCon n ts
-    pp (t1 :~> t2) a = maybeParens (pp t1 True PP.<+> PP.text "->" PP.<+> pp t2 False) where
+    pp (ucType -> ts) a = maybeParens (PP.encloseSep PP.empty PP.empty (PP.text " -> ") [pp ti True | ti <- ts]) where
+    -- pp (t1 :~> t2) a = maybeParens (pp t1 True PP.<+> PP.text "->" PP.<+> pp t2 False) where
       maybeParens
         | a = PP.parens
         | otherwise = id

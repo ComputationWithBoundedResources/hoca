@@ -201,9 +201,6 @@ datatypeDeclP = do
       tyCase = (,) <$> constructor <*> tyList where
         tyList = (try (symbol "of") >> typeP `sepBy1` symbol "*")
                  <|> return []
-        -- tyList1 = typeP `sepBy1` symbol "*"
-        -- tyList = try tyList1 <|> try (parens tyList1) <|> return [] where
-        --   
 
 funDeclP :: Parser FunDecl
 funDeclP = do

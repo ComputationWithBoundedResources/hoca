@@ -46,7 +46,7 @@ import qualified Data.Map as Map
 import           Hoca.Utils (ppSeq)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import Control.Arrow (first)
-import Hoca.Utils ((//)) 
+
 ---------------------------------------------------------------------- 
 -- General
 ---------------------------------------------------------------------- 
@@ -231,15 +231,12 @@ instance PP.Pretty TypeSchema where
     ppBVars bvs = PP.text "forall" PP.<+> ppSeq PP.space [ prettyTyVar v | v <- bvs ]
 
 instance PP.Pretty Type where 
-  pretty t = ppType t False where
+  pretty t = ppType t id where
     ppType (TyVar i) _ = prettyTyVar i
-    ppType (TyCon
-            n ts) _ = prettyTyCon n ts
-    ppType (t1 :-> t2) a = maybeParens (ppType t1 True PP.<+> PP.text "->" // ppType t2 False) where
-      maybeParens
-        | a = PP.parens
-        | otherwise = id
-         
+    ppType (TyCon n ts) _ = prettyTyCon n ts
+    ppType (uncurryType -> (ts,tr)) p = p (PP.encloseSep PP.empty PP.empty (PP.text " -> ") [ppType ti PP.parens | ti <- ts ++ [tr]])
+
+
 instance PP.Pretty f => PP.Pretty (Signature f) where 
     pretty ts = 
         PP.vcat [ PP.hang 2 (PP.pretty ci PP.<+> PP.text "::" PP.<+> ppTSig tins tout)

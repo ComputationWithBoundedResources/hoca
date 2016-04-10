@@ -25,7 +25,7 @@ executable pcf2trs
               , hoca == 0.4
               , multiset >= 0.2 && < 0.3
               , term-rewriting >= 0.2 && < 0.3
-              , term-rewriting-applicative >= 0.1 && < 0.2
+              , term-rewriting-applicative >= 0.2 && < 0.3
               , text >= 1.1
  extensions: TypeOperators
            , FlexibleContexts
@@ -66,7 +66,7 @@ library
                  , multiset >= 0.2 && < 0.3
                  , parsec >= 3.1 && < 3.2
                  , term-rewriting >= 0.2 && < 0.3
-                 , term-rewriting-applicative >= 0.1 && < 0.2                 
+                 , term-rewriting-applicative >= 0.2 && < 0.3
                  , text >= 1.1
     extensions: TypeSynonymInstances
               , FlexibleContexts 
