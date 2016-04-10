@@ -84,10 +84,10 @@ instance {-# OVERLAPPING #-} PP.Pretty (TypedExp l) where
     pp p vs (Fix _ _ [Abs (_,t :-> _) n e]) = p (ppAbs t "μ" vs n e)
     pp p vs (Fix _ i es) = 
       p (PP.bold (PP.text "μ" PP.<> PP.int i) PP.<+> PP.list [ pp id vs e | e <- es])
-    pp p vs (Cond _ e cs) = 
-      p (PP.nest 2 (PP.bold (PP.text "case") PP.<+> pp id vs e PP.<+> PP.bold (PP.text "of"))
-                    PP.<$> PP.vcat [PP.text "|" PP.<+> PP.pretty g PP.<+> PP.text "->" PP.<+> pp id vs e'
-                                   | (g,e') <- cs])
+    pp p vs (Cond _ e cs) = PP.flatAlt pcs pcs where
+      pcs = p (PP.nest 2 (PP.bold (PP.text "case") PP.<+> pp id vs e PP.<+> PP.bold (PP.text "of"))
+               PP.<$> PP.vcat [PP.text "|" PP.<+> PP.pretty g PP.<+> PP.text "->" PP.<+> pp id vs e'
+                              | (g,e') <- cs])
     pp p vs (uncurryExp -> es) = PP.flatAlt pes pes where
       pes = p (PP.nest 2 (PP.sep [PP.group (pp PP.parens vs e) | e <- es]))
 
