@@ -66,13 +66,14 @@ prettyTerm _ _ _ _ = PP.text "NON-WELL-FORMED-TERM"
 instance (Eq f, PP.Pretty f) => PP.Pretty (Problem f Int) where
   pretty p =
     PP.vcat
-    [ PP.int i 
-      PP.<> PP.text ":" 
-      PP.<+> PP.hang 2 (prettyTerm True id env (R.lhs rl)
-                        PP.<+> PP.text "-->" 
-                        PP.</> PP.align (prettyTerm False id env (R.rhs rl)
-                                         PP.<+> PP.text ":"
-                                         PP.<+> PP.pretty (theType trl)))
+    [ PP.int i PP.<> PP.text ":" 
+      PP.<+> PP.hang 2 (PP.group (prettyTerm False id env (R.lhs rl) PP.<+> PP.text "->")
+                        PP.</> PP.group (prettyTerm False id env (R.rhs rl)))
+      -- PP.<+> PP.hang 2 (prettyTerm True id env (R.lhs rl)
+      --                   PP.<+> PP.align ( PP.text "-->" 
+      --                                     PP.</> prettyTerm False id env (R.rhs rl)
+      --                                            PP.<+> PP.text ":"
+      --                                            PP.<+> PP.pretty (theType trl)))
     | (i,trl) <- rs
     , let rl = theRule trl
     , let env = theEnv trl ]

@@ -239,9 +239,10 @@ instance PP.Pretty Type where
 
 instance PP.Pretty f => PP.Pretty (Signature f) where 
     pretty ts = 
-        PP.vcat [ PP.hang 2 (PP.pretty ci PP.<+> PP.text "::" PP.<+> ppTSig tins tout)
-                | ci ::: tins :~> tout <- signatureToList ts ] where
-    
+        PP.vcat [ PP.hang 2 (PP.fillBreak n (PP.pretty ci) PP.<+> PP.text "::" PP.<+> ppTSig tins tout)
+                | ci ::: tins :~> tout <- l ] where
+        l = signatureToList ts
+        n = maximum  (0 : [ length (show (PP.pretty ci)) | ci ::: _ <- l])
         ppTSig [] tout = PP.pretty tout
         ppTSig tins tout = 
             PP.align (PP.brackets (ppSeq (PP.text " * ") (PP.pretty `map` tins))

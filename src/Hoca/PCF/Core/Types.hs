@@ -88,8 +88,8 @@ instance {-# OVERLAPPING #-} PP.Pretty (TypedExp l) where
       p (PP.nest 2 (PP.bold (PP.text "case") PP.<+> pp id vs e PP.<+> PP.bold (PP.text "of"))
                     PP.<$> PP.vcat [PP.text "|" PP.<+> PP.pretty g PP.<+> PP.text "->" PP.<+> pp id vs e'
                                    | (g,e') <- cs])
-    pp p vs (uncurryExp -> es) = 
-      p (PP.nest 2 (PP.sep [PP.group (pp PP.parens vs e) | e <- es]))
+    pp p vs (uncurryExp -> es) = PP.flatAlt pes pes where
+      pes = p (PP.nest 2 (PP.sep [PP.group (pp PP.parens vs e) | e <- es]))
 
     ppAbs t l vs n e = PP.align (PP.nest 2 (PP.bold (PP.text l PP.<> ppName n 0) 
                                             PP.<+> PP.text ":" PP.<+> PP.pretty t PP.<> PP.text "." 
