@@ -82,8 +82,8 @@ main = do
    "--no-simp" : _ -> putStrLn helpMsg          
    fname : []  ->
      trans True fname Nothing
-   fname : name : []  ->
-     trans True fname (Just name)
+   fname : args  ->
+     trans True fname (Just (concat args))
    _ -> error helpMsg
   exitSuccess
   where

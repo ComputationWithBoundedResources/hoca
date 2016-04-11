@@ -77,7 +77,6 @@ instance (Eq f, PP.Pretty f) => PP.Pretty (Problem f Int) where
     | (i,trl) <- rs
     , let rl = theRule trl
     , let env = theEnv trl ]
-    PP.<$> PP.text ""
     PP.<$> PP.text "where"
     PP.<$> PP.indent 2 (PP.align (PP.pretty sig))
       where 

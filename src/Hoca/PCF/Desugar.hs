@@ -5,7 +5,9 @@ module Hoca.PCF.Desugar (
 
 import qualified Hoca.PCF.Core as PCF
 import           Hoca.PCF.Sugar.Types
+import           Hoca.PCF.Sugar.Parse (expressionFromString)
 import qualified Hoca.Data.MLTypes as Tpe
+import qualified Data.Set as Set
 import           Control.Monad.Reader (ReaderT, MonadReader, runReaderT, ask, local)
 import           Control.Monad.Except (MonadError, throwError)
 import           Control.Arrow (first, second)
@@ -121,10 +123,12 @@ desugarDecl :: FunDecl -> DesugarM (PCF.Exp Context) -> DesugarM (PCF.Exp Contex
 desugarDecl (FunDeclLet _ ds) f = withEmptyContext (desugarLet ds f)
 desugarDecl (FunDeclRec _ ds) f = withEmptyContext (desugarLetRec ds f)
 
-desugarDecls :: [FunDecl] -> (Variable,[Variable]) -> DesugarM (PCF.Exp Context)
-desugarDecls ds (f,vs) = foldr lambda (foldr desugarDecl (desugarExp main) ds) vs where
-  main = foldl (App p) (Var p f) [Var p v | v <- vs ]
-  p = Pos "" 0 0
+desugarDecls :: [FunDecl] -> Exp -> DesugarM (PCF.Exp Context)
+desugarDecls ds main = foldr lambda (foldr desugarDecl (desugarExp main) ds) vs
+  where   
+    vs = freeVars main Set.\\ Set.fromList (concatMap defSyms ds)
+    defSyms (FunDeclLet _ ds) = [ d | (_,d,_,_) <- ds]
+    defSyms (FunDeclRec _ ds) = [ d | (_,d,_,_) <- ds] 
 
 desugarExpression :: Exp -> Either String (PCF.Exp Context)
 desugarExpression e = run (desugarExp e)
@@ -153,26 +157,35 @@ signatureFromPrologue ds = Tpe.signatureFromList <$> concat <$> mapM fromDecl ds
         fromSType (t1 :~> t2) = (Tpe.:->) <$> fromSType t1 <*> fromSType t2
       
 desugar :: Maybe String -> Program -> Either String (PCF.Program Context)
-desugar mname prog = do
+desugar mcall prog = do
   sig <- signatureFromPrologue (prologue prog)
-  e <- run (desugarDecls ds =<< getMainCall (concatMap defs ds)) 
+  e <- run (desugarDecls decls =<< getMainCall) 
   return PCF.Program { PCF.signature = sig , PCF.expression = e}
     where
-      ds = functions prog
+      getMainCall = maybe mainFromDecl mainFromString  mcall
+      mainFromDecl = case concatMap defs decls of
+                       [] -> throwError "program contains no function definition"
+                       ds -> return (foldl (App p) (Var p f) [Var p v | v <- vs ])
+                         where p = Pos "" 0 0        
+                               (_,f,vs,_) = last ds
+      mainFromString s = case expressionFromString "<cmdline>" s of 
+                           Left err -> throwError $ "error parsing main call: " ++ err
+                           Right e -> return e
+      decls = functions prog
       defs (FunDeclLet _ ds') = ds'
       defs (FunDeclRec _ ds') = ds'  
 
-      getMainCall [] =
-          case mname of
-            Just name -> throwError ("program contains no function named '" ++ name ++ "'")
-            _ -> throwError "program contains no function definition"
-      getMainCall [(_,f,vs,_)]
-          | isNothing mname = return (f,vs)
-      getMainCall ((_,f@(Variable name),vs,_):ds')
-          | Just name == mname = return (f,vs)
-          | otherwise = getMainCall ds'
+--       getMainCall [] =
+--           case mname of
+--             Just name -> throwError ("program contains no function named '" ++ name ++ "'")
+--             _ -> 
+--       getMainCall [(_,f,vs,_)]
+--           | isNothing mname = return (f,vs)
+--       getMainCall ((_,f@(Variable name),vs,_):ds')
+--           | Just name == mname = return (f,vs)
+--           | otherwise = getMainCall ds'
     
---    
+-- --    
 
     
 
