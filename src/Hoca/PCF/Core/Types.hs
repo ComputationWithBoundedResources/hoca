@@ -1,6 +1,6 @@
 module Hoca.PCF.Core.Types where
 
-import Debug.Trace (trace)
+
 import qualified Data.IntMap as IntMap
 import           Hoca.Data.MLTypes
 import           Hoca.Utils (($$), (//), ppSeq)
@@ -88,7 +88,7 @@ instance {-# OVERLAPPING #-} PP.Pretty (TypedExp l) where
       p (PP.bold (PP.text "μ" PP.<> PP.int i) PP.<+> PP.list [ pp id vs e | e <- es])
     pp p vs (Cond _ e cs) = 
       p (PP.nest 2 (PP.bold (PP.text "case") PP.<+> pp id vs e PP.<+> PP.bold (PP.text "of"))
-         PP.<$> PP.vcat [PP.text "|" PP.<+> PP.pretty g PP.<+> PP.text "->" PP.<+> pp id vs e' PP.<> PP.text " "
+         PP.<$> PP.vcat [PP.text " |" PP.<+> PP.pretty g PP.<+> PP.text "->" PP.<+> pp id vs e'
                         | (g,e') <- cs])
     pp p vs (uncurryExp -> es) = 
       p (PP.nest 2 (PP.sep [PP.group (pp PP.parens vs e) | e <- es]))

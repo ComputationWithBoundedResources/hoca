@@ -3,6 +3,7 @@ module Hoca.PCF.Desugar (
   , desugarExpression
   ) where
 
+import Data.Maybe (catMaybes)
 import qualified Hoca.PCF.Core as PCF
 import           Hoca.PCF.Sugar.Types
 import           Hoca.PCF.Sugar.Parse (expressionFromString)
@@ -122,12 +123,33 @@ desugarDecl :: FunDecl -> DesugarM (PCF.Exp Context) -> DesugarM (PCF.Exp Contex
 desugarDecl (FunDeclLet _ ds) f = withEmptyContext (desugarLet ds f)
 desugarDecl (FunDeclRec _ ds) f = withEmptyContext (desugarLetRec ds f)
 
+dce :: [FunDecl] -> Set.Set Variable -> [FunDecl]
+dce ds = catMaybes . walk (reverse ds) [] where
+  walk [] ds' _ = ds'
+  walk (d:ds) ds' s = walk ds (d':ds') (maybe s (`Set.union` s) (fvs <$> d')) where
+    d' = restrictDecl d
+    
+    restrictDecl (FunDeclLet p decs) = FunDeclLet p <$> implode (restrictLet decs)
+    restrictDecl (FunDeclRec p decs) = FunDeclRec p <$> implode (restrictLetRec decs)
+
+    restrictLet = filter (\ (_,f,_,_) -> f `Set.member` s)
+    restrictLetRec decs | any (\ (_,f,_,_) -> f `Set.member` s) decs = decs
+                        | otherwise = []
+                          
+    implode [] = Nothing
+    implode l = Just l
+
+    fvs (FunDeclLet _ decs) = Set.unions $ (\ (_,_,vs,e) -> freeVars e Set.\\ Set.fromList vs) `map` decs
+    fvs (FunDeclRec p decs) = fvs (FunDeclLet p decs) Set.\\ Set.fromList [ f | (_,f,_,_) <- decs]
+    
 desugarDecls :: [FunDecl] -> Exp -> DesugarM (PCF.Exp Context)
-desugarDecls ds main = foldr lambda (foldr desugarDecl (desugarExp main) ds) vs
-  where   
-    vs = freeVars main Set.\\ Set.fromList (concatMap defSyms ds)
+desugarDecls ds main = foldr lambda (foldr desugarDecl (desugarExp main) ds') vs
+  where
+    fvs = freeVars main     
+    vs = fvs Set.\\ Set.fromList (concatMap defSyms ds)
     defSyms (FunDeclLet _ ds) = [ d | (_,d,_,_) <- ds]
-    defSyms (FunDeclRec _ ds) = [ d | (_,d,_,_) <- ds] 
+    defSyms (FunDeclRec _ ds) = [ d | (_,d,_,_) <- ds]
+    ds' = dce ds fvs
 
 desugarExpression :: Exp -> Either String (PCF.Exp Context)
 desugarExpression e = run (desugarExp e)
