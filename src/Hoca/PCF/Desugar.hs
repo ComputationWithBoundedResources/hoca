@@ -12,7 +12,6 @@ import           Control.Monad.Reader (ReaderT, MonadReader, runReaderT, ask, lo
 import           Control.Monad.Except (MonadError, throwError)
 import           Control.Arrow (first, second)
 import           Data.Maybe (isNothing)
-
 -- desugaring monad
 newtype DesugarM a =
   DesugarM { runDesugarM :: ReaderT ([(Variable, Int)], Context) (Either String) a }
@@ -92,13 +91,13 @@ desugarExp (Var pos v@(Variable n)) = do
                           ++ ", column " ++ show (cn pos) ++ " not bound.")
                           
 desugarExp (Err _) = PCF.Bot <$> context
-  
+
 desugarExp (Con _ g es) =
   PCF.Con <$> context <*> return g'
    <*> sequence [withContext [ConstructorArg (i + 1) (es!!i)] (desugarExp ei)
                 | (i,ei) <- zip [0..] es]
   where g' = pcfSymbol g (length es)
-desugarExp (App _ e1 e2) =
+desugarExp (App _ e1 e2) = 
   PCF.App <$> context 
           <*> withContext [Lapp e1] (desugarExp e1) 
           <*> withContext [Rapp e2] (desugarExp e2)
@@ -118,7 +117,7 @@ desugarExp (Cond _ gexp cs) =
     caseBdy g c zs (v:vs') = withContext [CaseBdy g zs c] (lambda v (caseBdy g c (v:zs) vs'))
 desugarExp (Let _ ds f) = desugarLet ds (desugarExp f)
 desugarExp (LetRec _ ds f) = desugarLetRec ds (desugarExp f)
- 
+
 desugarDecl :: FunDecl -> DesugarM (PCF.Exp Context) -> DesugarM (PCF.Exp Context)
 desugarDecl (FunDeclLet _ ds) f = withEmptyContext (desugarLet ds f)
 desugarDecl (FunDeclRec _ ds) f = withEmptyContext (desugarLetRec ds f)

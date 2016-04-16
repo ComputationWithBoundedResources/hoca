@@ -1,5 +1,6 @@
 module Hoca.PCF.Core.Types where
 
+import Debug.Trace (trace)
 import qualified Data.IntMap as IntMap
 import           Hoca.Data.MLTypes
 import           Hoca.Utils (($$), (//), ppSeq)
@@ -75,21 +76,22 @@ uncurryExp e = [e]
 
 instance {-# OVERLAPPING #-} PP.Pretty (TypedExp l) where
   pretty = pp id [] where
+    pp _ vs (Var _ i) | i < 0 = error "negative de-bruin index"
     pp _ vs (Var _ i) = PP.underline (ppName (vs!!i) i)
     pp _ _ (Con _ f []) = PP.pretty f                             
     pp _ vs (Con _ f as) = PP.pretty f PP.<> PP.tupled [ pp id vs ai | ai <- as]
-    pp _ _ (Bot _) = PP.bold (PP.text "_|_")
+    pp _ _ (Bot _) = PP.bold (PP.text "⟘ ")
     pp p vs (Abs (_,t :-> _) n e) = p (ppAbs t "λ" vs n e)
     pp _ _ (Abs {}) = error "expression not well-typed"
     pp p vs (Fix _ _ [Abs (_,t :-> _) n e]) = p (ppAbs t "μ" vs n e)
     pp p vs (Fix _ i es) = 
       p (PP.bold (PP.text "μ" PP.<> PP.int i) PP.<+> PP.list [ pp id vs e | e <- es])
-    pp p vs (Cond _ e cs) = PP.flatAlt pcs pcs where
-      pcs = p (PP.nest 2 (PP.bold (PP.text "case") PP.<+> pp id vs e PP.<+> PP.bold (PP.text "of"))
-               PP.<$> PP.vcat [PP.text "|" PP.<+> PP.pretty g PP.<+> PP.text "->" PP.<+> pp id vs e' PP.<> PP.text " "
-                              | (g,e') <- cs])
-    pp p vs (uncurryExp -> es) = PP.flatAlt pes pes where
-      pes = p (PP.nest 2 (PP.sep [PP.group (pp PP.parens vs e) | e <- es]))
+    pp p vs (Cond _ e cs) = 
+      p (PP.nest 2 (PP.bold (PP.text "case") PP.<+> pp id vs e PP.<+> PP.bold (PP.text "of"))
+         PP.<$> PP.vcat [PP.text "|" PP.<+> PP.pretty g PP.<+> PP.text "->" PP.<+> pp id vs e' PP.<> PP.text " "
+                        | (g,e') <- cs])
+    pp p vs (uncurryExp -> es) = 
+      p (PP.nest 2 (PP.sep [PP.group (pp PP.parens vs e) | e <- es]))
 
     ppAbs t l vs n e = PP.align (PP.nest 2 (PP.bold (PP.text l PP.<> ppName n 0) 
                                             PP.<+> PP.text ":" PP.<+> PP.pretty t PP.<> PP.text "." 
