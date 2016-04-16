@@ -1,7 +1,6 @@
-{-# LANGUAGE ViewPatterns, TypeOperators, FlexibleContexts #-}
+{-# LANGUAGE ViewPatterns, TypeOperators, FlexibleContexts, DeriveDataTypeable #-}
 #!/usr/local/bin/runhaskell
 module Main where
-
 
 import           Control.Applicative
 import           Data.Maybe (fromJust)
@@ -12,88 +11,83 @@ import           Hoca.PCF.Desugar (desugar, desugarExpression)
 import           Hoca.PCF.Sugar (programFromString, expressionFromString, Context)
 import qualified Hoca.Problem as P
 import           Hoca.Problem hiding (Problem,TRule)
-import           Hoca.Transform
+import           Hoca.Transform as T
 import           Hoca.Utils (putDocLn)
 import           System.Environment (getArgs)
 import           System.Exit (exitSuccess,exitFailure)
 import           System.IO (hPutStrLn, stderr)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
-
+import System.Console.CmdArgs
 
 type Problem f = P.Problem f Int
-type ATRS = Problem Symbol
-type TRS = Problem TRSSymbol
-type TRule = P.TRule Symbol Int
 
-
-transform :: ATRS :=> TRS
 transform = try simplifyATRS >=> toTRS >=> try simplify >=> try compress
 
-programFromArgs :: FilePath -> Maybe String -> [String] -> IO (PCF.Program Context)
-programFromArgs fname mname args = do
-  r <- parseDesugared <$> readFile fname
-  either (\e -> putErrLn e >> exitFailure) return r where
-    parseDesugared s = do
-      p <- programFromString fname s >>= desugar mname
-      as <- sequence [ expressionFromString ("argument " ++ show i) ai >>= desugarExpression
-                     | (i,ai) <- zip [(1::Int)..] args]
-      return p { PCF.expression = foldl (PCF.App mempty) (PCF.expression p) as }
+data Pcf2Trs = Eval { fname :: FilePath
+                    , call :: String }
+             | Pcf { fname :: FilePath
+                   , call :: String }
+             | Defunctionalise { fname :: FilePath
+                               , call :: String}
+             | Translate { fname :: FilePath
+                         , call :: String }
+          deriving (Show, Data, Typeable)
 
-programFromFile :: FilePath -> IO (PCF.Program Context)
-programFromFile fname = programFromArgs fname Nothing []
+translate :: Pcf2Trs
+translate = Translate
+  { fname = def &= argPos 0 &= typFile 
+  , call = def &= argPos 1  &= typ "PCF-expression"  &= opt ""}
 
-defunctionalizedFromFile :: FilePath -> Maybe String -> [String] -> IO ATRS
-defunctionalizedFromFile fn m a = do
-  prog <- programFromArgs fn m a 
-  case DM.infer prog of 
-    Left e -> putDocLn e >> error "Typing failed!"
-    Right prog' -> 
-      case run defunctionalize prog' of 
-        Nothing -> error "Defunctionalization failed!"
-        Just p -> return p
+eval :: Pcf2Trs
+eval = Eval
+  { fname = def &= argPos 2 &= typFile 
+  , call = def &= argPos 3  &= typ "PCF-expression"  &= opt ""
+  }
 
--- Main
-    
-helpMsg :: String
-helpMsg = "pcf2trs [--eval|--pcf|--no-simp] <file> [args]*"
+defunc :: Pcf2Trs
+defunc = Defunctionalise
+  { fname = def &= argPos 4 &= typFile 
+  , call = def &= argPos 5  &= typ "PCF-expression"  &= opt ""
+  }
 
-putErrLn :: String -> IO ()
-putErrLn = hPutStrLn stderr
+pcf :: Pcf2Trs
+pcf = Pcf
+  { fname = def &= argPos 6 &= typFile 
+  , call = def &= argPos 7 &= typ "PCF-expression"  &= opt ""
+  }
+
+
+mode = modes [pcf,eval,defunc,translate] &= help "Translate Ocaml programs to TRSs" &= program "pcf2trs" &= summary "Translate Ocaml programs to TRSs"
 
 main :: IO ()
 main = do
-  as <- getArgs  
-  case as of
-   "--help" : _ -> putStrLn helpMsg
-   "--eval" : fname : as' -> do
-     e <- PCF.expression <$> programFromArgs fname Nothing as'
-     putDocLn (PP.pretty (fromJust (PCF.nf PCF.cbv e)))
-   "--eval" : _ -> putStrLn helpMsg
-   "--pcf" : fname : [] -> do
-     p <- programFromArgs fname Nothing []
-     case DM.infer p of 
-       Left e -> putDocLn (PP.pretty p) >> putDocLn e
-       Right p' -> putDocLn (PP.pretty p')
-   "--pcf" : _ -> putStrLn helpMsg     
-   "--no-simp" : fname : [] -> 
-     trans False fname Nothing
-   "--no-simp" : fname : name : [] -> 
-     trans False fname (Just name)
-   "--no-simp" : _ -> putStrLn helpMsg          
-   fname : []  ->
-     trans True fname Nothing
-   fname : args  ->
-     trans True fname (Just (concat args))
-   _ -> error helpMsg
-  exitSuccess
+  cfg <- cmdArgs mode
+  p <- programFromArgs cfg
+  case cfg of
+    Eval {} -> putDocLn (PP.pretty (fromJust (PCF.nf PCF.cbv (PCF.expression p))))
+    Pcf {} -> typeProgram p >>= putDocLn
+    Translate {} -> 
+      typeProgram p >>= defunctionalizeProgram >>= simplifyAtrs >>= displayTrs
+    Defunctionalise {} -> 
+      typeProgram p >>= defunctionalizeProgram >>= displayTrs
+  exitSuccess      
   where
-    trans True fname mname = do
-      prob <- defunctionalizedFromFile fname mname []
-      case run transform prob of
-        Nothing -> do
-         putErrLn "the program cannot be transformed"
-         exitFailure
-        Just res -> putDocLn (prettyWST res)
-    trans False fname mname = do
-      prob <- defunctionalizedFromFile fname mname []
-      putDocLn (prettyWST prob)
+    programFromArgs cfg = do
+      s <- readFile (fname cfg)
+      case programFromString (fname cfg) s >>= desugar' of
+        Left e -> putStrLn e >> exitFailure
+        Right p -> return p
+     where
+       desugar' | null (call cfg) = desugar Nothing
+                | otherwise = desugar (Just (call cfg))
+    typeProgram p = case DM.infer p of 
+       Left e -> putDocLn (PP.pretty p) >> putDocLn (PP.pretty e) >> exitFailure
+       Right p' -> return p'
+    defunctionalizeProgram p = case run defunctionalize p of 
+        Nothing -> putStrLn "defunctionalization failed" >> exitFailure
+        Just p' -> return p'
+    simplifyAtrs p = case run transform p of 
+        Nothing -> putStrLn "simplification failed" >> exitFailure
+        Just p' -> return p'
+    displayTrs :: (Eq f, PP.Pretty f) => Problem f -> IO ()
+    displayTrs = putDocLn . prettyWST

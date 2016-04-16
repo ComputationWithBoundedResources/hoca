@@ -174,18 +174,6 @@ desugar mcall prog = do
       defs (FunDeclLet _ ds') = ds'
       defs (FunDeclRec _ ds') = ds'  
 
---       getMainCall [] =
---           case mname of
---             Just name -> throwError ("program contains no function named '" ++ name ++ "'")
---             _ -> 
---       getMainCall [(_,f,vs,_)]
---           | isNothing mname = return (f,vs)
---       getMainCall ((_,f@(Variable name),vs,_):ds')
---           | Just name == mname = return (f,vs)
---           | otherwise = getMainCall ds'
-    
--- --    
-
     
 
 
