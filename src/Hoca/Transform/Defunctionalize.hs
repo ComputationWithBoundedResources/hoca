@@ -74,8 +74,6 @@ visit n = modify (\(vs,ns,i) -> (n:vs,ns,i))
 makeName :: PCF.TypedExp Context -> TM Name
 makeName = maybeFresh . name' where
   name' (PCF.Cond (Context ctx,_) _ _) = fromTopLetFrame ctx `mappend` Name [LString "cond"]
-  -- name' (PCF.Abs (Context ctx@(LetBdy{}:_),_) _ _) = fromTopLetFrame ctx
-  -- name' (PCF.Abs (Context ctx@(LetRecBdy{}:_),_) _ _) = fromTopLetFrame ctx  
   name' (PCF.Abs (Context ctx,_) _ _) = fromTopLetFrame ctx
   name' _ = mempty
 
