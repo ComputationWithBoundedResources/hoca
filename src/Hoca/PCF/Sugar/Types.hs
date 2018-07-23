@@ -4,7 +4,7 @@ import qualified Data.Set as Set
 
 
 -- | constructors
-newtype Symbol = Symbol String deriving (Eq, Ord, Show) 
+newtype Symbol = Symbol String deriving (Eq, Ord, Show)
 
 -- | variables
 newtype Variable = Variable String deriving (Ord, Eq, Show)
@@ -13,11 +13,11 @@ newtype Variable = Variable String deriving (Ord, Eq, Show)
 -- type expressions / declarations
 ----------------------------------------------------------------------
 
--- | type variables  
-newtype TypeVar = TypeVar String deriving (Eq, Ord, Show) 
+-- | type variables
+newtype TypeVar = TypeVar String deriving (Eq, Ord, Show)
 
 -- | type names
-newtype TypeName = TypeName String deriving (Eq, Ord, Show) 
+newtype TypeName = TypeName String deriving (Eq, Ord, Show)
 
 data Type = TyVar TypeVar -- ^ variable
           | TyCon TypeName [Type] -- ^ composite type
@@ -34,7 +34,7 @@ data TypeDecl = TypeDecl { typeName :: TypeName -- ^ name
 ----------------------------------------------------------------------
 
 -- | position in a source
-data Pos = Pos {sn :: String -- ^ source name
+data Pos = Pos {sn  :: String -- ^ source name
                , ln :: Int -- ^ line number
                , cn :: Int -- ^ column number
                }
@@ -44,11 +44,11 @@ data Pos = Pos {sn :: String -- ^ source name
 data Exp =
   Abs Pos Variable Exp -- ^ abstraction
   | Var Pos Variable -- ^ variable
-  | Err Pos -- ^ used to handle error function  
+  | Err Pos -- ^ used to handle error function
   | Con Pos Symbol [Exp] -- ^ constructor
   | App Pos Exp Exp -- ^ application
   | Lazy Pos Exp -- ^ lazy keyword
-  | Force Pos Exp -- ^ force keyword    
+  | Force Pos Exp -- ^ force keyword
   | Cond Pos Exp [(Symbol, [Variable], Exp, Pos)] -- ^ match statements
   | Let Pos [(Pos,Variable,[Variable],Exp)] Exp -- ^ non-recursive lets
   | LetRec Pos [(Pos,Variable,[Variable],Exp)] Exp -- ^ recursive lets
@@ -79,32 +79,32 @@ freeVars (LetRec _ ds e) =
 
 -- | source position of overall expression
 sourcePos :: Exp -> Pos
-sourcePos (Err l) = l
-sourcePos (Abs l _ _) = l
-sourcePos (Lazy l _) = l
-sourcePos (Force l _) = l
-sourcePos (Var l _) = l
-sourcePos (Con l _ _) = l
-sourcePos (App l  _ _) = l
-sourcePos (Cond l _ _) = l
-sourcePos (Let l _ _) = l
+sourcePos (Err l)        = l
+sourcePos (Abs l _ _)    = l
+sourcePos (Lazy l _)     = l
+sourcePos (Force l _)    = l
+sourcePos (Var l _)      = l
+sourcePos (Con l _ _)    = l
+sourcePos (App l  _ _)   = l
+sourcePos (Cond l _ _)   = l
+sourcePos (Let l _ _)    = l
 sourcePos (LetRec l _ _) = l
 
 -- | Contextual informations for an expression
 
 data ProgramPoint =
   LetBdy Variable [Variable] Exp
-  | LetRecBdy Variable [Variable] Exp  
+  | LetRecBdy Variable [Variable] Exp
   | LazyBdy Exp
   | ForceBdy Exp
   | CaseGuard Exp
   | CaseBdy Symbol [Variable] Exp
   | ConstructorArg Int Exp
   | Lapp Exp
-  | Rapp Exp  
+  | Rapp Exp
     deriving (Show, Eq, Ord)
-             
-newtype Context = Context [ProgramPoint] deriving (Eq, Ord, Monoid)
+
+newtype Context = Context [ProgramPoint] deriving (Eq, Ord, Monoid, Semigroup)
 
 
 ----------------------------------------------------------------------
@@ -112,11 +112,11 @@ newtype Context = Context [ProgramPoint] deriving (Eq, Ord, Monoid)
 ----------------------------------------------------------------------
 
 -- | type for function declaration. The quadruple @(p,f,xs,e)@ indicates
--- a declaration @let [rec] f xs = e@ at source position @p@ 
+-- a declaration @let [rec] f xs = e@ at source position @p@
 data FunDecl =
   FunDeclLet Pos [(Pos,Variable,[Variable],Exp)] -- ^ non-recursive function declaration
   | FunDeclRec Pos [(Pos,Variable,[Variable],Exp)] -- ^ recursive function declaration
 
-data Program = Program { prologue :: [TypeDecl]
+data Program = Program { prologue  :: [TypeDecl]
                        , functions :: [FunDecl]}
 

@@ -72,7 +72,7 @@ insertInto isInstanceOf (a:as) b
   | otherwise = a : insertInto isInstanceOf as b
 
 -- avoid redundant rules, i.e. those that are instances of other rules
-newtype RS f v = RS [R.Rule f v]
+newtype RS f v = RS [R.Rule f v] deriving (Semigroup)
 
 instance (Eq f, Ord v) => Monoid (RS f v) where
   mempty = RS []
@@ -89,7 +89,7 @@ nubRules = rsToList . rsFromList
 
 -- termset, implicitly closed under instances
 
-newtype TS f v = TS [T.Term f v]
+newtype TS f v = TS [T.Term f v] deriving (Semigroup)
 
 instance (Eq f, Ord v) => Monoid (TS f v) where
   mempty = TS []
