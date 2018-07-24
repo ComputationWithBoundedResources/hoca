@@ -32,4 +32,4 @@ extra-deps:
 - ghc-paths-0.1.0.9
 - network-2.7.0.2
 - syb-0.7
-resolver: ghc-8.4
+resolver: ghc-8.4.1
