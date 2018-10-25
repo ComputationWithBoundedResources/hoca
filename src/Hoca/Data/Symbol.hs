@@ -19,8 +19,8 @@ import qualified Text.PrettyPrint.ANSI.Leijen as PP
 data Lbl = LString String
          | LInt Int
          deriving (Show, Eq, Ord)
-                  
-newtype Name = Name [Lbl] deriving (Show, Eq, Ord, Monoid)
+
+newtype Name = Name [Lbl] deriving (Show, Eq, Ord, Monoid, Semigroup)
 
 data Symbol =
   Con String
@@ -34,32 +34,32 @@ data Symbol =
   deriving (Show, Eq, Ord)
 
 instance PP.Pretty Lbl where
-  pretty (LInt i) = PP.int i
+  pretty (LInt i)    = PP.int i
   pretty (LString i) = PP.text i
 
 instance PP.Pretty Name where
-  pretty (Name []) = PP.empty
-  pretty (Name [l]) = PP.pretty l
+  pretty (Name [])     = PP.empty
+  pretty (Name [l])    = PP.pretty l
   pretty (Name (l:ls)) = PP.pretty (Name ls) PP.<> PP.text "_" PP.<> PP.pretty l
 
 instance PP.Pretty Symbol where
-  pretty (Con g) = PP.text g
-  pretty (Lambda l) = PP.pretty l
-  pretty (Cond l) = PP.pretty l
-  pretty (Fix l) = PP.pretty l
-  pretty (Bot l) = PP.text "bot" PP.<> PP.brackets (PP.pretty l)      
-  pretty Main = PP.text "main"
+  pretty (Con g)     = PP.text g
+  pretty (Lambda l)  = PP.pretty l
+  pretty (Cond l)    = PP.pretty l
+  pretty (Fix l)     = PP.pretty l
+  pretty (Bot l)     = PP.text "bot" PP.<> PP.brackets (PP.pretty l)
+  pretty Main        = PP.text "main"
   pretty (Unknown n) = PP.pretty n PP.<> PP.text "#"
 
 isCaseSym,isFixSym,isMainSym,isConstructor :: Symbol -> Bool
 isCaseSym Cond{} = True
-isCaseSym _ = False
+isCaseSym _      = False
 isFixSym Fix{} = True
-isFixSym _ = False
+isFixSym _     = False
 isMainSym Main{} = True
-isMainSym _ = False
+isMainSym _      = False
 isConstructor Con{} = True
-isConstructor _ = False
+isConstructor _     = False
 
 symbolFromString :: String -> Symbol
 symbolFromString n = Unknown (Name [LString n])
