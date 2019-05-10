@@ -20,7 +20,7 @@ data Lbl = LString String
          | LInt Int
          deriving (Show, Eq, Ord)
 
-newtype Name = Name [Lbl] deriving (Show, Eq, Ord, Monoid,Semigroup)
+newtype Name = Name [Lbl] deriving (Show, Eq, Ord, Monoid, Semigroup)
 
 data Symbol =
   Con String
