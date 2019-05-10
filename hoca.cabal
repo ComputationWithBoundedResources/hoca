@@ -1,5 +1,5 @@
 name:          hoca
-version:       0.4
+version:       0.5
 stability:     experimental
 author:        Martin Avanzini, Ugo Dal Lago, Georg Moser
 maintainer:    Martin Avanzini <martin.avanzini@uibk.ac.at>
@@ -22,7 +22,7 @@ executable pcf2trs
  build-depends: ansi-wl-pprint
               , base
               , containers
-              , hoca == 0.4
+              , hoca == 0.5
               , multiset
               , term-rewriting
               , term-rewriting-applicative
@@ -30,6 +30,8 @@ executable pcf2trs
               , text
  extensions: TypeOperators
            , FlexibleContexts
+ ghc-options:
+   -Wall -O2 -fno-warn-orphans -fno-spec-constr-count -rtsopts -with-rtsopts=-N
 
 library
     hs-source-dirs:
@@ -39,24 +41,24 @@ library
                      Hoca.Problem
                      Hoca.Problem.DFA
                      Hoca.Problem.Type
-                     Hoca.Problem.DMInfer                     
-                     Hoca.Problem.Ops                     
+                     Hoca.Problem.DMInfer
+                     Hoca.Problem.Ops
                      Hoca.PCF.Sugar
                      Hoca.PCF.Sugar.Types
                      Hoca.PCF.Sugar.Parse
-                     Hoca.PCF.Sugar.Pretty                    
+                     Hoca.PCF.Sugar.Pretty
                      Hoca.PCF.Core
-                     Hoca.PCF.Core.Types                     
-                     Hoca.PCF.Core.DMInfer                     
+                     Hoca.PCF.Core.Types
+                     Hoca.PCF.Core.DMInfer
                      Hoca.PCF.Desugar
                      Hoca.Transform
                      Hoca.Transform.Defunctionalize
                      Hoca.Transform.UsableRules
-                     Hoca.Transform.Inlining                     
+                     Hoca.Transform.Inlining
                      Hoca.Transform.Uncurry
                      Hoca.Transform.Instantiate
-                     Hoca.Data.Symbol                              
-                     Hoca.Data.MLTypes                     
+                     Hoca.Data.Symbol
+                     Hoca.Data.MLTypes
                      Hoca.Data.TreeGrammar
     other-modules:
     build-depends: ansi-wl-pprint
@@ -70,7 +72,7 @@ library
                  , term-rewriting-applicative
                  , text
     extensions: TypeSynonymInstances
-              , FlexibleContexts 
+              , FlexibleContexts
               , FlexibleInstances
               , GeneralizedNewtypeDeriving
               , MultiParamTypeClasses
@@ -78,10 +80,10 @@ library
               , ViewPatterns
               , TupleSections
               , DataKinds
-              , TypeFamilies              
+              , TypeFamilies
               , GADTs
               , DeriveFunctor
               , DeriveFoldable
               , DeriveTraversable
-    ghc-options:       
-     -threaded -Wall -O2 -fno-warn-orphans -fno-spec-constr-count -rtsopts -with-rtsopts=-N
+    ghc-options:
+     -Wall -O2 -fno-warn-orphans -fno-spec-constr-count

@@ -1,0 +1,11 @@
+flags: {}
+packages:
+- '.'
+extra-deps:
+ - graphviz-2999.20.0.3
+ - union-find-array-0.1.0.2
+ - term-rewriting-0.4.0.1
+ - git: http://github.com/ComputationWithBoundedResources/term-rewriting-applicative
+   commit: HEAD
+resolver: lts-13.20 # ghc-8.6.5
+

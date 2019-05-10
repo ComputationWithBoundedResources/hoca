@@ -97,7 +97,7 @@ match e f = go 0 e f IntMap.empty where
   nonVarCapture k (Fix _ _ ss) = all (nonVarCapture k) ss
 
 applySubst :: Exp l -> Subst l -> Exp l
-applySubst = IntMap.foldWithKey subst
+applySubst = IntMap.foldrWithKey subst
 
 isInstanceOf :: (Show l, Eq l) => Exp l -> Exp l -> Bool
 isInstanceOf e f = isJust (match f e)
@@ -177,7 +177,7 @@ ctxtClosure :: (Alternative m, Monad m) => (Exp l -> m (Exp l)) -> Exp l -> m (E
 ctxtClosure stp e = ctxt e <|> stp e
   where
     ctxt (App l e1 e2) = do
-      [f1,f2] <- oneOf (ctxtClosure stp) [e1,e2]
+      ~[f1,f2] <- oneOf (ctxtClosure stp) [e1,e2]
       return (App l f1 f2)
     ctxt (Con l g es) = Con l g <$> oneOf (ctxtClosure stp) es
     ctxt (Cond l f cs) = redF <|> redCS
@@ -199,7 +199,7 @@ cbvCtxtClosure :: (Alternative m, Monad m, Choice m) => (Exp l -> m (Exp l)) -> 
 cbvCtxtClosure stp e = ctxt e <||> stp e
   where       
     ctxt (App l e1 e2) = do
-      [f1,f2] <- leftToRight (cbvCtxtClosure stp) [e1,e2]
+      ~[f1,f2] <- leftToRight (cbvCtxtClosure stp) [e1,e2]
       return (App l f1 f2)
     ctxt (Con l g es) = Con l g <$> leftToRight (cbvCtxtClosure stp) es
     ctxt (Cond l f cs) = Cond l <$> cbvCtxtClosure stp f <*> return cs

@@ -138,7 +138,7 @@ cgSuccs :: Problem f v -> Int -> [Int]
 cgSuccs p i = maybe [] (ISet.toList . snd) (IMap.lookup i (ruleGraph p))
 
 cgPreds :: Problem f v -> Int -> [Int]
-cgPreds p i = IMap.foldWithKey collect [] (ruleGraph p) where
+cgPreds p i = IMap.foldrWithKey collect [] (ruleGraph p) where
   collect j (_,ss) preds
     | i `ISet.member` ss = j : preds
     | otherwise = preds

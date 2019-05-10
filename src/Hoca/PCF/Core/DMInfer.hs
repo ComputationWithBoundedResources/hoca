@@ -90,7 +90,7 @@ freshInstanceFor f =
   (Map.lookup f <$> ask) >>= maybe err inst where
     err = return Nothing 
     inst (tsins :~> tsout) = do 
-      (tout : tins) <- instantiateSchemas (substitute bvar `map`  (tsout:tsins))
+      ~(tout : tins) <- instantiateSchemas (substitute bvar `map`  (tsout:tsins))
       return (Just (f ::: tins :~> tout))
 
 freshForSymbol :: Exp l -> Symbol -> InferM l TypeDecl
@@ -117,7 +117,7 @@ unifyM e t1 t2 = unifyML e [(t1,t2)]
 ctx |- Var l n 
     | n >= length ctx = throwError ExpressionNotClosed
     | otherwise = do 
-  [t] <- instantiateSchemas [ctx!!n]
+  ~[t] <- instantiateSchemas [ctx!!n]
   return (idSubst, Var (l,t) n)
    
 ctx |- e@(Con l g es) = do 
