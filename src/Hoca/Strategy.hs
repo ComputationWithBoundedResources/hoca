@@ -39,13 +39,15 @@ instance Functor Result where
   
 
 instance Monad Result where
-  fail _ = Fail
   return i = Success [i]
   Fail >>= _ = Fail
   Success as >>= f =
     case concat [ bs | Success bs <- map f as ] of
      [] -> Fail
      bss -> Success bss
+
+instance MonadFail Result where
+  fail _ = Fail
 
 instance Applicative Result where
   pure = return
