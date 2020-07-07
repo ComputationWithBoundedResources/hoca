@@ -1,0 +1,3 @@
+packages:
+  ../term-rewriting-xml
+  ../term-rewriting-applicative

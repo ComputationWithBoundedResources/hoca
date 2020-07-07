@@ -3,11 +3,9 @@ flags:
     five-three: true
 packages:
 - .
+- ../term-rewriting-xml
+- ../term-rewriting-applicative
 extra-deps:
-- git: https://github.com/ComputationWithBoundedResources/term-rewriting-applicative
-  commit: b8446e7b4b5403f5122b901d76542eab505cb106
-- git: https://github.com/ComputationWithBoundedResources/term-rewriting-xml
-  commit: ac8e4a5920af1e36f09995d03626cfce3d9ee69a
 - List-0.6.2
 - QuickCheck-2.11.3
 - ansi-terminal-0.8.0.4
