@@ -1,3 +1,4 @@
 packages:
+  ./*.cabal
   ../term-rewriting-xml
   ../term-rewriting-applicative
